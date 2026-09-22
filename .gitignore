@@ -21,6 +21,11 @@ _test_*.png
 _test_*.jpg
 scroll_debug/
 
+_e.txt
+_o.txt
+_err.txt
+_out.txt
+
 # ---- 编辑器/系统 ----
 .vscode/
 .idea/
