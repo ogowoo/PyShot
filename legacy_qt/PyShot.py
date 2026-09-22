@@ -1,0 +1,5230 @@
+# -*- coding: utf-8 -*-
+"""PyShot 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
+
+这是一个自动生成的单文件版本：把多文件源码合并在一起，并在启动时自动安装
+缺失的第三方库（PySide6 / numpy），因此可以直接发给别人运行::
+
+    python PyShot.py              # 启动后驻留托盘，按 PrintScreen 开始截图
+    python PyShot.py 图片.png     # 直接编辑已有图片
+    python PyShot.py --check-deps # 只检查依赖
+
+生成方式：python build_single.py（请勿手工修改本文件，改动请改多文件源码）
+"""
+
+
+# ========================================================================
+# 来自 bootstrap.py
+# ========================================================================
+# -*- coding: utf-8 -*-
+"""依赖自举：启动时检查并自动安装缺失的第三方库（PySide6 / numpy）。
+
+设计要点
+========
+- 只用标准库，保证在"什么都还没装"的环境里也能跑起来
+- 安装按顺序降级尝试：直接装 → --user → 国内镜像 → 镜像 + --user
+- Windows 上先尝试打开长路径支持（PySide6 的深层路径会因此安装失败）
+- 全部失败时给出可复制的手动命令，并弹系统对话框提示
+- 环境变量 PYSHOT_SKIP_DEPS=1 可跳过检查（测试用）
+- PYSHOT_PIP_MIRROR 可自定义镜像源
+"""
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+# (导入名, pip 安装名)
+# 只依赖 PySide6：拼接/图像统计都用纯 Python 实现了，不再需要 numpy。
+REQUIRED_PACKAGES = [
+    ("PySide6", "PySide6"),
+]
+
+# 国内镜像（默认仅在直连失败时使用）
+DEFAULT_MIRROR = "https://pypi.tuna.tsinghua.edu.cn/simple"
+
+
+def bundled_libs() -> Path | None:
+    """程序旁边的内嵌依赖目录（便携版/内嵌版用，存在就不需要 pip）。"""
+    here = Path(getattr(sys, "frozen", None) and sys.executable or __file__).resolve()
+    libs = here.parent / "libs"
+    return libs if libs.is_dir() else None
+
+
+def _use_bundled_libs() -> bool:
+    """有内嵌依赖就优先用它（不联网、不装包）。"""
+    libs = bundled_libs()
+    if libs is None:
+        return False
+    p = str(libs)
+    if p not in sys.path:
+        sys.path.insert(0, p)
+    return True
+
+
+def missing_packages(requirements=None) -> list:
+    """返回缺失的 pip 包名列表。"""
+    import importlib
+    reqs = REQUIRED_PACKAGES if requirements is None else requirements
+    missing = []
+    for module_name, pip_name in reqs:
+        try:
+            importlib.import_module(module_name)
+        except Exception:
+            missing.append(pip_name)
+    return missing
+
+
+def enable_windows_long_paths() -> bool:
+    """Windows 未开启长路径支持时，pip 安装 PySide6 会因路径过长失败。"""
+    if os.name != "nt":
+        return False
+    try:
+        import winreg
+        path = r"SYSTEM\CurrentControlSet\Control\FileSystem"
+        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, path, 0,
+                             winreg.KEY_READ | winreg.KEY_SET_VALUE)
+        try:
+            value, _ = winreg.QueryValueEx(key, "LongPathsEnabled")
+        except FileNotFoundError:
+            value = 0
+        if value == 1:
+            return True
+        winreg.SetValueEx(key, "LongPathsEnabled", 0, winreg.REG_DWORD, 1)
+        print("[PyShot] 已开启 Windows 长路径支持（解决 PySide6 安装失败）")
+        return True
+    except Exception:
+        # 没有管理员权限就算了，安装时若失败会给出提示
+        return False
+
+
+def pip_install(packages, mirror: str | None = None, runner=None,
+                extra_args=()) -> bool:
+    """按 直装 → --user → 镜像 → 镜像 + --user 的顺序尝试安装。
+
+    runner(cmd) -> int 可注入，便于测试；默认真正执行 pip。
+    """
+    mirror = mirror if mirror is not None else os.environ.get(
+        "PYSHOT_PIP_MIRROR", DEFAULT_MIRROR)
+    base = [sys.executable, "-m", "pip", "install", *extra_args]
+    attempts = [base + list(packages)]
+    if "--user" not in extra_args:
+        attempts.append(base + ["--user"] + list(packages))
+    if mirror:
+        attempts.append(base + ["-i", mirror] + list(packages))
+        if "--user" not in extra_args:
+            attempts.append(base + ["--user", "-i", mirror] + list(packages))
+    run = runner or (lambda cmd: subprocess.call(cmd))
+    for cmd in attempts:
+        try:
+            if run(cmd) == 0:
+                return True
+        except Exception as ex:  # noqa: BLE001
+            print(f"[PyShot] pip 执行失败：{ex}")
+    return False
+
+
+def alert(title: str, message: str):
+    """无 GUI 可用时的提示：Windows 弹系统对话框，其他平台打印。"""
+    print(f"[PyShot] {title}：{message}")
+    if os.name == "nt":
+        try:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(None, message, title, 0x40)
+        except Exception:
+            pass
+
+
+def ensure_deps(requirements=None, runner=None, quiet: bool = False) -> bool:
+    """确保依赖就绪：优先用内嵌依赖；缺什么装什么。返回是否可用。"""
+    if os.environ.get("PYSHOT_SKIP_DEPS") == "1":
+        return True
+    reqs = REQUIRED_PACKAGES if requirements is None else requirements
+    # 1) 程序旁边有内嵌依赖目录 → 直接用，不联网不装包
+    if _use_bundled_libs():
+        if not missing_packages(reqs):
+            return True
+    missing = missing_packages(reqs)
+    if not missing:
+        return True
+    if not quiet:
+        print(f"[PyShot] 缺少依赖：{', '.join(missing)}，正在自动安装（首次约需 1-3 分钟）…")
+    if os.name == "nt":
+        enable_windows_long_paths()
+    if not pip_install(missing, runner=runner):
+        manual = f"{sys.executable} -m pip install " + " ".join(missing)
+        alert("PyShot 依赖安装失败",
+              f"请手动执行以下命令后重新运行：\n\n{manual}")
+        return False
+    # 安装完再验证一次，确保真的能导入
+    import importlib
+    importlib.invalidate_caches()
+    still = missing_packages(reqs)
+    if still:
+        alert("PyShot 依赖仍不可用", f"以下库导入失败：{', '.join(still)}")
+        return False
+    if not quiet:
+        print("[PyShot] 依赖安装完成。")
+    return True
+
+
+def deps_report() -> str:
+    """依赖状态文本，供 --check-deps 使用。"""
+    import importlib
+    lines = ["PyShot 依赖检查："]
+    bundled = bundled_libs()
+    if bundled is not None:
+        lines.append(f"  内嵌依赖目录: {bundled}")
+    else:
+        lines.append("  内嵌依赖目录: 无（将使用系统环境或自动安装）")
+    for module_name, pip_name in REQUIRED_PACKAGES:
+        try:
+            mod = importlib.import_module(module_name)
+            version = getattr(mod, "__version__", None)
+            if version is None and module_name == "PySide6":
+                from PySide6 import __version__ as version  # type: ignore
+            where = getattr(mod, "__file__", "")
+            lines.append(f"  [OK]   {pip_name} {version or ''}  ({where})".rstrip())
+        except Exception as ex:  # noqa: BLE001
+            lines.append(f"  [缺失] {pip_name}（{type(ex).__name__}）")
+    lines.append(f"  Python: {sys.version.split()[0]}  解释器: {sys.executable}")
+    return "\n".join(lines)
+
+
+# 依赖自举：在任何 PySide6 导入之前完成检查与安装
+if not ensure_deps():
+    raise SystemExit(1)
+
+
+# ========================================================================
+# 来自 watermark.py
+# ========================================================================
+# -*- coding: utf-8 -*-
+"""水印：配置、绘制与设置持久化（对标 FSCapture 的水印功能）。
+
+能力
+====
+- 文字水印：多行文本、字体/字号/粗斜体、颜色、透明度
+- 图片水印：选一张图，按比例缩放
+- 位置：九宫格（左上…右下）+ 平铺
+- 旋转角度、边距、平铺间距
+- 可"设为默认"，之后每次新截图自动加上
+
+绘制逻辑集中在 draw_watermark()，编辑器里的水印图形和对话框预览共用同一份，
+保证"预览 = 实际效果"。
+"""
+import json
+import os
+from pathlib import Path
+
+from PySide6.QtCore import QPointF, QRectF, QSize, QSizeF, Qt
+from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainter, QPixmap
+
+from PySide6.QtWidgets import (QCheckBox, QColorDialog, QComboBox, QDialog,
+                               QDialogButtonBox, QFileDialog, QFormLayout,
+                               QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit,
+                               QPushButton, QSlider, QSpinBox, QVBoxLayout)
+
+POSITIONS = ["左上", "上中", "右上", "左中", "居中", "右中", "左下", "下中", "右下", "平铺"]
+
+DEFAULT_SETTINGS = {
+    "kind": "text",              # text | image
+    "text": "仅供参考",
+    "font_family": "Microsoft YaHei",
+    "font_size": 28,             # 图像像素
+    "bold": True,
+    "italic": False,
+    "color": "#ffffff",
+    "alpha": 90,                 # 0-255
+    "image_path": "",
+    "image_scale": 0.2,          # 占图像宽度的比例
+    "position": 8,               # 0-8 九宫格；9 = 平铺
+    "rotation": 0,               # 角度
+    "margin": 24,                # 距边距离（像素）
+    "spacing": 60,               # 平铺间距（像素）
+    "shadow": True,              # 文字描边阴影，任何背景都看得清
+    "auto": False,               # 设为默认后，新截图自动应用
+}
+
+CONFIG_PATH = Path.home() / ".pyshot" / "watermark.json"
+_cache = {}
+
+
+# ---------------------------------------------------------------- 设置读写
+
+def normalize(settings: dict | None) -> dict:
+    """补全缺失字段（兼容旧配置/手改配置）。"""
+    out = dict(DEFAULT_SETTINGS)
+    if settings:
+        for k, v in settings.items():
+            if k in DEFAULT_SETTINGS:
+                out[k] = v
+    return out
+
+
+def load_default() -> dict:
+    """读取默认水印设置（不存在的字段用默认值补齐）。"""
+    global _cache
+    if _cache:
+        return dict(_cache)
+    try:
+        with open(CONFIG_PATH, encoding="utf-8") as f:
+            _cache = normalize(json.load(f))
+    except Exception:                       # noqa: BLE001
+        _cache = dict(DEFAULT_SETTINGS)
+    return dict(_cache)
+
+
+def save_default(settings: dict) -> bool:
+    """保存默认水印设置。返回是否写盘成功（失败不影响本次运行）。"""
+    global _cache
+    _cache = normalize(settings)
+    try:
+        CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(_cache, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception:                       # noqa: BLE001
+        return False
+
+
+def clear_cache():
+    """测试用：清掉内存缓存。"""
+    global _cache
+    _cache = {}
+
+
+# ---------------------------------------------------------------- 绘制
+
+def make_font(settings: dict) -> QFont:
+    font = QFont(settings.get("font_family") or "Microsoft YaHei")
+    font.setPixelSize(max(6, int(settings.get("font_size", 28))))
+    font.setBold(bool(settings.get("bold")))
+    font.setItalic(bool(settings.get("italic")))
+    return font
+
+
+def watermark_size(settings: dict, image_size: QSize) -> QSizeF:
+    """水印自身占据的尺寸（未旋转）。"""
+    if settings.get("kind") == "image":
+        pix = load_image(settings)
+        if pix is None or pix.isNull():
+            return QSizeF(0, 0)
+        scale = max(0.01, float(settings.get("image_scale", 0.2)))
+        w = image_size.width() * scale
+        h = w * pix.height() / max(1, pix.width())
+        return QSizeF(w, h)
+    text = settings.get("text") or ""
+    metrics = QFontMetricsF(make_font(settings))
+    lines = text.split("\n") or [""]
+    width = max((metrics.horizontalAdvance(line) for line in lines), default=0)
+    height = metrics.lineSpacing() * len(lines)
+    return QSizeF(width, height)
+
+
+def _image_cache(settings: dict):
+    if not hasattr(_image_cache, "_pix"):
+        _image_cache._pix = {}
+    key = settings.get("image_path", "")
+    pix = _image_cache._pix.get(key)
+    if pix is None and key and os.path.exists(key):
+        pix = QPixmap(key)
+        _image_cache._pix[key] = pix
+    return pix
+
+
+def load_image(settings: dict) -> QPixmap | None:
+    return _image_cache(settings)
+
+
+def placements(settings: dict, image_size: QSize, size: QSizeF) -> list:
+    """返回每个水印的左上角坐标（平铺时返回多个）。"""
+    iw, ih = image_size.width(), image_size.height()
+    margin = float(settings.get("margin", 24))
+    pos = int(settings.get("position", 8))
+    if pos == 9:                        # 平铺
+        spacing = float(settings.get("spacing", 60))
+        step_x = size.width() + spacing
+        step_y = size.height() + spacing
+        if step_x <= 1 or step_y <= 1:
+            return []
+        out = []
+        y = margin
+        while y < ih:
+            x = margin
+            while x < iw:
+                out.append(QPointF(x, y))
+                x += step_x
+            y += step_y
+        return out
+    col, row = pos % 3, pos // 3
+    fx, fy = col / 2.0, row / 2.0
+    x = margin + fx * max(0.0, iw - margin * 2 - size.width())
+    y = margin + fy * max(0.0, ih - margin * 2 - size.height())
+    return [QPointF(x, y)]
+
+
+def draw_watermark(painter: QPainter, settings: dict, image_size: QSize,
+                   offset: QPointF | None = None):
+    """把水印画到 painter 上（坐标系 = 图像像素）。"""
+    size = watermark_size(settings, image_size)
+    if size.width() <= 0 or size.height() <= 0:
+        return
+    color = QColor(settings.get("color", "#ffffff"))
+    color.setAlpha(int(settings.get("alpha", 90)))
+    rotation = float(settings.get("rotation", 0))
+    offset = offset or QPointF(0, 0)
+
+    pix = load_image(settings) if settings.get("kind") == "image" else None
+    text = settings.get("text") or ""
+    font = make_font(settings)
+    metrics = QFontMetricsF(font)
+    shadow = bool(settings.get("shadow")) and settings.get("kind") != "image"
+
+    painter.save()
+    painter.setOpacity(1.0)
+    for pt in placements(settings, image_size, size):
+        painter.save()
+        cx = pt.x() + offset.x() + size.width() / 2
+        cy = pt.y() + offset.y() + size.height() / 2
+        painter.translate(cx, cy)
+        if rotation:
+            painter.rotate(rotation)
+        box = QRectF(-size.width() / 2, -size.height() / 2,
+                     size.width(), size.height())
+        if pix is not None and not pix.isNull():
+            painter.drawPixmap(box, pix, QRectF(pix.rect()))
+        else:
+            painter.setFont(font)
+            line_h = metrics.lineSpacing()
+            for i, line in enumerate(text.split("\n")):
+                y = box.top() + metrics.ascent() + i * line_h
+                if shadow:                      # 描边，深浅背景都清晰
+                    shadow_color = QColor(0, 0, 0, min(200, color.alpha() + 40))
+                    painter.setPen(shadow_color)
+                    for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                        painter.drawText(QPointF(box.left() + dx, y + dy), line)
+                painter.setPen(color)
+                painter.drawText(QPointF(box.left(), y), line)
+        painter.restore()
+    painter.restore()
+
+
+# ---------------------------------------------------------------- 对话框
+
+class WatermarkDialog(QDialog):
+    """水印设置对话框（带实时预览）。"""
+
+    def __init__(self, parent=None, settings: dict | None = None,
+                 image_size: QSize | None = None):
+        super().__init__(parent)
+        self.setWindowTitle("水印")
+        self.setMinimumWidth(560)
+        self._settings = normalize(settings or load_default())
+        self._image_size = image_size or QSize(640, 400)
+
+        root = QVBoxLayout(self)
+        form = QFormLayout()
+
+        self.kind = QComboBox()
+        self.kind.addItems(["文字水印", "图片水印"])
+        self.kind.setCurrentIndex(0 if self._settings["kind"] == "text" else 1)
+        self.kind.currentIndexChanged.connect(self._on_kind)
+        form.addRow("类型", self.kind)
+
+        self.text = QPlainTextEdit(self._settings["text"])
+        self.text.setFixedHeight(56)
+        self.text.textChanged.connect(self._refresh_preview)
+        form.addRow("文字", self.text)
+
+        self.font_box = QComboBox()
+        self.font_box.setEditable(True)
+        self.font_box.addItems(["Microsoft YaHei", "Segoe UI", "Arial",
+                                "Consolas", "SimSun", "SimHei"])
+        self.font_box.setCurrentText(self._settings["font_family"])
+        self.font_box.currentTextChanged.connect(self._refresh_preview)
+        form.addRow("字体", self.font_box)
+
+        row = QHBoxLayout()
+        self.size = SpinBox()
+        self.size.setRange(8, 400)
+        self.size.setValue(int(self._settings["font_size"]))
+        self.size.setSuffix(" px")
+        self.size.valueChanged.connect(self._refresh_preview)
+        self.bold = QCheckBox("粗体")
+        self.bold.setChecked(bool(self._settings["bold"]))
+        self.bold.toggled.connect(self._refresh_preview)
+        self.italic = QCheckBox("斜体")
+        self.italic.setChecked(bool(self._settings["italic"]))
+        self.italic.toggled.connect(self._refresh_preview)
+        row.addWidget(self.size)
+        row.addWidget(self.bold)
+        row.addWidget(self.italic)
+        row.addStretch(1)
+        form.addRow("字号", row)
+
+        self.color_btn = QPushButton()
+        self.color_btn.setFixedSize(60, 24)
+        self.color_btn.clicked.connect(self._pick_color)
+        form.addRow("颜色", self.color_btn)
+
+        arow = QHBoxLayout()
+        self.alpha = QSlider(Qt.Horizontal)
+        self.alpha.setRange(10, 255)
+        self.alpha.setValue(int(self._settings["alpha"]))
+        self.alpha.valueChanged.connect(self._refresh_preview)
+        self.alpha_label = QLabel()
+        arow.addWidget(self.alpha)
+        arow.addWidget(self.alpha_label)
+        form.addRow("透明度", arow)
+
+        self.image_path = QLineEdit(self._settings["image_path"])
+        browse = QPushButton("选择…")
+        browse.clicked.connect(self._browse_image)
+        irow = QHBoxLayout()
+        irow.addWidget(self.image_path)
+        irow.addWidget(browse)
+        form.addRow("图片", irow)
+
+        self.image_scale = SpinBox()
+        self.image_scale.setRange(2, 100)
+        self.image_scale.setValue(int(float(self._settings["image_scale"]) * 100))
+        self.image_scale.setSuffix(" % 图宽")
+        self.image_scale.valueChanged.connect(self._refresh_preview)
+        form.addRow("图片大小", self.image_scale)
+
+        self.position = QComboBox()
+        self.position.addItems(POSITIONS)
+        self.position.setCurrentIndex(int(self._settings["position"]))
+        self.position.currentIndexChanged.connect(self._refresh_preview)
+        form.addRow("位置", self.position)
+
+        rrow = QHBoxLayout()
+        self.rotation = SpinBox()
+        self.rotation.setRange(-180, 180)
+        self.rotation.setValue(int(self._settings["rotation"]))
+        self.rotation.setSuffix(" °")
+        self.rotation.valueChanged.connect(self._refresh_preview)
+        self.margin = SpinBox()
+        self.margin.setRange(0, 400)
+        self.margin.setValue(int(self._settings["margin"]))
+        self.margin.setSuffix(" px 边距")
+        self.margin.valueChanged.connect(self._refresh_preview)
+        self.spacing = SpinBox()
+        self.spacing.setRange(0, 800)
+        self.spacing.setValue(int(self._settings["spacing"]))
+        self.spacing.setSuffix(" px 间距")
+        self.spacing.valueChanged.connect(self._refresh_preview)
+        rrow.addWidget(self.rotation)
+        rrow.addWidget(self.margin)
+        rrow.addWidget(self.spacing)
+        form.addRow("旋转/间距", rrow)
+
+        self.shadow = QCheckBox("文字加描边（深浅背景都清晰）")
+        self.shadow.setChecked(bool(self._settings["shadow"]))
+        self.shadow.toggled.connect(self._refresh_preview)
+        form.addRow("", self.shadow)
+
+        self.auto = QCheckBox("设为默认水印：之后每次新截图自动添加")
+        self.auto.setChecked(bool(self._settings["auto"]))
+        form.addRow("", self.auto)
+
+        root.addLayout(form)
+
+        self.preview = QLabel()
+        self.preview.setFixedHeight(180)
+        self.preview.setAlignment(Qt.AlignCenter)
+        self.preview.setStyleSheet(
+            "background: #2b2f36; border: 1px solid #3a3d45; border-radius: 6px;")
+        root.addWidget(QLabel("预览"))
+        root.addWidget(self.preview)
+
+        buttons = QDialogButtonBox()
+        self.btn_apply = buttons.addButton("应用", QDialogButtonBox.AcceptRole)
+        self.btn_default = buttons.addButton("应用并设为默认",
+                                             QDialogButtonBox.AcceptRole)
+        buttons.addButton("取消", QDialogButtonBox.RejectRole)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        self.btn_default.clicked.connect(self._mark_default)
+        root.addWidget(buttons)
+
+        self._on_kind()
+        self._refresh_preview()
+
+    # ---------- 交互 ----------
+    def _mark_default(self):
+        self.auto.setChecked(True)
+        self.accept()
+
+    def _on_kind(self, *_):
+        is_text = self.kind.currentIndex() == 0
+        for w in (self.text, self.font_box, self.size, self.bold, self.italic,
+                  self.shadow):
+            w.setEnabled(is_text)
+        for w in (self.image_path, self.image_scale):
+            w.setEnabled(not is_text)
+        self._refresh_preview()
+
+    def _pick_color(self):
+        c = QColorDialog.getColor(QColor(self._settings.get("color", "#ffffff")),
+                                  self, "水印颜色")
+        if c.isValid():
+            self._settings["color"] = c.name()
+            self._refresh_preview()
+
+    def _browse_image(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self, "选择水印图片", "", "图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)")
+        if path:
+            self.image_path.setText(path)
+            self._refresh_preview()
+
+    # ---------- 数据 ----------
+    def settings(self) -> dict:
+        s = dict(self._settings)
+        s.update({
+            "kind": "text" if self.kind.currentIndex() == 0 else "image",
+            "text": self.text.toPlainText(),
+            "font_family": self.font_box.currentText(),
+            "font_size": self.size.value(),
+            "bold": self.bold.isChecked(),
+            "italic": self.italic.isChecked(),
+            "alpha": self.alpha.value(),
+            "image_path": self.image_path.text().strip(),
+            "image_scale": self.image_scale.value() / 100.0,
+            "position": self.position.currentIndex(),
+            "rotation": self.rotation.value(),
+            "margin": self.margin.value(),
+            "spacing": self.spacing.value(),
+            "shadow": self.shadow.isChecked(),
+            "auto": self.auto.isChecked(),
+        })
+        return s
+
+    def _refresh_preview(self, *_):
+        self.color_btn.setStyleSheet(
+            f"background:{self._settings.get('color', '#ffffff')};"
+            "border:1px solid #666; border-radius:4px;")
+        self.alpha_label.setText(f"{int(self.alpha.value() / 255 * 100)}%")
+        s = self.settings()
+        w = max(200, self.preview.width() or 420)
+        h = 180
+        pix = QPixmap(w, h)
+        pix.fill(QColor("#39404a"))
+        p = QPainter(pix)
+        # 画一点"内容"条纹，方便判断水印在真实画面上的效果
+        for y in range(20, h, 34):
+            p.fillRect(0, y, w, 12, QColor(255, 255, 255, 26))
+        draw_watermark(p, s, QSize(w, h))
+        p.end()
+        self.preview.setPixmap(pix)
+
+
+# ========================================================================
+# 来自 shapes.py
+# ========================================================================
+# -*- coding: utf-8 -*-
+"""标注图形对象：矩形 / 椭圆 / 直线 / 箭头 / 画笔 / 文字 / 序号 / 高亮 / 马赛克。
+
+所有图形使用图像像素坐标（与底图一致），由画布负责缩放。
+"""
+import copy
+import math
+
+from PySide6.QtCore import QPointF, QRectF, QSize, Qt
+from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen, QPixmap
+
+
+class Shape:
+    """所有标注图形的基类。"""
+
+    def __init__(self, color: QColor, width: int):
+        self.color = QColor(color)
+        self.width = max(1, int(width))
+
+    # --- 子类需实现 ---
+    def draw(self, painter: QPainter, canvas):
+        raise NotImplementedError
+
+    def bounding_rect(self) -> QRectF:
+        raise NotImplementedError
+
+    def move_by(self, dx: float, dy: float):
+        raise NotImplementedError
+
+    def contains(self, pos: QPointF, tol: float = 6.0) -> bool:
+        return self.bounding_rect().adjusted(-tol, -tol, tol, tol).contains(pos)
+
+    # --- 通用 ---
+    def pen(self) -> QPen:
+        pen = QPen(self.color, self.width, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+        pen.setCosmetic(False)
+        return pen
+
+    def clone(self):
+        return copy.deepcopy(self)
+
+    def translate(self, dx: float, dy: float):
+        """整体平移（裁剪时使用）。默认按 move_by 处理。"""
+        self.move_by(dx, dy)
+
+    # ---------- 缩放手柄 ----------
+    # 顺序：0左上 1上中 2右上 3右中 4右下 5下中 6左下 7左中
+    def handles(self) -> list:
+        """可拖拽的缩放句柄（默认按外接矩形给 8 个；返回空列表表示不可缩放）。"""
+        r = self.bounding_rect()
+        if r.isNull() or r.width() < 1 or r.height() < 1:
+            return []
+        x0, y0, x1, y1 = r.left(), r.top(), r.right(), r.bottom()
+        cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
+        return [QPointF(x0, y0), QPointF(cx, y0), QPointF(x1, y0),
+                QPointF(x1, cy), QPointF(x1, y1), QPointF(cx, y1),
+                QPointF(x0, y1), QPointF(x0, cy)]
+
+    def resize_by_handle(self, index: int, pos: QPointF):
+        """把第 index 个句柄拖到 pos。"""
+        r = self.bounding_rect()
+        x0, y0, x1, y1 = r.left(), r.top(), r.right(), r.bottom()
+        if index in (0, 1, 2):
+            y0 = pos.y()
+        elif index in (4, 5, 6):
+            y1 = pos.y()
+        if index in (0, 6, 7):
+            x0 = pos.x()
+        elif index in (2, 3, 4):
+            x1 = pos.x()
+        new = QRectF(QPointF(min(x0, x1), min(y0, y1)),
+                     QPointF(max(x0, x1), max(y0, y1)))
+        self.apply_rect(new)
+
+    def apply_rect(self, rect: QRectF):
+        """把图形拉伸到新的外接矩形（子类按自身语义实现）。"""
+        self.move_by(rect.topLeft().x() - self.bounding_rect().left(),
+                     rect.topLeft().y() - self.bounding_rect().top())
+
+
+class RectShape(Shape):
+    def __init__(self, color, width, rect: QRectF, fill=False):
+        super().__init__(color, width)
+        self.rect = QRectF(rect).normalized()
+        self.fill = fill
+
+    def apply_rect(self, rect: QRectF):
+        self.rect = QRectF(rect).normalized()
+
+    def draw(self, painter, canvas):
+        painter.setPen(self.pen())
+        if self.fill:
+            c = QColor(self.color)
+            c.setAlpha(60)
+            painter.setBrush(c)
+        else:
+            painter.setBrush(Qt.NoBrush)
+        painter.drawRect(self.rect)
+
+    def bounding_rect(self):
+        return self.rect
+
+    def move_by(self, dx, dy):
+        self.rect.translate(dx, dy)
+
+
+class EllipseShape(RectShape):
+    def draw(self, painter, canvas):
+        painter.setPen(self.pen())
+        if self.fill:
+            c = QColor(self.color)
+            c.setAlpha(60)
+            painter.setBrush(c)
+        else:
+            painter.setBrush(Qt.NoBrush)
+        painter.drawEllipse(self.rect)
+
+
+class LineShape(Shape):
+    def __init__(self, color, width, p1: QPointF, p2: QPointF):
+        super().__init__(color, width)
+        self.p1 = QPointF(p1)
+        self.p2 = QPointF(p2)
+
+    def handles(self):
+        return [QPointF(self.p1), QPointF(self.p2)]
+
+    def resize_by_handle(self, index: int, pos: QPointF):
+        if index == 0:
+            self.p1 = QPointF(pos)
+        else:
+            self.p2 = QPointF(pos)
+
+    def apply_rect(self, rect: QRectF):
+        # 直线按外接矩形拉伸两个端点（保持方向）
+        old = self.bounding_rect()
+        if old.width() < 0.5 and old.height() < 0.5:
+            return
+        sx = rect.width() / old.width() if old.width() > 0.5 else 1.0
+        sy = rect.height() / old.height() if old.height() > 0.5 else 1.0
+        self.p1 = QPointF(rect.left() + (self.p1.x() - old.left()) * sx,
+                          rect.top() + (self.p1.y() - old.top()) * sy)
+        self.p2 = QPointF(rect.left() + (self.p2.x() - old.left()) * sx,
+                          rect.top() + (self.p2.y() - old.top()) * sy)
+
+    def draw(self, painter, canvas):
+        painter.setPen(self.pen())
+        painter.drawLine(self.p1, self.p2)
+
+    def bounding_rect(self):
+        return QRectF(self.p1, self.p2).normalized()
+
+    def move_by(self, dx, dy):
+        self.p1 += QPointF(dx, dy)
+        self.p2 += QPointF(dx, dy)
+
+
+class ArrowShape(LineShape):
+    """带箭头头部的直线。"""
+
+    def draw(self, painter, canvas):
+        painter.setPen(self.pen())
+        painter.drawLine(self.p1, self.p2)
+        angle = math.atan2(self.p2.y() - self.p1.y(), self.p2.x() - self.p1.x())
+        head = 8 + self.width * 3.0
+        spread = math.radians(25)
+        for sign in (1, -1):
+            a = angle + math.pi + sign * spread
+            tip = QPointF(self.p2.x() + head * math.cos(a),
+                          self.p2.y() + head * math.sin(a))
+            painter.drawLine(self.p2, tip)
+
+
+class PenShape(Shape):
+    """自由画笔轨迹。"""
+
+    def __init__(self, color, width, points=None):
+        super().__init__(color, width)
+        self.points = [QPointF(p) for p in (points or [])]
+
+    def add_point(self, p: QPointF):
+        self.points.append(QPointF(p))
+
+    def draw(self, painter, canvas):
+        if len(self.points) < 2:
+            if self.points:
+                painter.setPen(self.pen())
+                painter.drawPoint(self.points[0])
+            return
+        path = QPainterPath(self.points[0])
+        for p in self.points[1:]:
+            path.lineTo(p)
+        painter.setPen(self.pen())
+        painter.setBrush(Qt.NoBrush)
+        painter.drawPath(path)
+
+    def bounding_rect(self):
+        if not self.points:
+            return QRectF()
+        xs = [p.x() for p in self.points]
+        ys = [p.y() for p in self.points]
+        return QRectF(min(xs), min(ys), max(xs) - min(xs) + 1, max(ys) - min(ys) + 1)
+
+    def apply_rect(self, rect: QRectF):
+        old = self.bounding_rect()
+        if old.width() < 1 or old.height() < 1 or not self.points:
+            return
+        sx = rect.width() / old.width()
+        sy = rect.height() / old.height()
+        self.points = [QPointF(rect.left() + (p.x() - old.left()) * sx,
+                               rect.top() + (p.y() - old.top()) * sy)
+                       for p in self.points]
+
+    def move_by(self, dx, dy):
+        d = QPointF(dx, dy)
+        self.points = [p + d for p in self.points]
+
+
+class TextShape(Shape):
+    def __init__(self, color, width, pos: QPointF, text: str, font_size: int):
+        super().__init__(color, width)
+        self.pos = QPointF(pos)
+        self.text = text
+        self.font_size = max(8, int(font_size))
+
+    def font(self) -> QFont:
+        f = QFont("Microsoft YaHei")
+        f.setPixelSize(self.font_size)
+        f.setBold(True)
+        return f
+
+    def draw(self, painter, canvas):
+        painter.setFont(self.font())
+        painter.setPen(QPen(self.color))
+        # 白色描边提升可读性
+        metrics = painter.fontMetrics()
+        for i, line in enumerate(self.text.split("\n")):
+            y = self.pos.y() + i * metrics.lineSpacing()
+            for ox, oy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                painter.setPen(QPen(QColor(255, 255, 255, 200)))
+                painter.drawText(QPointF(self.pos.x() + ox, y + oy), line)
+            painter.setPen(QPen(self.color))
+            painter.drawText(QPointF(self.pos.x(), y), line)
+
+    def bounding_rect(self):
+        metrics = _metrics(self.font())
+        lines = self.text.split("\n")
+        w = max((metrics.horizontalAdvance(s) for s in lines), default=0)
+        h = metrics.lineSpacing() * len(lines)
+        return QRectF(self.pos.x() - 2, self.pos.y() - metrics.ascent() - 2,
+                      w + 6, h + 6)
+
+    def apply_rect(self, rect: QRectF):
+        """缩放文字：按高度比例改字号（8~400），并把左上角搬到新位置。"""
+        old = self.bounding_rect()
+        if old.height() < 2:
+            return
+        ratio = rect.height() / old.height()
+        self.font_size = int(min(400, max(8, round(self.font_size * ratio))))
+        metrics = _metrics(self.font())
+        self.pos = QPointF(rect.left() + 2,
+                           rect.top() + 2 + metrics.ascent())
+
+    def move_by(self, dx, dy):
+        self.pos += QPointF(dx, dy)
+
+
+def _metrics(font: QFont):
+    from PySide6.QtGui import QFontMetrics
+    return QFontMetrics(font)
+
+
+class StepShape(Shape):
+    """序号步骤：圆形底 + 数字，做操作指引的核心工具。
+
+    直径（diameter）独立可调，数字大小自动跟随直径，保证任何尺寸下都居中好看。
+    """
+
+    def __init__(self, color, width, center: QPointF, number: int,
+                 font_size: int = 20, diameter: float | None = None):
+        super().__init__(color, width)
+        self.center = QPointF(center)
+        self.number = int(number)
+        self.font_size = max(8, int(font_size))
+        # 未指定直径时按字号推算（兼容旧调用）
+        self.diameter = float(diameter) if diameter else max(24.0, self.font_size * 1.8)
+
+    @property
+    def radius(self):
+        return self.diameter / 2.0
+
+    def digit_pixel_size(self) -> int:
+        """数字字号：跟随直径，但不超过设定的字号上限。"""
+        return max(8, int(min(self.diameter * 0.62, self.font_size * 1.8)))
+
+    def set_diameter(self, diameter: float):
+        self.diameter = max(16.0, float(diameter))
+
+    def draw(self, painter, canvas):
+        r = self.radius
+        rect = QRectF(self.center.x() - r, self.center.y() - r, r * 2, r * 2)
+        painter.setPen(QPen(QColor(255, 255, 255), max(2, self.width)))
+        painter.setBrush(self.color)
+        painter.drawEllipse(rect)
+        font = QFont("Microsoft YaHei")
+        font.setPixelSize(self.digit_pixel_size())
+        font.setBold(True)
+        painter.setFont(font)
+        painter.setPen(QPen(QColor(255, 255, 255)))
+        painter.drawText(rect, Qt.AlignCenter, str(self.number))
+
+    def bounding_rect(self):
+        r = self.radius
+        return QRectF(self.center.x() - r, self.center.y() - r, r * 2, r * 2)
+
+    def apply_rect(self, rect: QRectF):
+        """缩放序号：改直径，圆心跟随。"""
+        self.center = rect.center()
+        self.set_diameter(max(rect.width(), rect.height()))
+
+    def contains(self, pos, tol=6.0):
+        return (math.hypot(pos.x() - self.center.x(),
+                           pos.y() - self.center.y()) <= self.radius + tol)
+
+    def move_by(self, dx, dy):
+        self.center += QPointF(dx, dy)
+
+
+class HighlightShape(Shape):
+    """荧光笔高亮：半透明色块。"""
+
+    def __init__(self, color, width, rect: QRectF):
+        super().__init__(color, width)
+        self.rect = QRectF(rect).normalized()
+
+    def draw(self, painter, canvas):
+        c = QColor(self.color)
+        c.setAlpha(110)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(c)
+        painter.drawRect(self.rect)
+
+    def bounding_rect(self):
+        return self.rect
+
+    def move_by(self, dx, dy):
+        self.rect.translate(dx, dy)
+
+
+class MosaicShape(Shape):
+    """马赛克：绘制时将底图对应区域像素化。"""
+
+    PIXEL = 12
+
+    def __init__(self, color, width, rect: QRectF):
+        super().__init__(color, width)
+        self.rect = QRectF(rect).normalized()
+
+    def draw(self, painter, canvas):
+        src = canvas.base_pixmap
+        r = self.rect.toAlignedRect().intersected(src.rect())
+        if r.isEmpty():
+            return
+        region = src.copy(r)
+        region.setDevicePixelRatio(1.0)     # 避免源 dpr 影响贴图尺寸
+        w = max(1, r.width() // self.PIXEL)
+        h = max(1, r.height() // self.PIXEL)
+        small = region.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+        blocky = small.scaled(r.size(), Qt.IgnoreAspectRatio, Qt.FastTransformation)
+        blocky.setDevicePixelRatio(1.0)
+        # 用显式目标/源矩形，坐标系与图形一致（图像物理像素）
+        painter.drawPixmap(QRectF(r), blocky, QRectF(blocky.rect()))
+
+    def bounding_rect(self):
+        return self.rect
+
+    def move_by(self, dx, dy):
+        self.rect.translate(dx, dy)
+
+
+class WatermarkShape(Shape):
+    """水印（文字/图片、九宫格或平铺、旋转、透明度）。
+
+    非破坏性：和水印相关的参数都在这里，可以随时删除/撤销，不影响底图。
+    """
+
+    def __init__(self, settings: dict, image_size, offset=None):
+        super().__init__(QColor(settings.get("color", "#ffffff")),
+                         int(settings.get("font_size", 28)))
+        self.settings = dict(settings)
+        self.image_size = QSize(int(image_size.width()),
+                                int(image_size.height()))
+        self.offset = QPointF(offset) if offset else QPointF(0, 0)
+        self._bounds = None
+
+    def _size(self):
+
+        return watermark_size(self.settings, self.image_size)
+
+    def draw(self, painter, canvas):
+
+        draw_watermark(painter, self.settings, self.image_size, self.offset)
+
+    def bounding_rect(self):
+
+        size = self._size()
+        pts = placements(self.settings, self.image_size, size)
+        if not pts:
+            return QRectF()
+        if self.settings.get("position") == 9:      # 平铺：整幅都算
+            return QRectF(0, 0, self.image_size.width(), self.image_size.height())
+        pt = pts[0] + self.offset
+        # 旋转后用一个足够大的外接矩形，保证点选/移动手感
+        r = max(size.width(), size.height())
+        return QRectF(pt.x(), pt.y(), size.width(), size.height()).adjusted(
+            -(r - size.width()) / 2, -(r - size.height()) / 2,
+            (r - size.width()) / 2, (r - size.height()) / 2)
+
+    def move_by(self, dx, dy):
+        self.offset += QPointF(dx, dy)
+        self._bounds = None
+
+    def apply_rect(self, rect: QRectF):
+        """缩放水印：按高度比例调整字号或图片大小，并跟到新位置。"""
+        old = self.bounding_rect()
+        if old.height() < 2 or old.width() < 2:
+            return
+        ratio = max(0.1, min(8.0, rect.height() / old.height()))
+        if self.settings.get("kind") == "image":
+            self.settings["image_scale"] = max(
+                0.02, min(1.0, float(self.settings.get("image_scale", 0.2)) * ratio))
+        else:
+            self.settings["font_size"] = int(min(
+                400, max(8, round(int(self.settings.get("font_size", 28)) * ratio))))
+        self._bounds = None
+        new = self.bounding_rect()
+        self.offset += QPointF(rect.left() - new.left(), rect.top() - new.top())
+
+
+def clone_shapes(shapes):
+    return copy.deepcopy(shapes)
+
+
+# ========================================================================
+# 来自 style.py
+# ========================================================================
+# -*- coding: utf-8 -*-
+"""现代化深色主题：全局 QSS + 自绘矢量工具图标。"""
+from PySide6.QtCore import QPointF, Qt
+from PySide6.QtGui import (QColor, QFont, QIcon, QPainter, QPainterPath,
+                           QPalette, QPen, QPixmap)
+
+ACCENT = "#4c9aff"
+ACCENT_HOVER = "#66adff"
+ACCENT_ACTIVE = "#2f7fe0"
+ACCENT_SOFT = "rgba(76, 154, 255, 0.16)"
+DANGER = "#ff5c5c"
+
+BG = "#17181c"            # 窗口底色（接近黑）
+SURFACE = "#1f2126"       # 面板/工具栏
+SURFACE_2 = "#26292f"     # 浮起的控件
+BORDER = "#2c2f36"        # 细分隔线
+BORDER_STRONG = "#3a3e47" # 需要强调的分隔
+TEXT = "#e6e8ec"
+TEXT_DIM = "#a2a8b2"
+
+RADIUS = 8
+RADIUS_LG = 10
+
+import os as _os
+from pathlib import Path as _Path
+
+from PySide6.QtWidgets import (QSpinBox as _QSpinBox, QStyle,
+                               QStyleOptionSpinBox)
+
+
+class SpinBox(_QSpinBox):
+    """深色主题的 SpinBox：自己画上/下箭头。
+
+    Qt 的 QSS 在自定义 ::up-button 后就不再画箭头（实测无论调色板还是
+    image: 都不可靠），所以这里在 paintEvent 里直接画两个小三角，
+    任何主题下都保证可见。
+    """
+
+    def paintEvent(self, e):
+        super().paintEvent(e)
+        opt = QStyleOptionSpinBox()
+        self.initStyleOption(opt)
+        style = self.style()
+        color = self.palette().color(QPalette.ButtonText)
+        if not self.isEnabled():
+            color = self.palette().color(QPalette.Disabled, QPalette.ButtonText)
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setPen(Qt.NoPen)
+        p.setBrush(color)
+        for sc, up in ((QStyle.SC_SpinBoxUp, True), (QStyle.SC_SpinBoxDown, False)):
+            rect = style.subControlRect(QStyle.CC_SpinBox, opt, sc, self)
+            if rect.isNull():
+                continue
+            cx, cy = rect.center().x(), rect.center().y()
+            s = max(2.5, min(rect.width(), rect.height()) * 0.30)
+            pts = [(cx, cy - s), (cx + s, cy + s), (cx - s, cy + s)] if up else \
+                  [(cx, cy + s), (cx + s, cy - s), (cx - s, cy - s)]
+            path = QPainterPath(QPointF(*pts[0]))
+            for x, y in pts[1:]:
+                path.lineTo(x, y)
+            path.closeSubpath()
+            p.drawPath(path)
+        p.end()
+
+
+def apply_theme(app):
+    """先铺一套深色 QPalette（Fusion 的很多细节——下拉箭头、复选框勾、
+    禁用文字、数字框箭头——都靠调色板画），再叠加 QSS 精修。"""
+    app.setStyle("Fusion")
+    pal = QPalette()
+    base = QColor(BG)
+    panel = QColor(SURFACE)
+    text = QColor(TEXT)
+    dim = QColor(TEXT_DIM)
+    accent = QColor(ACCENT)
+    pal.setColor(QPalette.Window, panel)
+    pal.setColor(QPalette.WindowText, text)
+    pal.setColor(QPalette.Base, base)
+    pal.setColor(QPalette.AlternateBase, panel)
+    pal.setColor(QPalette.ToolTipBase, panel)
+    pal.setColor(QPalette.ToolTipText, text)
+    pal.setColor(QPalette.Text, text)
+    pal.setColor(QPalette.Button, panel)
+    pal.setColor(QPalette.ButtonText, text)
+    pal.setColor(QPalette.BrightText, QColor("#ff5555"))
+    pal.setColor(QPalette.Highlight, accent)
+    pal.setColor(QPalette.HighlightedText, QColor("#ffffff"))
+    pal.setColor(QPalette.Link, accent)
+    pal.setColor(QPalette.LinkVisited, QColor("#8e24aa"))
+    pal.setColor(QPalette.PlaceholderText, QColor("#6b7079"))
+    # 禁用态
+    disabled = QColor("#5a5e66")
+    pal.setColor(QPalette.Disabled, QPalette.Text, disabled)
+    pal.setColor(QPalette.Disabled, QPalette.ButtonText, disabled)
+    pal.setColor(QPalette.Disabled, QPalette.WindowText, disabled)
+    pal.setColor(QPalette.Disabled, QPalette.Highlight, QColor("#2a2d33"))
+    pal.setColor(QPalette.Disabled, QPalette.HighlightedText, QColor("#8a8f98"))
+    app.setPalette(pal)
+    app.setStyleSheet(APP_QSS)
+
+APP_QSS = f"""
+/* ============ PyShot 设计系统 ============ */
+* {{ font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif; font-size: 13px; }}
+QMainWindow, QDialog {{ background: {BG}; color: {TEXT}; }}
+
+/* ---------- 顶栏（流式布局，窗口变窄自动换行） ---------- */
+QWidget#topbar {{
+    background: {SURFACE};
+    border: none;
+    border-bottom: 1px solid {BORDER};
+}}
+QWidget#topbar QLabel {{ color: {TEXT_DIM}; padding: 0 2px; }}
+QWidget#topbar QToolButton#topbtn {{
+    background: transparent; border: none; border-radius: {RADIUS}px;
+    padding: 6px 12px; color: {TEXT};
+}}
+QWidget#topbar QToolButton#topbtn:hover {{ background: {SURFACE_2}; }}
+QWidget#topbar QToolButton#topbtn:pressed {{ background: {BORDER_STRONG}; }}
+QWidget#topbar QToolButton#topbtn:disabled {{ color: #596069; }}
+QPushButton#primarybtn {{
+    background: {ACCENT}; color: #ffffff; font-weight: 600;
+    border: none; border-radius: {RADIUS}px; padding: 6px 14px;
+}}
+QPushButton#primarybtn:hover {{ background: {ACCENT_HOVER}; }}
+QPushButton#primarybtn:pressed {{ background: {ACCENT_ACTIVE}; }}
+
+/* ---------- 左侧工具轨道（工具分组，细线分隔） ---------- */
+QFrame#sidebar {{
+    background: {SURFACE};
+    border: none;
+    border-right: 1px solid {BORDER};
+}}
+QToolButton#toolbtn {{
+    background: transparent; border: none; border-radius: {RADIUS}px;
+    padding: 8px;
+}}
+QToolButton#toolbtn:hover {{ background: {SURFACE_2}; }}
+QToolButton#toolbtn:checked {{
+    background: {ACCENT_SOFT};
+    border: none;
+    border-left: 3px solid {ACCENT};
+    border-radius: 4px {RADIUS}px {RADIUS}px 4px;
+}}
+QFrame#railsep {{ background: {BORDER}; max-height: 1px; margin: 4px 10px; border: none; }}
+
+QFrame#topsep {{ background: {BORDER_STRONG}; max-width: 1px; margin: 4px 4px; border: none; }}
+
+/* ---------- 圆形色板 ---------- */
+QPushButton#swatch {{ border-radius: 11px; border: 2px solid rgba(0,0,0,0); }}
+QPushButton#swatch:hover {{ border: 2px solid {TEXT_DIM}; }}
+QPushButton#swatch[selected="true"] {{ border: 2px solid #ffffff; }}
+QPushButton#swatchMore {{
+    background: {SURFACE_2}; color: {TEXT}; border-radius: 11px; border: none;
+}}
+QPushButton#swatchMore:hover {{ background: {BORDER_STRONG}; }}
+
+/* ---------- 数字输入框 ---------- */
+QSpinBox {{
+    background: {SURFACE_2}; color: {TEXT};
+    border: 1px solid {BORDER}; border-radius: {RADIUS - 2}px;
+    padding: 4px 6px;
+}}
+QSpinBox:focus {{ border: 1px solid {ACCENT}; }}
+QSpinBox::up-button, QSpinBox::down-button {{
+    width: 16px; background: transparent; border: none;
+}}
+QSpinBox::up-button:hover, QSpinBox::down-button:hover {{ background: {BORDER_STRONG}; }}
+
+/* ---------- 画布滚动区 ---------- */
+QScrollArea {{ background: {BG}; border: none; }}
+QScrollBar:vertical {{ background: transparent; width: 10px; margin: 2px; }}
+QScrollBar::handle:vertical {{
+    background: {BORDER_STRONG}; border-radius: 5px; min-height: 30px;
+}}
+QScrollBar::handle:vertical:hover {{ background: #4a5059; }}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
+QScrollBar:horizontal {{ background: transparent; height: 10px; margin: 2px; }}
+QScrollBar::handle:horizontal {{
+    background: {BORDER_STRONG}; border-radius: 5px; min-width: 30px;
+}}
+QScrollBar::handle:horizontal:hover {{ background: #4a5059; }}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0; }}
+
+/* ---------- 画布标签页（下划线指示，现代风） ---------- */
+QTabWidget#canvasTabs::pane {{ border: none; background: {BG}; }}
+QTabBar {{ qproperty-drawBase: 0; }}
+QTabWidget#canvasTabs > QTabBar {{ background: {SURFACE}; }}
+QTabBar::tab {{
+    background: transparent; color: {TEXT_DIM};
+    padding: 8px 6px 9px 14px; margin: 0 2px;
+    border: none; border-bottom: 2px solid transparent;
+}}
+QTabBar::tab:hover {{ color: {TEXT}; }}
+QTabBar::tab:selected {{ color: {TEXT}; border-bottom: 2px solid {ACCENT}; font-weight: 600; }}
+QToolButton#tabclose {{
+    background: transparent; border: none; border-radius: 4px;
+    color: {TEXT_DIM}; font-size: 11px; padding: 1px 4px;
+}}
+QToolButton#tabclose:hover {{ background: {SURFACE_2}; color: #ffffff; }}
+QLabel#sizelabel {{ color: {TEXT_DIM}; padding-right: 6px; }}
+
+/* ---------- 状态栏 ---------- */
+QStatusBar {{
+    background: {SURFACE}; color: {TEXT_DIM};
+    border-top: 1px solid {BORDER}; min-height: 30px;
+}}
+QStatusBar::item {{ border: none; }}
+QLabel#toolname {{ color: {TEXT_DIM}; padding-left: 6px; }}
+
+/* ---------- 状态栏右侧缩放胶囊 ---------- */
+QWidget#zoomgroup {{
+    background: {SURFACE_2}; border: 1px solid {BORDER}; border-radius: {RADIUS}px;
+}}
+QPushButton#zoombtn {{
+    background: transparent; border: none; border-radius: 5px;
+    color: {TEXT}; font-size: 14px; font-weight: 600; padding: 0;
+}}
+QPushButton#zoombtn:hover {{ background: {BORDER_STRONG}; }}
+QPushButton#zoombtn:pressed {{ background: {ACCENT_SOFT}; }}
+QLabel#zoomlabel {{ color: #ffffff; font-weight: 700; font-size: 13px; padding: 0 2px; }}
+QFrame#zoomsep {{ color: {BORDER_STRONG}; background: {BORDER_STRONG};
+    max-width: 1px; margin: 5px 4px; border: none; }}
+
+/* ---------- 菜单 / 提示 / 通用控件 ---------- */
+QMenu {{
+    background: {SURFACE_2}; color: {TEXT};
+    border: 1px solid {BORDER_STRONG}; border-radius: {RADIUS_LG}px; padding: 5px;
+}}
+QMenu::item {{ padding: 7px 28px 7px 14px; border-radius: 6px; }}
+QMenu::item:selected {{ background: {ACCENT_SOFT}; color: {TEXT}; }}
+QMenu::separator {{ height: 1px; background: {BORDER}; margin: 5px 10px; }}
+QToolTip {{
+    background: {SURFACE_2}; color: {TEXT};
+    border: 1px solid {BORDER_STRONG}; border-radius: 6px; padding: 5px 8px;
+}}
+QLineEdit, QPlainTextEdit, QComboBox, QSlider::groove:horizontal {{
+    background: {SURFACE_2}; color: {TEXT};
+    border: 1px solid {BORDER}; border-radius: {RADIUS - 2}px;
+}}
+QLineEdit:focus, QPlainTextEdit:focus {{ border: 1px solid {ACCENT}; }}
+QFileDialog QListView, QFileDialog QTreeView {{
+    background: {BG}; color: {TEXT}; border: 1px solid {BORDER};
+}}
+QPushButton {{
+    background: {SURFACE_2}; color: {TEXT};
+    border: none; border-radius: {RADIUS}px; padding: 7px 16px;
+}}
+QPushButton:hover {{ background: {BORDER_STRONG}; }}
+QPushButton:default {{ background: {ACCENT}; color: white; }}
+QColorDialog {{ background: {BG}; }}
+QSlider::groove:horizontal {{ height: 4px; background: {BORDER}; border-radius: 2px; }}
+QSlider::handle:horizontal {{
+    background: {ACCENT}; width: 14px; height: 14px; margin: -5px 0;
+    border-radius: 7px;
+}}
+QSlider::handle:horizontal:hover {{ background: {ACCENT_HOVER}; }}
+"""
+
+
+# ---------------------------------------------------------------- 工具图标
+
+def _icon_pixmap(draw_fn, color: QColor, size=24, dpr=2) -> QPixmap:
+    pix = QPixmap(size * dpr, size * dpr)
+    pix.setDevicePixelRatio(dpr)
+    pix.fill(Qt.transparent)
+    p = QPainter(pix)
+    p.setRenderHint(QPainter.Antialiasing)
+    pen = QPen(color, 2.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+    p.setPen(pen)
+    p.setBrush(Qt.NoBrush)
+    draw_fn(p, color)
+    p.end()
+    return pix
+
+
+def _draw_select(p, c):
+    path = QPainterPath(QPointF(7, 3.5))
+    for pt in [(7, 18.5), (10.8, 15), (13, 20.5), (15.6, 19.2), (13.4, 13.8), (18.5, 13.8)]:
+        path.lineTo(*pt)
+    path.closeSubpath()
+    p.setBrush(c)
+    p.drawPath(path)
+
+
+def _draw_rect(p, c):
+    p.drawRoundedRect(4.5, 6.5, 15, 11, 1.5, 1.5)
+
+
+def _draw_ellipse(p, c):
+    p.drawEllipse(4.5, 6.5, 15, 11)
+
+
+def _draw_line(p, c):
+    p.drawLine(QPointF(5, 19), QPointF(19, 5))
+
+
+def _draw_arrow(p, c):
+    p.drawLine(QPointF(4.5, 19.5), QPointF(17, 7))
+    p.drawLine(QPointF(17, 7), QPointF(10.5, 7.8))
+    p.drawLine(QPointF(17, 7), QPointF(16.2, 13.5))
+
+
+def _draw_pen(p, c):
+    path = QPainterPath(QPointF(4, 19))
+    path.cubicTo(QPointF(8, 10), QPointF(10, 15), QPointF(13, 11))
+    path.cubicTo(QPointF(15, 8.5), QPointF(17, 8), QPointF(20, 5))
+    p.drawPath(path)
+
+
+def _draw_step(p, c):
+    p.drawEllipse(4, 4, 16, 16)
+    f = QFont("Segoe UI")
+    f.setPixelSize(12)
+    f.setBold(True)
+    p.setFont(f)
+    p.drawText(4, 4, 16, 16, Qt.AlignCenter, "1")
+
+
+def _draw_text(p, c):
+    f = QFont("Segoe UI")
+    f.setPixelSize(17)
+    f.setBold(True)
+    p.setFont(f)
+    p.drawText(4, 3, 16, 19, Qt.AlignCenter, "T")
+
+
+def _draw_highlight(p, c):
+    fill = QColor(c)
+    fill.setAlpha(90)
+    p.setPen(Qt.NoPen)
+    p.setBrush(fill)
+    p.drawRoundedRect(4, 9, 16, 7, 2, 2)
+    p.setPen(QPen(c, 2.0, Qt.SolidLine, Qt.RoundCap))
+    p.drawLine(QPointF(4, 16.5), QPointF(20, 16.5))
+
+
+def _draw_mosaic(p, c):
+    s = 4.6
+    for i in range(3):
+        for j in range(3):
+            if (i + j) % 2 == 0:
+                p.fillRect(4.2 + j * (s + 0.8), 4.2 + i * (s + 0.8), s, s, c)
+
+
+def _draw_pick(p, c):
+    # 滴管：斜杆 + 顶部菱形
+    p.drawLine(QPointF(5.5, 18.5), QPointF(13.5, 10.5))
+    path = QPainterPath(QPointF(15.5, 4))
+    for pt in [(20, 8.5), (15.5, 13), (11, 8.5)]:
+        path.lineTo(*pt)
+    path.closeSubpath()
+    p.drawPath(path)
+    p.setBrush(c)
+    p.drawEllipse(QPointF(5, 20), 1.8, 1.8)
+
+
+def _draw_crop(p, c):
+    for x1, y1, x2, y2, x3, y3 in [
+            (5, 10, 5, 5, 10, 5), (14, 5, 19, 5, 19, 10),
+            (19, 14, 19, 19, 14, 19), (10, 19, 5, 19, 5, 14)]:
+        path = QPainterPath(QPointF(x1, y1))
+        path.lineTo(x2, y2)
+        path.lineTo(x3, y3)
+        p.drawPath(path)
+
+
+def _draw_camera(p, c):
+    """相机图标（顶栏"截图"按钮用）。"""
+    p.drawRoundedRect(3.5, 7.5, 17, 12, 2, 2)
+    p.drawLine(QPointF(9, 7.5), QPointF(10.5, 5))
+    p.drawLine(QPointF(10.5, 5), QPointF(13.5, 5))
+    p.drawLine(QPointF(13.5, 5), QPointF(15, 7.5))
+    p.drawEllipse(QPointF(12, 13.5), 3.4, 3.4)
+
+
+def _draw_undo(p, c):
+    """撤销：左向弧线箭头。"""
+    path = QPainterPath(QPointF(5, 9))
+    path.cubicTo(QPointF(11, 4), QPointF(19, 6), QPointF(19, 13))
+    path.cubicTo(QPointF(19, 18), QPointF(14, 20), QPointF(9, 19))
+    p.drawPath(path)
+    p.drawLine(QPointF(5, 9), QPointF(5, 4))
+    p.drawLine(QPointF(5, 9), QPointF(10, 9))
+
+
+def _draw_redo(p, c):
+    """重做：右向弧线箭头（撤销的镜像）。"""
+    path = QPainterPath(QPointF(19, 9))
+    path.cubicTo(QPointF(13, 4), QPointF(5, 6), QPointF(5, 13))
+    path.cubicTo(QPointF(5, 18), QPointF(10, 20), QPointF(15, 19))
+    p.drawPath(path)
+    p.drawLine(QPointF(19, 9), QPointF(19, 4))
+    p.drawLine(QPointF(19, 9), QPointF(14, 9))
+
+
+_ICON_DRAWERS = {
+    "select": _draw_select, "rect": _draw_rect, "ellipse": _draw_ellipse,
+    "line": _draw_line, "arrow": _draw_arrow, "pen": _draw_pen,
+    "step": _draw_step, "text": _draw_text, "highlight": _draw_highlight,
+    "mosaic": _draw_mosaic, "pick": _draw_pick, "crop": _draw_crop,
+    "camera": _draw_camera, "undo": _draw_undo, "redo": _draw_redo,
+}
+
+
+def make_icon(name: str, off_color: str = "#b8c0cc",
+              on_color: str = "#ffffff") -> QIcon:
+    """生成双色态图标：普通=浅灰，选中/悬停=白色。"""
+    icon = QIcon()
+    fn = _ICON_DRAWERS[name]
+    icon.addPixmap(_icon_pixmap(fn, QColor(off_color)), QIcon.Normal, QIcon.Off)
+    icon.addPixmap(_icon_pixmap(fn, QColor(on_color)), QIcon.Normal, QIcon.On)
+    icon.addPixmap(_icon_pixmap(fn, QColor(on_color)), QIcon.Active, QIcon.Off)
+    return icon
+
+
+def make_tool_icon(tool_id: str) -> QIcon:
+    """工具图标：未选中=浅灰，选中/悬停=强调色（配合柔和的选中底色）。"""
+    return make_icon(tool_id, off_color="#9aa3af", on_color=ACCENT)
+
+
+# ========================================================================
+# 来自 capture_utils.py
+# ========================================================================
+# -*- coding: utf-8 -*-
+"""抓屏工具：内容空白检测 + PrintWindow 回退抓取。
+
+为什么需要
+==========
+远程桌面 / 虚拟化应用（Citrix Workspace、RDP 里的应用等）常用硬件加速或
+内容保护渲染，常规的屏幕 BitBlt（Qt 的 QScreen.grabWindow）可能拿到**黑屏或
+纯色**。这里提供：
+
+- is_blank()：判断抓到的画面是不是"没内容"（纯黑/纯色），用于给出明确提示
+- grab_window_printwindow()：改用 Windows 的 PrintWindow(PW_RENDERFULLCONTENT)
+  把指定窗口自己渲染一遍，能救回一部分 BitBlt 拿不到内容的窗口
+"""
+import ctypes
+import ctypes.wintypes as wt
+
+from PySide6.QtGui import QImage, QPixmap
+
+user32 = ctypes.windll.user32
+gdi32 = ctypes.windll.gdi32
+
+PW_RENDERFULLCONTENT = 0x00000002
+DIB_RGB_COLORS = 0
+
+
+class BITMAPINFOHEADER(ctypes.Structure):
+    _fields_ = [
+        ("biSize", wt.DWORD), ("biWidth", ctypes.c_long),
+        ("biHeight", ctypes.c_long), ("biPlanes", wt.WORD),
+        ("biBitCount", wt.WORD), ("biCompression", wt.DWORD),
+        ("biSizeImage", wt.DWORD), ("biXPelsPerMeter", ctypes.c_long),
+        ("biYPelsPerMeter", ctypes.c_long), ("biClrUsed", wt.DWORD),
+        ("biClrImportant", wt.DWORD),
+    ]
+
+
+def _gray_stats(pix: QPixmap):
+    """返回 (均值, 标准差)；无法分析时返回 None。纯 Python，不依赖 numpy。"""
+    if pix is None or pix.isNull():
+        return None
+    img = pix.toImage().convertToFormat(QImage.Format_RGB888)
+    w, h, bpl = img.width(), img.height(), img.bytesPerLine()
+    if w < 4 or h < 4:
+        return None
+    data = bytes(img.constBits())
+    row_step = max(1, h // 60)
+    col_step = max(1, w // 60)
+    total = total_sq = 0.0
+    n = 0
+    for y in range(0, h, row_step):
+        row = data[y * bpl: y * bpl + w * 3]
+        for x in range(0, w * 3, col_step * 3):
+            v = (row[x] + row[x + 1] + row[x + 2]) / 3.0
+            total += v
+            total_sq += v * v
+            n += 1
+    if n == 0:
+        return None
+    mean = total / n
+    var = max(0.0, total_sq / n - mean * mean)
+    return mean, var ** 0.5
+
+
+def pixmap_is_blank(pix: QPixmap, min_std: float = 2.0,
+                    black_level: float = 12.0) -> bool:
+    """判断画面是否"没内容"：整幅近乎纯色，或几乎全黑。"""
+    stats = _gray_stats(pix)
+    if stats is None:
+        return True
+    mean, std = stats
+    return std < min_std or mean < black_level
+
+
+def looks_like_missing_content(pix: QPixmap, black_level: float = 18.0,
+                               uniform_std: float = 0.6) -> bool:
+    """更像"抓不到内容"而非"用户就选了张素色图"：
+
+    - 几乎全黑（远程桌面/受保护内容的典型表现），或
+    - 完全没有变化且不是纯白（纯白页面可能是真实内容，不误报）
+    """
+    stats = _gray_stats(pix)
+    if stats is None:
+        return True
+    mean, std = stats
+    return mean < black_level or (std < uniform_std and mean < 250.0)
+
+
+def window_at(x: int, y: int) -> int:
+    """返回屏幕坐标（物理像素）处的窗口句柄。"""
+    pt = wt.POINT(int(x), int(y))
+    return int(user32.WindowFromPoint(pt))
+
+
+def _hwnd_bitmap(hwnd: int):
+    """用 PrintWindow 把窗口画进位图，返回 (hbitmap, memdc, hdc, rect)。"""
+    rect = wt.RECT()
+    if not user32.GetWindowRect(wt.HWND(hwnd), ctypes.byref(rect)):
+        return None
+    w, h = rect.right - rect.left, rect.bottom - rect.top
+    if w <= 0 or h <= 0:
+        return None
+    hdc = user32.GetWindowDC(wt.HWND(hwnd))
+    if not hdc:
+        return None
+    memdc = gdi32.CreateCompatibleDC(hdc)
+    bmp = gdi32.CreateCompatibleBitmap(hdc, w, h)
+    gdi32.SelectObject(memdc, bmp)
+    ok = user32.PrintWindow(wt.HWND(hwnd), memdc, PW_RENDERFULLCONTENT)
+    if not ok:                      # 老系统不支持 PW_RENDERFULLCONTENT 时退化为 0
+        user32.PrintWindow(wt.HWND(hwnd), memdc, 0)
+    return bmp, memdc, hdc, rect
+
+
+def _bitmap_to_image(bmp, memdc, w: int, h: int) -> QImage | None:
+    info = BITMAPINFOHEADER()
+    info.biSize = ctypes.sizeof(BITMAPINFOHEADER)
+    info.biWidth = w
+    info.biHeight = -h              # 负数 = 自上而下
+    info.biPlanes = 1
+    info.biBitCount = 32
+    info.biCompression = 0
+    buf = ctypes.create_string_buffer(w * h * 4)
+    got = gdi32.GetDIBits(memdc, bmp, 0, h, buf, ctypes.byref(info), DIB_RGB_COLORS)
+    if not got:
+        return None
+    img = QImage(bytes(buf), w, h, w * 4, QImage.Format_RGB32).copy()
+    return img
+
+
+def grab_window_printwindow(hwnd: int) -> QPixmap | None:
+    """把窗口自身渲染成 pixmap（拿不到则返回 None）。"""
+    if not hwnd or hwnd == 0:
+        return None
+    res = _hwnd_bitmap(hwnd)
+    if res is None:
+        return None
+    bmp, memdc, hdc, rect = res
+    try:
+        img = _bitmap_to_image(bmp, memdc, rect.right - rect.left,
+                               rect.bottom - rect.top)
+    finally:
+        gdi32.DeleteObject(bmp)
+        gdi32.DeleteDC(memdc)
+        user32.ReleaseDC(wt.HWND(hwnd), hdc)
+    if img is None or img.isNull():
+        return None
+    return QPixmap.fromImage(img)
+
+
+def grab_region_printwindow(region_physical, dpr: float = 1.0) -> QPixmap | None:
+    """按屏幕物理像素矩形，用 PrintWindow 抓该区域（常用于 BitBlt 拿不到内容时）。
+
+    region_physical: QRect，屏幕物理像素坐标。
+    """
+    from PySide6.QtCore import QRect
+    hwnd = window_at(region_physical.center().x(), region_physical.center().y())
+    pix = grab_window_printwindow(hwnd)
+    if pix is None:
+        return None
+    rect = wt.RECT()
+    if not user32.GetWindowRect(wt.HWND(hwnd), ctypes.byref(rect)):
+        return None
+    crop = QRect(region_physical.x() - rect.left, region_physical.y() - rect.top,
+                 region_physical.width(), region_physical.height())
+    crop = crop.intersected(QRect(0, 0, pix.width(), pix.height()))
+    if crop.width() < 4 or crop.height() < 4:
+        return None
+    out = pix.copy(crop)
+    out.setDevicePixelRatio(dpr)
+    return out
+
+
+# ---------------------------------------------------------------- 原生滚动条
+
+OBJID_VSCROLL = -5
+OBJID_HSCROLL = -6
+STATE_SYSTEM_INVISIBLE = 0x00008000
+STATE_SYSTEM_UNAVAILABLE = 0x00000001
+
+
+class SCROLLBARINFO(ctypes.Structure):
+    _fields_ = [
+        ("cbSize", wt.DWORD),
+        ("rcScrollBar", wt.RECT),
+        ("dxyLineButton", ctypes.c_int),
+        ("xyThumbTop", ctypes.c_int),
+        ("xyThumbBottom", ctypes.c_int),
+        ("reserved", ctypes.c_int),
+        ("rgstate", wt.DWORD * 6),
+    ]
+
+
+def thumb_rect_from_info(info) -> tuple:
+    """从 SCROLLBARINFO 算出滑块矩形（屏幕物理像素）。返回 (QRect, 是否可见)。"""
+    from PySide6.QtCore import QRect
+    sb = info.rcScrollBar
+    visible = not (info.rgstate[0] & (STATE_SYSTEM_INVISIBLE
+                                      | STATE_SYSTEM_UNAVAILABLE))
+    top = sb.top + info.xyThumbTop
+    height = max(1, info.xyThumbBottom - info.xyThumbTop)
+    return QRect(sb.left, top, max(1, sb.right - sb.left), height), visible
+
+
+def scrollbar_thumb_at(x: int, y: int, vertical: bool = True):
+    """尽力找到 (x, y) 所在窗口的原生滚动条滑块矩形（屏幕物理像素）。
+
+    只对使用系统标准滚动条的窗口有效；自绘滚动条（浏览器/Qt/虚拟桌面里的画面）
+    会返回 None —— 那种情况只能相信用户点击的位置。
+    """
+    hwnd = window_at(x, y)
+    if not hwnd:
+        return None
+    info = SCROLLBARINFO()
+    info.cbSize = ctypes.sizeof(SCROLLBARINFO)
+    obj = OBJID_VSCROLL if vertical else OBJID_HSCROLL
+    if not user32.GetScrollBarInfo(wt.HWND(hwnd), obj, ctypes.byref(info)):
+        return None
+    rect, visible = thumb_rect_from_info(info)
+    if not visible or rect.isNull() or rect.width() <= 0 or rect.height() <= 0:
+        return None
+    return rect
+
+
+# ---------------------------------------------------------------- 滚动位置 API
+
+SB_VERT, SB_HORZ = 1, 0
+SIF_RANGE, SIF_PAGE, SIF_POS, SIF_TRACKPOS, SIF_ALL = 0x1, 0x2, 0x4, 0x8, 0xF
+
+
+class SCROLLINFO(ctypes.Structure):
+    _fields_ = [
+        ("cbSize", wt.UINT), ("fMask", wt.UINT),
+        ("nMin", ctypes.c_int), ("nMax", ctypes.c_int),
+        ("nPage", wt.UINT), ("nPos", ctypes.c_int),
+        ("nTrackPos", ctypes.c_int),
+    ]
+
+
+def _get_scroll_info(hwnd: int) -> dict | None:
+    """读取窗口的垂直滚动条信息（GetScrollInfo）。无滚动条返回 None。"""
+    info = SCROLLINFO()
+    info.cbSize = ctypes.sizeof(SCROLLINFO)
+    info.fMask = SIF_RANGE | SIF_PAGE | SIF_POS
+    if not user32.GetScrollInfo(wt.HWND(hwnd), SB_VERT, ctypes.byref(info)):
+        return None
+    if info.nMax <= info.nMin or info.nPage <= 0:
+        return None
+    return {"hwnd": int(hwnd), "min": int(info.nMin), "max": int(info.nMax),
+            "page": int(info.nPage), "pos": int(info.nPos)}
+
+
+def get_scroll_info_at(x: int, y: int, max_ancestors: int = 6) -> dict | None:
+    """在 (x, y) 物理像素处寻找可程序化滚动的窗口（向上找几层父窗口）。
+
+    返回 {hwnd, min, max, page, pos} 或 None。
+    """
+    hwnd = window_at(x, y)
+    tried = set()
+    while hwnd and hwnd not in tried and max_ancestors > 0:
+        tried.add(hwnd)
+        info = _get_scroll_info(hwnd)
+        if info is not None:
+            return info
+        parent = user32.GetParent(wt.HWND(hwnd))
+        hwnd = int(parent) if parent else 0
+        max_ancestors -= 1
+    return None
+
+
+def set_scroll_pos(hwnd: int, pos: int) -> int:
+    """用 SetScrollInfo 直接设置滚动位置（完全不用动鼠标）。返回设置后的位置。"""
+    info = SCROLLINFO()
+    info.cbSize = ctypes.sizeof(SCROLLINFO)
+    info.fMask = SIF_POS
+    info.nPos = int(pos)
+    return int(user32.SetScrollInfo(wt.HWND(hwnd), SB_VERT,
+                                    ctypes.byref(info), True))
+
+
+# ========================================================================
+# 来自 pinboard.py
+# ========================================================================
+# -*- coding: utf-8 -*-
+"""贴图钉板（Snipaste 风格）：把图片钉在屏幕最上层。
+
+操作
+====
+- 左键拖拽：移动
+- 滚轮：调整透明度
+- Ctrl + 滚轮：缩放
+- 双击 / Esc：关闭
+- 右键：菜单（复制图片 / 重置 / 关闭）
+"""
+from PySide6.QtCore import QPoint, Qt, Signal
+from PySide6.QtGui import QAction, QColor, QPainter, QPen, QPixmap
+from PySide6.QtWidgets import QApplication, QMenu, QWidget
+
+
+class PinWindow(QWidget):
+    closed = Signal(object)  # 参数为自身，便于宿主从列表移除
+
+    def __init__(self, pixmap: QPixmap, pos: QPoint | None = None):
+        super().__init__(None, Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+                         | Qt.Tool)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self._pix = QPixmap(pixmap)
+        # 保留 dpr：按逻辑尺寸布局，绘制时铺满控件 → 100% 时 1:1 物理像素，不发虚
+        self._dpr = float(self._pix.devicePixelRatio() or 1.0)
+        self._scale = 1.0
+        self._drag_pos: QPoint | None = None
+        self.setWindowOpacity(1.0)
+        self._apply_size()
+        if pos is not None:
+            self.move(pos)
+        self.setCursor(Qt.SizeAllCursor)
+
+    # ---------- 外观 ----------
+    def _apply_size(self):
+        w = max(24, round(self._pix.width() / self._dpr * self._scale))
+        h = max(24, round(self._pix.height() / self._dpr * self._scale))
+        self.setFixedSize(w, h)
+        self.update()
+
+    def paintEvent(self, e):
+        p = QPainter(self)
+        # 缩小时平滑滤波，放大时保持像素锐利
+        p.setRenderHint(QPainter.SmoothPixmapTransform, self._scale < 1.0)
+        p.drawPixmap(self.rect(), self._pix)   # 目标矩形重载：按逻辑尺寸 1:1 铺满
+        p.setPen(QPen(QColor(30, 136, 229), 1))
+        p.setBrush(Qt.NoBrush)
+        p.drawRect(self.rect().adjusted(0, 0, -1, -1))
+
+    # ---------- 交互 ----------
+    def mousePressEvent(self, e):
+        if e.button() == Qt.LeftButton:
+            self._drag_pos = e.globalPosition().toPoint() - self.frameGeometry().topLeft()
+        elif e.button() == Qt.RightButton:
+            self._show_menu(e.globalPosition().toPoint())
+
+    def mouseMoveEvent(self, e):
+        if self._drag_pos is not None and e.buttons() & Qt.LeftButton:
+            self.move(e.globalPosition().toPoint() - self._drag_pos)
+
+    def mouseReleaseEvent(self, e):
+        self._drag_pos = None
+
+    def mouseDoubleClickEvent(self, e):
+        self.close()
+
+    def wheelEvent(self, e):
+        steps = e.angleDelta().y() / 120
+        if e.modifiers() & Qt.ControlModifier:
+            self._scale = min(4.0, max(0.1, self._scale * (1.1 ** steps)))
+            self._apply_size()
+        else:
+            self.setWindowOpacity(min(1.0, max(0.15, self.windowOpacity() + steps * 0.08)))
+
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_Escape:
+            self.close()
+
+    # ---------- 菜单 ----------
+    def _show_menu(self, global_pos: QPoint):
+        menu = QMenu(self)
+        act_copy = QAction("复制图片", self)
+        act_copy.triggered.connect(
+            lambda: QApplication.clipboard().setPixmap(self._pix))
+        menu.addAction(act_copy)
+        act_reset = QAction("重置大小 / 透明度", self)
+        act_reset.triggered.connect(self._reset)
+        menu.addAction(act_reset)
+        menu.addSeparator()
+        act_close = QAction("关闭 (Esc)", self)
+        act_close.triggered.connect(self.close)
+        menu.addAction(act_close)
+        menu.exec(global_pos)
+
+    def _reset(self):
+        self._scale = 1.0
+        self.setWindowOpacity(1.0)
+        self._apply_size()
+
+    def closeEvent(self, e):
+        self.closed.emit(self)
+        super().closeEvent(e)
+
+
+# ========================================================================
+# 来自 snipper.py
+# ========================================================================
+# -*- coding: utf-8 -*-
+"""全屏覆盖层：框选截图区域 / 屏幕取色，带放大镜、尺寸和色值提示。
+
+模式
+====
+- region：拖拽框选，松开后同时发出 captured(pixmap) 和 region_selected(rect)
+- color ：单击取色，发出 color_picked(QColor)
+
+用法::
+
+    snipper = SnipperOverlay()                # 或 SnipperOverlay("color")
+    snipper.captured.connect(on_pixmap)
+    snipper.cancelled.connect(on_cancel)
+    snipper.start()
+"""
+import ctypes
+
+from PySide6.QtCore import QPoint, QRect, QRectF, Qt, QTimer, Signal
+from PySide6.QtGui import (QColor, QCursor, QFont, QGuiApplication, QImage,
+                           QPainter, QPainterPath, QPen, QPixmap, QRegion)
+from PySide6.QtWidgets import QWidget
+
+MASK_COLOR = QColor(6, 10, 18, 150)   # 遮罩：偏深的蓝黑，任何背景都能看出"已进入截图状态"
+VK_LBUTTON = 0x01
+user32 = ctypes.windll.user32
+
+# 覆盖层窗口类型（测试可覆盖，用于对比不同标志对首屏速度的影响）
+OVERLAY_FLAGS = (Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+                 | Qt.Tool | Qt.BypassWindowManagerHint)
+
+MAG_ZOOM = 9                      # 放大倍数（整数，保证像素格对齐）
+MAG_CELL = 15                     # 放大镜覆盖的源像素数（奇数，有正中心像素）
+MAG_SIZE = MAG_CELL * MAG_ZOOM    # 放大镜边长 135（屏幕像素）
+
+
+def screens_and_geometry() -> tuple:
+    """返回 (所有屏幕, 虚拟桌面逻辑矩形)。"""
+    screens = QGuiApplication.screens()
+    geo = QRect()
+    for s in screens:
+        geo = geo.united(s.geometry()) if not geo.isNull() else s.geometry()
+    return screens, geo
+
+
+def region_to_screen_pixels(region: QRect, screen_geo: QRect,
+                            dpr: float) -> QRect:
+    """把逻辑屏幕坐标的区域，换算成某块屏幕上抓屏图里的物理像素矩形。
+
+    独立成纯函数便于测试（含负坐标的多屏布局、混合 DPI 都能算对）。
+    """
+    local = region.translated(-screen_geo.left(), -screen_geo.top())
+    return QRect(int(round(local.x() * dpr)), int(round(local.y() * dpr)),
+                 int(round(local.width() * dpr)),
+                 int(round(local.height() * dpr)))
+
+
+def grab_logical_region(region: QRect) -> QPixmap:
+    """按逻辑屏幕坐标抓一块区域：自动选中那块屏幕，并按它的 dpr 精确裁剪。
+
+    多屏 + 混合 DPI 下这是唯一正确的做法（不能用主屏 dpr 去处理所有屏）。
+    """
+    screen = QGuiApplication.screenAt(region.center())
+    if screen is None:                      # 区域中心不在任何屏上，退到主屏
+        screen = QGuiApplication.primaryScreen()
+    dpr = float(screen.devicePixelRatio() or 1.0)
+    shot = screen.grabWindow(0)
+    src = region_to_screen_pixels(region, screen.geometry(), dpr)
+    out = shot.copy(src.intersected(shot.rect()))
+    out.setDevicePixelRatio(dpr)
+    return out
+
+
+def grab_virtual_desktop() -> tuple[QPixmap, QRect]:
+    """抓取所有屏幕拼成一张图，返回 (pixmap, 虚拟桌面逻辑矩形)。
+
+    以参考 dpr（主屏）合成，每块屏按自己的 dpr 独立抓取后按逻辑位置摆放：
+    单 DPI 环境下是像素精确的；混合 DPI 下次屏内容会按参考比例重采样
+    （区域截图不受影响 —— 那条路径走 grab_logical_region，按屏精确裁剪）。
+    """
+    screens, geo = screens_and_geometry()
+    if not screens:
+        return QPixmap(), QRect()
+    ref = float(QGuiApplication.primaryScreen().devicePixelRatio() or 1.0)
+    big = QPixmap(int(geo.width() * ref), int(geo.height() * ref))
+    big.setDevicePixelRatio(ref)
+    big.fill(Qt.black)
+    p = QPainter(big)
+    for s in screens:
+        shot = s.grabWindow(0)
+        if shot.isNull():
+            continue
+        local = s.geometry().translated(-geo.left(), -geo.top())
+        target = QRectF(local.x() * ref, local.y() * ref,
+                        local.width() * ref, local.height() * ref)
+        p.drawPixmap(target, shot, QRectF(shot.rect()))
+    p.end()
+    return big, geo
+
+
+class SnipperOverlay(QWidget):
+    captured = Signal(QPixmap)
+    region_selected = Signal(QRect)   # 逻辑屏幕坐标，滚动截图用
+    point_selected = Signal(QPoint)   # 单击选一个点（如滚动条滑块）
+    color_picked = Signal(QColor)
+    cancelled = Signal()
+
+    def __init__(self, mode: str = "region", screen=None):
+        """mode: "region" 框选截图 | "color" 屏幕取色 | "scroll" 只选区 | "point" 选点
+
+        screen: 该覆盖层负责的显示器。**每个显示器一个覆盖层实例** ——
+        单个窗口横跨多显示器在 Windows 每显示器 DPI 下会被裁剪/缩放，直接不可用。
+        """
+        super().__init__(None, OVERLAY_FLAGS)
+        self.mode = mode
+        self.screen = screen or QGuiApplication.primaryScreen()
+        self.setAttribute(Qt.WA_TranslucentBackground, False)
+        self.setMouseTracking(True)
+        self.setCursor(Qt.CrossCursor)
+        self._bg: QPixmap | None = None
+        self._img: QImage | None = None   # 取色用的缓存
+        self._geo = QRect()
+        self._origin = QPoint()
+        self._current = QPoint()
+        self._selecting = False
+        self._active = False              # 是否处于截图会话中
+        self._warmed = False
+        # “选滚动条”模式：选区外遮罩、选区内鼠标穿透（能真的点到应用里的滚动条）
+        self._point_local = QRect()
+        self._point_pressed = False
+        self._point_timer = QTimer(self)
+        self._point_timer.setInterval(25)
+        self._point_timer.timeout.connect(self._poll_point_click)
+
+    def screen_geometry(self) -> QRect:
+        """本覆盖层覆盖的显示器逻辑矩形。"""
+        return self.screen.geometry()
+
+    # ---------- 预热 ----------
+    def warmup(self, hold_ms: int = 3000):
+        """启动时预热窗口，消除"首次截图遮罩迟迟不出现"。
+
+        实测（Windows）：进程内第一个置顶全屏窗口虽然很早 paintEvent 就画完了，
+        但系统要好几秒才真正把它合成上屏（4~5 秒）；而一旦上屏过，之后每次
+        show() 只要 ~0.3 秒。所以这里在启动时以**完全透明 + 鼠标穿透**的方式
+        先上屏一次，代价在启动阶段付掉，用户第一次截图就是快的。
+
+        透明（opacity=0）不会被合成进屏幕画面，因此也不会污染截图。
+        """
+        if self._warmed:
+            return
+        self._warmed = True
+        self.setGeometry(self.screen.geometry())
+        self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        self.setWindowOpacity(0.0)
+        self.show()
+        self.raise_()
+        QTimer.singleShot(hold_ms, self._end_warmup)
+
+    def _end_warmup(self):
+        if self._active:          # 用户已经自己开始截图了，别去隐藏
+            return
+        self.hide()
+        self.setWindowOpacity(1.0)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents, False)
+
+    # ---------- 生命周期 ----------
+    def start(self, mode: str | None = None):
+        if mode:
+            self.mode = mode
+        # 万一在预热期间就开始截图：恢复正常不透明度并接收鼠标事件
+        self.setWindowOpacity(1.0)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents, False)
+        self._active = True
+        self._selecting = False
+        self._origin = QPoint(-1, -1)
+        self._current = QPoint(-1, -1)
+        # 只抓本显示器：多屏 + 混合 DPI 下，按屏抓取并按各自 dpr 裁剪才准确
+        self._bg = self.screen.grabWindow(0)
+        self._geo = self.screen.geometry()
+        self._img = self._bg.toImage() if not self._bg.isNull() else None
+        # 用显式几何 + show()，比 showFullScreen() 在多屏/首次显示时更可靠地铺满整屏
+        self.setGeometry(self._geo)
+        self.show()
+        self.setGeometry(self._geo)      # show 之后再钉一次，避免首次出现时尺寸不对
+        self.raise_()
+        self.activateWindow()
+        # 注意：这里不能用 repaint() —— 对尚未映射完成的窗口强制同步绘制后，
+        # Qt 不会再补一次绘制，窗口就会"在但没画出来"（动一下鼠标才出现）。
+        self.update()
+        for delay in (0, 60, 160):       # 多次兜底：窗口映射完成后确保绘制 + 置顶
+            QTimer.singleShot(delay, self._ensure_cover)
+
+    def finish(self):
+        """结束本次截图会话：隐藏窗口但保留原生窗口，下次截图更快。"""
+        self._point_timer.stop()
+        self._clear_mask()
+        self._point_local = QRect()
+        self._active = False
+        self._selecting = False
+        self._bg = None
+        self._img = None
+        self.hide()
+
+    # ---------- 选滚动条：选区外遮罩 + 选区内可点击 ----------
+    def set_point_hole(self, region_global: QRect):
+        """把选区"挖空"：外面继续遮罩，里面鼠标穿透 —— 用户能真的点到滚动条。
+
+        用窗口 mask 实现：窗口在 mask 之外的区域既不绘制也不接收鼠标，
+        事件自然落到下面的应用上。
+        """
+        local = region_global.translated(-self._geo.left(),
+                                         -self._geo.top()).intersected(self.rect())
+        self._point_local = local
+        if local.width() > 2 and local.height() > 2:
+            self.setMask(QRegion(self.rect()).subtracted(QRegion(local)))
+        else:
+            self._clear_mask()            # 与这块屏没有交集：整屏遮罩
+        self._point_pressed = False
+        self._active = True
+        self._point_timer.start()
+        self.update()
+
+    def _clear_mask(self):
+        if not self.mask().isEmpty():
+            self.setMask(QRegion())
+
+    def _poll_point_click(self):
+        """在选区内轮询真实左键按下（因为选区内事件被穿透给了应用）。"""
+        if not self._active or self.mode != "point":
+            self._point_timer.stop()
+            return
+        try:
+            pressed = bool(user32.GetAsyncKeyState(VK_LBUTTON) & 0x8000)
+        except Exception:                     # noqa: BLE001
+            pressed = False
+        if pressed and not self._point_pressed:
+            self._point_pressed = True
+            pos = QCursor.pos()
+            if self._point_local.contains(pos - self._geo.topLeft()):
+                self._point_timer.stop()
+                self._clear_mask()
+                self.finish()
+                self.point_selected.emit(pos)
+        elif not pressed:
+            self._point_pressed = False
+
+    def _ensure_cover(self):
+        """兜底：确保覆盖层真的铺满虚拟桌面并且是画出来的。"""
+        if not self._active or self._bg is None or not self.isVisible():
+            return
+        if self.geometry() != self._geo:
+            self.setGeometry(self._geo)
+        self.raise_()
+        self.update()
+
+    def closeEvent(self, e):
+        self._point_timer.stop()
+        self._clear_mask()
+        self._active = False
+        self._bg = None
+        self._img = None
+        super().closeEvent(e)
+
+    def color_at(self, logical_pos: QPoint) -> QColor:
+        """读取覆盖层逻辑坐标处的颜色。"""
+        if self._img is None:
+            return QColor()
+        dpr = self._bg.devicePixelRatio()
+        x = int(logical_pos.x() * dpr)
+        y = int(logical_pos.y() * dpr)
+        if 0 <= x < self._img.width() and 0 <= y < self._img.height():
+            return self._img.pixelColor(x, y)
+        return QColor()
+
+    # ---------- 交互 ----------
+    def mousePressEvent(self, e):
+        if not self._active or self._bg is None:   # 已结束：忽略残留事件
+            return
+        if e.button() == Qt.RightButton:
+            self._cancel()
+            return
+        if e.button() != Qt.LeftButton:
+            return
+        if self.mode == "color":
+            color = self.color_at(e.position().toPoint())
+            if color.isValid():
+                self.color_picked.emit(color)
+            self.finish()
+            return
+        if self.mode == "point":
+            # 选区内的点击会被穿透给应用（由 _poll_point_click 轮询捕获），
+            # 落在遮罩区的左键一律忽略，避免误当成滑块位置。
+            return
+        self._origin = e.position().toPoint()
+        self._current = self._origin
+        self._selecting = True
+        self.update()
+
+    def mouseMoveEvent(self, e):
+        if not self._active or self._bg is None:
+            return
+        self._current = e.position().toPoint()
+        self.update()
+
+    def mouseReleaseEvent(self, e):
+        if (not self._active or self._bg is None
+                or e.button() != Qt.LeftButton or not self._selecting):
+            return
+        self._selecting = False
+        rect = QRect(self._origin, self._current).normalized().intersected(self.rect())
+        if rect.width() < 6 or rect.height() < 6:
+            self.update()
+            return
+        dpr = self._bg.devicePixelRatio()
+        img_rect = QRect(int(rect.x() * dpr), int(rect.y() * dpr),
+                         int(rect.width() * dpr), int(rect.height() * dpr))
+        # 滚动截图只需要选区坐标：绝不能同时发 captured，
+        # 否则宿主会当成普通截图去打开/前置编辑器，正好盖住要滚动的区域。
+        if self.mode == "scroll":
+            self.finish()
+            self.region_selected.emit(rect.translated(self._geo.topLeft()))
+            return
+
+        result = self._bg.copy(img_rect)
+        result.setDevicePixelRatio(dpr)
+        # 常规抓屏拿不到内容时（远程桌面/虚拟化应用的硬件加速或内容保护），
+        # 用 PrintWindow 让目标窗口自己渲染一遍再试一次
+        try:
+
+            if looks_like_missing_content(result):
+                phys = QRect(int((rect.x() + self._geo.x()) * dpr),
+                             int((rect.y() + self._geo.y()) * dpr),
+                             img_rect.width(), img_rect.height())
+                alt = grab_region_printwindow(phys, dpr)
+                if alt is not None and not looks_like_missing_content(alt):
+                    result = alt
+        except Exception:                     # noqa: BLE001
+            pass                              # 回退失败就用原图
+        self.finish()              # 先隐藏再来发信号，避免处理期间残留事件重入
+        # 逻辑屏幕坐标（供滚动截图等需要屏幕位置的调用方）
+        self.region_selected.emit(rect.translated(self._geo.topLeft()))
+        self.captured.emit(result)
+
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_Escape:
+            self._cancel()
+
+    def _cancel(self):
+        if not self._active:
+            return
+        self.finish()
+        self.cancelled.emit()
+
+    # ---------- 绘制 ----------
+    def paintEvent(self, e):
+        p = QPainter(self)
+        has_bg = self._bg is not None and not self._bg.isNull()
+        if has_bg:
+            p.drawPixmap(0, 0, self._bg)
+        else:
+            p.fillRect(self.rect(), QColor(24, 26, 32))   # 抓图失败也要有遮罩
+
+        if self.mode == "point":
+            # 选滚动条：窗口 mask 已经"挖空"了选区，绘制只会落在遮罩区
+            p.fillRect(self.rect(), MASK_COLOR)
+            rect = self._point_local
+            if rect.width() > 2 and rect.height() > 2:
+                p.setBrush(Qt.NoBrush)
+                p.setPen(QPen(QColor(61, 139, 253), 3))
+                p.drawRect(rect.adjusted(-3, -3, 2, 2))
+                p.setPen(QPen(QColor(61, 139, 253, 90), 1, Qt.DashLine))
+                p.drawLine(0, rect.center().y(), max(0, rect.left()),
+                           rect.center().y())
+                p.drawLine(rect.right(), rect.center().y(), self.width(),
+                           rect.center().y())
+            self._draw_hint(p, self._hint_anchor(rect))
+            return
+
+        # 取色模式不压暗（保证看到的颜色真实），其余模式整体压暗
+        if self.mode != "color":
+            p.fillRect(self.rect(), MASK_COLOR)
+
+        rect = QRect(self._origin, self._current).normalized().intersected(self.rect())
+        selecting = (self.mode in ("region", "scroll") and self._selecting
+                     and rect.width() >= 2 and rect.height() >= 2)
+        if selecting:
+            # 选区内恢复原图亮度（源矩形必须夹在图像范围内，否则 drawPixmap 抛异常）
+            if has_bg:
+                dpr = self._bg.devicePixelRatio()
+                src = QRect(int(rect.x() * dpr), int(rect.y() * dpr),
+                            int(rect.width() * dpr), int(rect.height() * dpr))
+                src = src.intersected(self._bg.rect())
+                if not src.isEmpty():
+                    p.drawPixmap(QRectF(rect), self._bg, QRectF(src))
+            self._draw_guides(p, rect)
+            self._draw_selection_border(p, rect)
+            self._draw_size_label(p, rect)
+        else:
+            # 未开始拖拽：用全屏十字准线告诉用户当前落点
+            self._draw_crosshair(p, self._current)
+
+        if has_bg:                       # 预热显示等场景下 _bg 可能为空
+            self._draw_magnifier(p, self._current)
+        self._draw_hint(p)
+
+    # ---------- 选区视觉强化 ----------
+    def _draw_guides(self, p: QPainter, rect: QRect):
+        """把选区四条边延伸到全屏，方便看清边界对齐到了哪里。"""
+        pen = QPen(QColor(61, 139, 253, 170), 1, Qt.DashLine)
+        p.setPen(pen)
+        p.drawLine(0, rect.top(), self.width(), rect.top())
+        p.drawLine(0, rect.bottom(), self.width(), rect.bottom())
+        p.drawLine(rect.left(), 0, rect.left(), self.height())
+        p.drawLine(rect.right(), 0, rect.right(), self.height())
+
+    def _draw_crosshair(self, p: QPainter, pos: QPoint):
+        if pos.x() < 0 or pos.y() < 0:
+            return
+        p.setPen(QPen(QColor(61, 139, 253, 150), 1))
+        p.drawLine(0, pos.y(), self.width(), pos.y())
+        p.drawLine(pos.x(), 0, pos.x(), self.height())
+
+    def _draw_selection_border(self, p: QPainter, rect: QRect):
+        """外白内蓝双描边 + 四角把手：任何背景色下都清晰可见。"""
+        p.setBrush(Qt.NoBrush)
+        p.setPen(QPen(QColor(255, 255, 255, 220), 1))
+        p.drawRect(rect.adjusted(0, 0, -1, -1))
+        p.setPen(QPen(QColor(61, 139, 253), 2))
+        p.drawRect(rect.adjusted(1, 1, -2, -2))
+        # 四角把手
+        hs = 5
+        p.setPen(QPen(QColor(255, 255, 255), 1))
+        p.setBrush(QColor(61, 139, 253))
+        for cx, cy in [(rect.left(), rect.top()), (rect.right(), rect.top()),
+                       (rect.left(), rect.bottom()), (rect.right(), rect.bottom())]:
+            p.drawRect(QRect(cx - hs // 2, cy - hs // 2, hs, hs))
+
+    def _draw_size_label(self, p: QPainter, rect: QRect):
+        text = f"{rect.width()} × {rect.height()}"
+        font = p.font()
+        font.setPixelSize(13)
+        font.setBold(True)
+        p.setFont(font)
+        metrics = p.fontMetrics()
+        w = metrics.horizontalAdvance(text) + 18
+        h = metrics.height() + 10
+        below = rect.top() - h - 6 <= 0
+        x = rect.left()
+        y = rect.bottom() + 6 if below else rect.top() - h - 6
+        x = min(max(0, x), self.width() - w)
+        y = min(max(0, y), self.height() - h)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(15, 17, 22, 225))
+        p.drawRoundedRect(x, y, w, h, 5, 5)
+        p.setPen(QPen(QColor(61, 139, 253), 1))
+        p.drawRoundedRect(x, y, w, h, 5, 5)
+        p.setPen(QColor(255, 255, 255))
+        p.drawText(QRect(x, y, w, h), Qt.AlignCenter, text)
+        p.setFont(QFont())
+
+    def _draw_magnifier(self, p: QPainter, pos: QPoint):
+        dpr = self._bg.devicePixelRatio()
+        half = MAG_CELL // 2
+        src = QRect(int((pos.x() - half) * dpr), int((pos.y() - half) * dpr),
+                    int(MAG_CELL * dpr), int(MAG_CELL * dpr))
+        # 放大镜位置：光标右下，越界则翻转到左上
+        mx = pos.x() + 18
+        my = pos.y() + 18
+        if mx + MAG_SIZE > self.width() - 4:
+            mx = pos.x() - MAG_SIZE - 18
+        if my + MAG_SIZE > self.height() - 4:
+            my = pos.y() - MAG_SIZE - 18
+        target = QRect(mx, my, MAG_SIZE, MAG_SIZE)
+        p.save()
+        p.setClipRect(target)
+        p.fillRect(target, QColor(40, 40, 40))
+        # 源区域夹取到图像内，并同步修正目标子矩形（靠近屏幕边缘时）
+        clamped = src.intersected(self._bg.rect())
+        if not clamped.isEmpty():
+            scale = MAG_SIZE / src.width()
+            sub = QRectF(mx + (clamped.x() - src.x()) * scale,
+                         my + (clamped.y() - src.y()) * scale,
+                         clamped.width() * scale, clamped.height() * scale)
+            p.drawPixmap(sub, self._bg, QRectF(clamped))
+        # 网格线（整数格宽，逐像素对齐）
+        p.setPen(QPen(QColor(255, 255, 255, 40), 1))
+        for i in range(1, MAG_CELL):
+            p.drawLine(mx + i * MAG_ZOOM, my, mx + i * MAG_ZOOM, my + MAG_SIZE)
+            p.drawLine(mx, my + i * MAG_ZOOM, mx + MAG_SIZE, my + i * MAG_ZOOM)
+        p.restore()
+        p.setPen(QPen(QColor(255, 255, 255), 2))
+        p.setBrush(Qt.NoBrush)
+        p.drawRect(target)
+        # 红框标出真正取样的中心像素（与 color_at 取样点一致）
+        half = MAG_CELL // 2
+        p.setPen(QPen(QColor(229, 57, 53), 2))
+        p.drawRect(mx + half * MAG_ZOOM, my + half * MAG_ZOOM,
+                   MAG_ZOOM, MAG_ZOOM)
+        self._draw_color_label(p, pos, mx, my)
+
+    def _hint_anchor(self, rect: QRect) -> QPoint:
+        """给提示条挑一个落在遮罩区的位置（选区内部是穿透的，画在那看不见）。"""
+        w = self.width()
+        if rect.top() > 60:                     # 选区上方有空间
+            return QPoint((w - 420) // 2, max(8, rect.top() - 56))
+        if rect.bottom() < self.height() - 70:  # 选区下方有空间
+            return QPoint((w - 420) // 2, rect.bottom() + 12)
+        return QPoint((w - 420) // 2, 24)
+
+    def _draw_hint(self, p: QPainter, anchor: QPoint | None = None):
+        """提示条：明确告知当前模式和退出方式，避免看起来像卡死。"""
+        if self.mode == "color":
+            text = "屏幕取色：单击复制色值    ·    Esc / 右键 取消"
+        elif self.mode == "scroll":
+            text = "拖拽选择要滚动截图的区域    ·    Esc / 右键 取消"
+        elif self.mode == "point":
+            text = ("蓝框内可直接点击滚动条【滑块】→ 自动开始滚动"
+                    "    ·    Esc 取消")
+        else:
+            text = "拖拽选择截图区域    ·    Esc / 右键 取消"
+        metrics = p.fontMetrics()
+        w = metrics.horizontalAdvance(text) + 36
+        h = metrics.height() + 16
+        x = (self.width() - w) // 2
+        y = 24
+        if anchor is not None:
+            x = min(max(4, anchor.x()), max(4, self.width() - w - 4))
+            y = anchor.y()
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(0, 0, 0, 190))
+        p.drawRoundedRect(x, y, w, h, 8, 8)
+        p.setPen(QColor(235, 238, 242))
+        p.drawText(QRect(x, y, w, h), Qt.AlignCenter, text)
+
+    def _draw_color_label(self, p: QPainter, pos: QPoint, mx: int, my: int):
+        """在放大镜下方显示光标处的色值。"""
+        color = self.color_at(pos)
+        if not color.isValid():
+            return
+        text = color.name().upper()
+        rgb = f"{color.red()},{color.green()},{color.blue()}"
+        metrics = p.fontMetrics()
+        w = max(metrics.horizontalAdvance(text), metrics.horizontalAdvance(rgb)) + 14
+        h = metrics.height() * 2 + 10
+        x = mx
+        y = my + MAG_SIZE + 6
+        if y + h > self.height() - 4:
+            y = my - h - 6
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(0, 0, 0, 190))
+        p.drawRoundedRect(x, y, w, h, 4, 4)
+        # 色块
+        p.setBrush(color)
+        p.drawRect(x + 4, y + 5, metrics.height() - 2, metrics.height() - 2)
+        p.setPen(QColor(255, 255, 255))
+        p.drawText(x + 8 + metrics.height(), y + 5 + metrics.ascent(), text)
+        p.drawText(QRect(x, y + metrics.height() + 5, w, metrics.height() + 5),
+                   Qt.AlignCenter, rgb)
+
+
+# ========================================================================
+# 来自 scroller.py
+# ========================================================================
+# -*- coding: utf-8 -*-
+"""滚动长截图：选区后自动向下滚动，逐帧截取并按重叠像素拼接。
+
+工作流程
+========
+1. 用户在覆盖层框选一个可滚动区域（如浏览器页面）
+2. ScrollCapture 启动：抓取首帧 → 发送滚轮滚动 → 等待渲染 → 再抓帧
+3. 每帧与上一帧做重叠匹配，算出本次滚动的像素数 s，把新帧底部 s 行拼上去
+4. 连续几帧没有新内容（滚到底）或用户点"停止"时结束，交给编辑器
+
+拼接核心是纯函数 find_scroll()，可离屏单测。
+"""
+import ctypes
+import ctypes.wintypes
+import os
+from pathlib import Path
+
+from PySide6.QtCore import (QEventLoop, QObject, QPoint, QRect, Qt, QTimer, Signal)
+from PySide6.QtGui import QColor, QCursor, QGuiApplication, QImage, QPainter, QPen, QPixmap
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+
+MOUSEEVENTF_WHEEL = 0x0800
+user32 = ctypes.windll.user32          # 提到模块级，便于测试打桩
+
+
+def _sleep_ms(ms: int):
+    """等待若干毫秒，同时保持界面响应（处理事件）。"""
+    loop = QEventLoop()
+    QTimer.singleShot(ms, loop.quit)
+    loop.exec()
+
+
+# ---------------------------------------------------------------- 图像帧
+# 不依赖 numpy：一帧 = "每行 RGB 字节"的列表。纯 Python 足够快，
+# 而且"行哈希投票"找重叠对静态界面截图比逐像素差值更准。
+
+class Frame:
+    __slots__ = ("rows", "w", "h", "dpr")
+
+    def __init__(self, rows, w: int, h: int, dpr: float = 1.0):
+        self.rows = rows            # [bytes, ...]，每行 w*3 字节
+        self.w = w
+        self.h = h
+        self.dpr = dpr
+
+    @classmethod
+    def from_array(cls, arr) -> "Frame":
+        """测试用：从 numpy 数组构造。"""
+        h, w = int(arr.shape[0]), int(arr.shape[1])
+        return cls([arr[y].tobytes() for y in range(h)], w, h, 1.0)
+
+    def copy(self) -> "Frame":
+        return Frame(list(self.rows), self.w, self.h, self.dpr)
+
+
+def _as_frame(x) -> Frame:
+    """接受 Frame 或（测试用的）numpy 数组。"""
+    if isinstance(x, Frame):
+        return x
+    if hasattr(x, "shape") and hasattr(x, "__getitem__"):
+        return Frame.from_array(x)
+    raise TypeError(f"需要 Frame 或数组，收到 {type(x).__name__}")
+
+
+def pixmap_to_frame(pix: QPixmap) -> Frame:
+    """QPixmap → Frame（只做一次拷贝）。"""
+    img = pix.toImage().convertToFormat(QImage.Format_RGB888)
+    w, h, bpl = img.width(), img.height(), img.bytesPerLine()
+    data = bytes(img.constBits())
+    rows = [data[y * bpl: y * bpl + w * 3] for y in range(h)]
+    return Frame(rows, w, h, float(pix.devicePixelRatio() or 1.0))
+
+
+def frame_to_pixmap(frame: Frame, dpr: float | None = None) -> QPixmap:
+    """Frame → QPixmap。"""
+    data = b"".join(frame.rows)
+    img = QImage(data, frame.w, frame.h, frame.w * 3,
+                 QImage.Format_RGB888).copy()
+    pix = QPixmap.fromImage(img)
+    pix.setDevicePixelRatio(frame.dpr if dpr is None else dpr)
+    return pix
+
+
+def frame_diff(a: Frame, b: Frame, row_step: int = 4, col_step: int = 4) -> float:
+    """两帧的平均绝对差（抽样），用于判断画面是否已稳定。"""
+    if a.h != b.h or a.w != b.w:
+        return float("inf")
+    total = n = 0
+    for y in range(0, a.h, row_step):
+        ra, rb = a.rows[y], b.rows[y]
+        for x in range(0, a.w * 3, col_step * 3):
+            total += abs(ra[x] - rb[x]) + abs(ra[x + 1] - rb[x + 1]) \
+                + abs(ra[x + 2] - rb[x + 2])
+            n += 3
+    return total / max(1, n)
+
+
+# ---- 兼容旧测试/诊断的 numpy 辅助（延迟导入，运行期完全不碰 numpy） ----
+
+def pixmap_to_array(pix: QPixmap):
+    """仅供测试/诊断：转成 numpy 数组（应用本身不使用）。"""
+    import numpy as np
+    img = pix.toImage().convertToFormat(QImage.Format_RGB888)
+    w, h = img.width(), img.height()
+    arr = np.frombuffer(img.constBits(), np.uint8, img.sizeInBytes())
+    return arr.reshape(h, img.bytesPerLine())[:, : w * 3].reshape(h, w, 3).copy()
+
+
+def array_to_pixmap(arr, dpr: float = 1.0) -> QPixmap:
+    """仅供测试/诊断：numpy 数组转 QPixmap。"""
+    import numpy as np
+    arr = np.ascontiguousarray(arr)
+    h, w, _ = arr.shape
+    img = QImage(arr.data, w, h, w * 3, QImage.Format_RGB888).copy()
+    pix = QPixmap.fromImage(img)
+    pix.setDevicePixelRatio(dpr)
+    return pix
+
+
+def _same_ratio(prev: Frame, cur: Frame, s: int, rows: int = 140) -> float:
+    """重叠区域中"逐字节完全相同的行"占比（只做 bytes 比较，极快）。"""
+    span = prev.h - s
+    if span <= 0:
+        return 0.0
+    step = max(1, span // rows)
+    same = total = 0
+    for y in range(0, span, step):
+        total += 1
+        if prev.rows[s + y] == cur.rows[y]:
+            same += 1
+    return same / max(1, total)
+
+
+def _match_stats(prev: Frame, cur: Frame, s: int,
+                 rows: int = 140, col_step: int = 6) -> tuple:
+    """返回 (完全相同行占比, 平均像素差)。只有需要时才调用（较慢）。"""
+    return _same_ratio(prev, cur, s, rows), _overlap_diff(prev, cur, s)
+
+
+def _overlap_diff(prev: Frame, cur: Frame, s: int,
+                  row_step: int = 4, col_step: int = 6) -> float:
+    """重叠区域的平均绝对差（稀疏抽样，仅作兜底判断）。"""
+    total = n = 0
+    for y in range(0, prev.h - s, row_step):
+        a = prev.rows[s + y]
+        b = cur.rows[y]
+        if a == b:
+            continue
+        for x in range(0, len(a), col_step * 3):
+            total += abs(a[x] - b[x]) + abs(a[x + 1] - b[x + 1]) \
+                + abs(a[x + 2] - b[x + 2])
+            n += 3
+    return total / max(1, n) if n else 0.0
+
+
+def _best_offset_and_ratio(prev: Frame, cur: Frame, min_overlap: int,
+                           top_candidates: int = 6) -> tuple:
+    """行哈希投票 + 精修，返回 (最佳候选位移, 相同行占比)。位移 -1 表示没候选。"""
+    H = prev.h
+    sig_cur = {}
+    for r in range(H):
+        sig_cur.setdefault(hash(cur.rows[r]), []).append(r)
+    votes = {}
+    for r in range(H):
+        for rc in sig_cur.get(hash(prev.rows[r]), ())[:6]:
+            s = r - rc
+            if 0 <= s <= H - min_overlap:
+                votes[s] = votes.get(s, 0) + 1
+    if not votes:
+        return -1, 0.0
+    candidates = [s for s, _ in
+                  sorted(votes.items(), key=lambda kv: -kv[1])[:top_candidates]]
+    if 0 not in candidates:
+        candidates.append(0)
+
+    def best_of(cands):
+        ratios = [(s, _same_ratio(prev, cur, s)) for s in cands]
+        top = max(r for _, r in ratios)
+        tied = [s for s, r in ratios if r >= top - 1e-9]
+        if len(tied) > 1:      # 打平时用像素差细分（最多 3 个，避免慢路径）
+            scored = [(s, _overlap_diff(prev, cur, s)) for s in tied[:3]]
+            return min(scored, key=lambda kv: kv[1])[0], top
+        return tied[0], top
+
+    best_s, best_same = best_of(candidates)
+    if best_s > 0:             # 精修 ±4，消除"行内容重复"带来的偏差
+        cands = list(range(max(1, best_s - 4),
+                           min(H - min_overlap, best_s + 4) + 1))
+        s2, same2 = best_of(cands)
+        if same2 > best_same + 1e-9:
+            best_s, best_same = s2, same2
+    return best_s, best_same
+
+
+def best_candidate_offset(prev, cur, min_overlap: int = 60) -> int:
+    """不管置信度，返回匹配最好的候选位移（用于诊断"多块独立滚动区域"等场景）。"""
+    prev, cur = _as_frame(prev), _as_frame(cur)
+    if cur.h != prev.h or cur.w != prev.w:
+        return -1
+    return _best_offset_and_ratio(prev, cur, min_overlap)[0]
+
+
+def find_scroll(prev, cur, min_overlap: int = 60, thresh: float = 3.0,
+                loose_thresh: float = 12.0, top_candidates: int = 6,
+                min_same_ratio: float = 0.9) -> tuple[int, float]:
+    """在 cur 中找 prev 向下滚动的像素数 s：prev[s:] 应与 cur[:H-s] 一致。
+
+    算法：**行哈希投票定候选 + 行级精确比较定胜负**。
+    - 相同行占比最高者为胜（静态界面截图能到 1.0），比逐像素差值更准
+    - 再在胜者 ±4 内精修，消除"行内容重复"带来的偏差
+    - 成本与图幅无关（固定抽样行数），比逐像素扫描快一个量级
+
+    返回 (s, 差异值)。s == 0 表示没变化（到底了）；s == -1 表示匹配失败。
+    """
+    prev, cur = _as_frame(prev), _as_frame(cur)
+    H = prev.h
+    if cur.h != H or cur.w != prev.w:
+        return -1, float("inf")
+    if prev.rows == cur.rows:            # 整帧相同 → 没滚动
+        return 0, 0.0
+
+    best_s, best_same = _best_offset_and_ratio(prev, cur, min_overlap,
+                                               top_candidates)
+    if best_s < 0:
+        return -1, float("inf")
+    if best_s == 0:
+        diff = _overlap_diff(prev, cur, 0)
+        return (0, diff) if diff < thresh else (-1, diff)
+    if best_same >= min_same_ratio:
+        return best_s, 0.0
+    diff = _overlap_diff(prev, cur, best_s)
+    if diff < loose_thresh:
+        return best_s, diff
+    return -1, diff
+
+
+def static_strips(prev, cur, thresh: float = 3.0,
+                  max_ratio: float = 0.45) -> tuple[int, int]:
+    """检测两帧间静止的上/下边缘行数。
+
+    用户框选的区域可能包含不随内容滚动的部分（窗口边框、固定工具栏、
+    底部明细面板）。这类"静止条带"必须排除，否则每一帧都会把它们当新内容拼进去。
+    max_ratio 放到 0.45：复杂业务界面（主列表 + 固定明细面板）里固定区域往往很高。
+    """
+    prev, cur = _as_frame(prev), _as_frame(cur)
+    H = prev.h
+    limit = max(1, int(H * max_ratio))
+
+    def same(r: int) -> bool:
+        a, b = prev.rows[r], cur.rows[r]
+        if a == b:
+            return True
+        # 每 4 个像素比较一次（三通道都算），与原 numpy 版严格程度一致
+        total = n = 0
+        for x in range(0, len(a), 12):
+            total += abs(a[x] - b[x]) + abs(a[x + 1] - b[x + 1]) \
+                + abs(a[x + 2] - b[x + 2])
+            n += 3
+        return total / max(1, n) < thresh
+
+    top = 0
+    while top < limit and same(top):
+        top += 1
+    bottom = 0
+    while bottom < limit and same(H - 1 - bottom):
+        bottom += 1
+    return top, bottom
+
+
+def content_band_residuals(prev, cur, s: int,
+                           top: int, bottom: int, bands: int = 3) -> list:
+    """在"已检测到的位移 s"下，检查内容区分成几带后是否都对得上。
+
+    对不上（残差远大于其它带）说明那一带的滚动量和整体不一致 ——
+    典型情况是选区里既有主列表又有固定/独立滚动的明细面板。
+    返回每带的残差（无法判定的带为 None）。
+    """
+    prev, cur = _as_frame(prev), _as_frame(cur)
+    out = []
+    if bottom - top < 90 or s <= 0 or bands < 2:
+        return out
+    bands = min(bands, max(2, int((bottom - top) / (s * 1.3))))
+    if (bottom - top) / bands <= s:          # 位移太大，分不了带
+        return []
+    step = max(1, (bottom - top) // bands)
+    for i in range(bands):
+        y0 = top + i * step
+        y1 = bottom if i == bands - 1 else y0 + step
+        if y1 - s <= y0:                     # 这一带装不下这个位移，跳过
+            out.append(None)
+            continue
+        total = n = 0
+        for y in range(y0, y1 - s, 4):
+            a, b = prev.rows[y + s], cur.rows[y]
+            if a == b:
+                continue
+            for x in range(0, len(a), 12):
+                total += abs(a[x] - b[x]) + abs(a[x + 1] - b[x + 1]) \
+                    + abs(a[x + 2] - b[x + 2])
+                n += 3
+        out.append(total / max(1, n) if n else 0.0)
+    return out
+
+
+# ---------------------------------------------------------------- 默认抓取/滚动
+
+def make_default_grab(region: QRect):
+    """按逻辑屏幕坐标区域抓帧。
+
+    多屏 / 混合 DPI 下必须按"区域所在的显示器"抓取并按该屏 dpr 裁剪
+    （用主屏 dpr 去裁所有屏会错位）。若常规抓屏是空白/纯色（远程桌面、
+    虚拟化应用常见），再回退到 PrintWindow 让目标窗口自己渲染一遍。
+    """
+
+
+    from PySide6.QtGui import QGuiApplication
+
+    def grab() -> QPixmap:
+        out = grab_logical_region(region)
+        if pixmap_is_blank(out):
+            scr = QGuiApplication.screenAt(region.center()) \
+                or QGuiApplication.primaryScreen()
+            dpr = float(scr.devicePixelRatio() or 1.0)
+            src = region_to_screen_pixels(region, scr.geometry(), dpr)
+            alt = grab_region_printwindow(src, dpr)
+            if alt is not None and not pixmap_is_blank(alt):
+                return alt
+        return out
+
+    return grab
+
+
+def make_default_scroll(region: QRect, notches: int = 3):
+    """把光标移到区域中心并发送滚轮事件（向下滚动）。"""
+    user32 = ctypes.windll.user32
+
+    def scroll():
+        QCursor.setPos(region.center())
+        user32.mouse_event(MOUSEEVENTF_WHEEL, 0, 0, -120 * notches, 0)
+
+    return scroll
+
+
+# ---------------------------------------------------------------- 滚动输入驱动
+
+MOUSEEVENTF_LEFTDOWN = 0x0002
+MOUSEEVENTF_LEFTUP = 0x0004
+KEYEVENTF_KEYUP = 0x0002
+VK_PAGEDOWN, VK_SPACE, VK_DOWN = 0x22, 0x20, 0x28
+
+# 各模式的"每单位输入能滚动多少内容像素"的初值与合理范围（会实测校准）
+_UNIT_DEFAULTS = {"wheel": 100.0, "drag": 3.0, "key": 420.0}
+_UNIT_BOUNDS = {"wheel": (5.0, 1500.0), "drag": (0.2, 400.0), "key": (20.0, 30000.0)}
+_PROBE_START = 4.0        # 拖拽模式首次试探的像素（长文档滑块行程短，必须从小往大试）
+_DRAG_MAX = 160.0         # 单次拖拽上限，避免一次把滑块拉到底
+
+
+def _send_vk(vk: int):
+    user32.keybd_event(vk, 0, 0, 0)
+    _sleep_ms(18)
+    user32.keybd_event(vk, 0, KEYEVENTF_KEYUP, 0)
+
+
+def _drag_scrollbar(anchor: QPoint, dy: float, steps: int = 6):
+    """在滚动条滑块上按住并向下拖拽 dy 像素（远程桌面里比滚轮可靠）。"""
+    QCursor.setPos(anchor)
+    _sleep_ms(30)
+    user32.mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+    for i in range(1, steps + 1):
+        QCursor.setPos(QPoint(anchor.x(), int(anchor.y() + dy * i / steps)))
+        _sleep_ms(12)
+    _sleep_ms(25)
+    user32.mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+
+
+class ScrollDriver:
+    """把"想滚动多少内容像素"翻译成实际输入，并用实测位移自我校准。
+
+    mode:
+      wheel — 滚轮（默认；把光标移到区域中心后发滚轮）
+      drag  — 在滚动条滑块上按住拖拽（远程桌面/Citrix 最可靠，步长可标定）
+      key   — PageDown / 空格 / ↓（没有滚动条的应用）
+    """
+
+    def __init__(self, mode: str, region: QRect, anchor: QPoint | None = None,
+                 key_vk: int = VK_PAGEDOWN):
+        self.mode = mode
+        self.region = QRect(region)
+        self.anchor = QPoint(anchor) if anchor is not None else region.center()
+        self.key_vk = key_vk
+        self.px_per_unit = float(_UNIT_DEFAULTS.get(mode, 100.0))
+        self.last_units = 0.0
+        self.observations = 0
+        self.moved_ever = False
+        self.probe_px = _PROBE_START      # 拖拽模式：先用极小的步长试探
+        self.probing = (mode == "drag")
+        self.snapped = False              # 是否用系统接口校正过滑块位置
+        self.native = None                # GetScrollInfo 可用时的原生滚动状态
+        self.used_fallback = None         # 拖拽失效后自动降级到的模式
+
+    # ---------- 前置 ----------
+    def prepare(self):
+        """开始前的准备。
+
+        - 按键模式：把目标窗口拉到前台，否则按键会打到我们自己窗口
+        - 拖拽模式：能读到原生滚动条状态就直接用 SetScrollInfo 设滚动位置
+          （完全不动鼠标，绝对精准且不会溢出轨道）；读不到才用拖拽。
+        """
+        if self.mode == "key":
+            try:
+
+                hwnd = window_at(self.region.center().x(), self.region.center().y())
+                if hwnd:
+                    ctypes.windll.user32.SetForegroundWindow(ctypes.wintypes.HWND(hwnd))
+                    _sleep_ms(120)
+            except Exception:               # noqa: BLE001
+                pass
+            return
+        if self.mode != "drag":
+            return
+        try:
+            from PySide6.QtGui import QGuiApplication
+
+            dpr = 1.0
+            scr = QGuiApplication.screenAt(self.anchor)
+            if scr is not None:
+                dpr = float(scr.devicePixelRatio() or 1.0)
+            ax, ay = int(self.anchor.x() * dpr), int(self.anchor.y() * dpr)
+            # 先尽量找到可程序化滚动的窗口（比拖拽可靠得多）
+            self.native = get_scroll_info_at(ax, ay)
+            if self.native is not None:
+                return
+            # 退而求其次：点偏了就把锚点校正到真实滑块中心
+            thumb = scrollbar_thumb_at(ax, ay)
+            if thumb is not None:
+                center = QPoint(int((thumb.left() + thumb.width() / 2) / dpr),
+                                int((thumb.top() + thumb.height() / 2) / dpr))
+                if (center - self.anchor).manhattanLength() <= 60:
+                    self.anchor = center
+                    self.snapped = True
+        except Exception:                   # noqa: BLE001
+            pass
+
+    # ---------- 执行 ----------
+    def __call__(self, step_px: float):
+        units = step_px / max(0.05, self.px_per_unit)
+        if self.mode == "wheel":
+            notches = int(min(15, max(1, round(units))))
+            self.last_units = float(notches)
+            QCursor.setPos(self.region.center())
+            user32.mouse_event(MOUSEEVENTF_WHEEL, 0, 0, -120 * notches, 0)
+        elif self.mode == "key":
+            times = int(min(5, max(1, round(units))))
+            self.last_units = float(times)
+            for _ in range(times):
+                _send_vk(self.key_vk)
+        else:                            # drag
+            if self.native is not None:
+                # 原生滚动条：直接设滚动位置（不动鼠标，步长 = 视口的 45% 且绝对精准）
+                info = self.native
+                step_pos = max(1, int(info["page"] * 0.45))
+                new_pos = min(info["max"], info["pos"] + step_pos)
+                self.last_units = float(max(1, new_pos - info["pos"]))
+
+                set_scroll_pos(info["hwnd"], new_pos)
+                info["pos"] = new_pos
+                return
+            if self.probing:
+                dy = self.probe_px
+            else:
+                dy = float(min(_DRAG_MAX, max(4.0, units)))
+            self.last_units = dy
+            _drag_scrollbar(self.anchor, dy)
+            # 关键：滑块已经被拖下去 dy，锚点必须跟着走。
+            # 否则下一次会在原位置按下 —— 那里已经是轨道，变成翻页而不是继续拖拽。
+            self.anchor = QPoint(self.anchor.x(), int(self.anchor.y() + dy))
+
+    def recovery_after_jump(self) -> bool:
+        """匹配失败（一次滚动太多，超出可拼接范围）时把步长改小再试。
+
+        拖拽滚动条的"每像素滚动量"完全取决于内容长度（长文档滑块行程很短），
+        事先无法得知，只能从小步试探并逐步收敛。最多试 4 次。
+        """
+        self._recovery_count = getattr(self, "_recovery_count", 0) + 1
+        if self.observations >= 2 or self._recovery_count > 4:
+            return False
+        if self.mode == "drag":
+            self.probing = True
+            self.probe_px = max(1.5, self.probe_px / 2)
+            self.px_per_unit = min(_UNIT_BOUNDS["drag"][1], self.px_per_unit * 2)
+            return True
+        lo, hi = _UNIT_BOUNDS.get(self.mode, (0.1, 10000.0))
+        self.px_per_unit = min(hi, self.px_per_unit * 2)
+        return True
+
+    def observe(self, actual_px: int):
+        """用实测位移校准"每单位输入滚动多少像素"。"""
+        if self.last_units <= 0 or actual_px <= 0:
+            return
+        measured = actual_px / self.last_units
+        lo, hi = _UNIT_BOUNDS.get(self.mode, (0.1, 10000.0))
+        if not (lo <= measured <= hi):
+            return                       # 明显被误匹配带偏，忽略这次
+        weight = 0.6 if self.observations == 0 else 0.35
+        self.px_per_unit = (1 - weight) * self.px_per_unit + weight * measured
+        self.observations += 1
+        if self.mode == "drag":
+            self.probing = False         # 试探成功，之后按目标步长来
+
+    def describe(self) -> str:
+        return {"wheel": "滚轮", "drag": "拖拽滚动条", "key": "按键"}.get(self.mode, self.mode)
+
+
+# ---------------------------------------------------------------- 进度控制条
+
+class ScrollControlBar(QWidget):
+    """浮在选区外的小条：显示帧数/总长，提供停止按钮。"""
+
+    stopped = Signal()
+
+    def __init__(self, region: QRect, manual: bool = False):
+        super().__init__(None, Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+                         | Qt.Tool)
+        self.manual = manual
+        self.title = ""
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setStyleSheet(
+            "QWidget { background: #2f3542; color: white; border-radius: 6px; }"
+            "QPushButton { background: #e53935; border: none; padding: 4px 14px;"
+            "  border-radius: 4px; color: white; }"
+            "QLabel { padding: 4px; }")
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(10, 6, 10, 6)
+        row = QHBoxLayout()
+        self.label = QLabel("滚动截图准备中…")
+        row.addWidget(self.label)
+        btn = QPushButton("完成 (Enter)" if manual else "停止 (Esc)")
+        btn.clicked.connect(self.stopped)
+        row.addWidget(btn)
+        lay.addLayout(row)
+        if manual:
+            hint = QLabel("请用鼠标滚轮或 Page Down 自己滚动页面，滚到底后点「完成」")
+            hint.setStyleSheet("color: #aeb6c2; font-size: 11px;")
+            lay.addWidget(hint)
+        self.adjustSize()
+        # 优先放在选区上方，放不下则放下方
+        screen = QGuiApplication.screenAt(region.center()) or QGuiApplication.primaryScreen()
+        sg = screen.availableGeometry()
+        x = min(region.left(), sg.right() - self.width())
+        y = region.top() - self.height() - 8
+        if y < sg.top():
+            y = region.bottom() + 8
+        if y + self.height() > sg.bottom():
+            y = region.top() + 8  # 实在没地方，放选区内顶部（会被拍到，用户可停止重来）
+        self.move(x, y)
+
+    def set_title(self, text: str):
+        self.title = text
+        self.adjustSize()
+
+    def set_progress(self, frames: int, height: int, offset: int | None = None):
+        prefix = f"{self.title} · " if self.title else ""
+        text = f"{prefix}{'手动' if self.manual else '滚动'}截图中… {frames} 帧 / {height} px"
+        if offset:
+            text += f"（本帧 +{offset}）"
+        self.label.setText(text)
+        self.adjustSize()
+
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_Escape:
+            self.stopped.emit()
+
+
+# ---------------------------------------------------------------- 主控制器
+
+class ScrollCapture(QObject):
+    """滚动截图状态机。grab_fn / scroll_fn 可注入，便于离屏测试。"""
+
+    finished_ok = Signal(QPixmap)
+    failed = Signal(str)
+
+    def __init__(self, region: QRect, grab_fn=None, scroll_fn=None,
+                 interval_ms: int = 650, max_frames: int = 240,
+                 manual: bool = False, driver=None, parent=None):
+        super().__init__(parent)
+        self.region = QRect(region)
+        self.manual = manual            # 手动模式：用户自己滚动，不注入滚轮
+        self.grab_fn = grab_fn or make_default_grab(region)
+        self.driver = None              # 自动模式下的输入驱动（带自校准）
+        if manual:
+            self.scroll_fn = None
+            self.interval_ms = min(interval_ms, 400)   # 采样更密，抓用户的滚动
+        elif driver is not None:
+            self.driver = driver
+            self.scroll_fn = None
+            self.interval_ms = interval_ms
+        elif scroll_fn is not None:
+            self.scroll_fn = scroll_fn  # 兼容：外部注入的滚动函数（无校准）
+            self.interval_ms = interval_ms
+        else:
+            self.driver = ScrollDriver("wheel", region)
+            self.scroll_fn = None
+            self.interval_ms = interval_ms
+        self.max_frames = max_frames
+
+        self._acc: Frame | None = None    # 累积图像（行列表）
+        self._prev: Frame | None = None   # 上一帧
+        self._dpr = 1.0
+        self._frames = 0
+        self._no_progress = 0
+        self._stop_requested = False
+        self._busy = False               # 抓帧内含嵌套事件循环，防重入
+
+        self.bar = ScrollControlBar(self.region, manual=manual)
+        self.bar.stopped.connect(self.stop)
+
+        self._timer = QTimer(self)
+        self._timer.setInterval(self.interval_ms)
+        self._timer.timeout.connect(self._tick)
+
+    def start(self):
+        self.bar.show()
+        if self.driver is not None:
+            self.driver.prepare()        # 按键模式先把目标窗口拉到前台
+        self._tick()                     # 首帧
+        self._timer.start()
+
+    def stop(self):
+        self._stop_requested = True
+
+    def _do_scroll(self):
+        """执行一次滚动：希望滚动约半屏内容（保证足够重叠，拼接才稳）。"""
+        frame_h = 0
+        if self._prev is not None:
+            frame_h = self._prev.h / max(0.01, self._dpr)
+        step = max(60.0, frame_h * 0.45)
+        if self.driver is not None:
+            self.driver(step)
+        elif self.scroll_fn is not None:
+            self.scroll_fn()
+
+    # ---------- 内部 ----------
+    def _grab_settled(self) -> QPixmap:
+        """抓一帧"稳定"的画面。
+
+        远程桌面 / 虚拟化应用的画面重绘慢，刚滚完就抓容易拍到画了一半的中间态，
+        拼接就会错位。手动模式和拖拽滚动条模式都多等一会儿再抓。
+        """
+        frame = self.grab_fn()
+        slow = self.manual or (self.driver is not None
+                               and self.driver.mode == "drag")
+        if not slow:
+            return frame
+        prev_fr = pixmap_to_frame(frame)
+        for wait_ms in (90, 180):
+            _sleep_ms(wait_ms)
+            again = self.grab_fn()
+            if again.isNull():
+                break
+            fr = pixmap_to_frame(again)
+            if frame_diff(prev_fr, fr) < 1.0:     # 画面稳定了
+                return again
+            frame, prev_fr = again, fr
+        return frame
+
+    def _debug_dump(self, fr: Frame, note: str):
+        """PYSHOT_SCROLL_DEBUG=1 时把每一帧和判定结果存盘，便于排查拼接异常。"""
+        if os.environ.get("PYSHOT_SCROLL_DEBUG") != "1":
+            return
+        try:
+            folder = Path.home() / ".pyshot" / "scroll_debug"
+            folder.mkdir(parents=True, exist_ok=True)
+            frame_to_pixmap(fr).save(str(folder / f"frame_{self._frames:03d}.png"))
+            with open(folder / "offsets.txt", "a", encoding="utf-8") as f:
+                f.write(f"frame {self._frames:03d}: {note}\n")
+        except Exception:                   # noqa: BLE001
+            pass
+
+    def _check_multi_pane(self, fr: Frame, s: int,
+                          top: int, bottom: int) -> str | None:
+        """识别"一个选区里有多块独立滚动的区域"，返回错误文案或 None。"""
+        res = content_band_residuals(self._prev, fr, s, top, bottom)
+        valid = [r for r in res if r is not None]
+        if len(valid) < 2:
+            return None
+        if max(valid) > max(6.0, min(valid) * 3.0 + 4.0):
+            return ("选区里似乎包含多块独立滚动的区域（例如上方列表 + 下方明细面板），"
+                    "它们滚动量不同，拼不到一起。\n"
+                    "请只框选其中一个面板（不含固定的明细面板/工具栏）后重试。\n"
+                    "（排查用：设环境变量 PYSHOT_SCROLL_DEBUG=1 会把每帧存到 "
+                    "~/.pyshot/scroll_debug）")
+        return None
+
+    def _tick(self):
+        if self._busy:                   # 上一次还在抓帧（内部有事件循环），跳过这一次
+            return
+        self._busy = True
+        try:
+            self._tick_once()
+        finally:
+            self._busy = False
+
+    def _tick_once(self):
+        if self._stop_requested or self._frames >= self.max_frames:
+            self._finish()
+            return
+        try:
+            frame = self._grab_settled()
+        except Exception as ex:
+            self.failed.emit(f"抓帧失败：{ex}")
+            self._cleanup()
+            return
+        if frame.isNull() or frame.width() < 8 or frame.height() < 80:
+            self.failed.emit("抓帧失败：区域过小或被遮挡")
+            self._cleanup()
+            return
+
+        # 首帧就是空白/纯色：多半是硬件加速或内容保护窗口（Citrix/RDP 常见），
+        # 早点说清楚原因，别让用户等一场拼不出东西的滚动。
+        if self._prev is None and self._frames == 0:
+
+            if pixmap_is_blank(frame, min_std=1.2, black_level=10):
+                self.failed.emit(
+                    "抓到的画面是空白/纯色，无法拼接。\n"
+                    "目标窗口（如 Citrix 虚拟桌面里的应用）可能启用了硬件加速或内容保护，"
+                    "系统抓屏 API 拿不到内容。\n"
+                    "可尝试：① 在 Citrix/远程桌面里关闭硬件加速；"
+                    "② 用托盘菜单的「滚动长截图（手动滚动）」；"
+                    "③ 把该窗口最大化或调整大小后重试。")
+                self._cleanup()
+                return
+
+        self._dpr = frame.devicePixelRatio()
+        fr = pixmap_to_frame(frame)
+        s = 0                                  # 本帧检测到的位移（首帧为 0）
+        if self._prev is None:
+            self._acc = fr
+            self._debug_dump(fr, "首帧")
+        else:
+            if fr.h != self._prev.h or fr.w != self._prev.w:
+                self.failed.emit("抓帧尺寸发生变化，已停止（请确保窗口未移动/缩放）")
+                self._cleanup()
+                return
+            s, diff = find_scroll(self._prev, fr)
+            if s < 0:
+                # 一次滚太多（超出可拼接范围）：小步试探阶段可以自动减半重试，
+                # 已经校准过就不折腾了，直接如实报错。
+                if self.driver is not None and self.driver.recovery_after_jump():
+                    self._prev = fr           # 画面确实动了，以新帧为基准继续
+                    self._frames += 1
+                    self.bar.set_progress(self._frames,
+                                          int(self._acc.h / self._dpr))
+                    self._do_scroll()
+                    return
+                # 手动模式下用户可能正在拖动滚动条，容忍几次再继续
+                if self.manual and self._frames < self.max_frames:
+                    self._prev = fr
+                    self._frames += 1
+                    self.bar.set_progress(self._frames,
+                                          int(self._acc.h / self._dpr))
+                    return
+                # 已经拼出明显长图后的个别不可匹配帧（典型是滚到底时滑块抖动），
+                # 不该当成失败丢掉整张图 —— 计数几次就正常收尾。
+                if (self._frames >= 3 and self._acc is not None
+                        and self._acc.h > fr.h * 1.5):
+                    self._no_progress += 1
+                    self._prev = fr
+                    self._frames += 1
+                    self.bar.set_progress(self._frames,
+                                          int(self._acc.h / self._dpr))
+                    if self._no_progress >= 2:
+                        self._finish()
+                    return
+                # 匹配失败时先做一次"多块独立滚动区域"诊断，给出更具体的建议
+
+                guess = best_candidate_offset(self._prev, fr)
+                if guess > 0:
+                    t2, b2 = static_strips(self._prev, fr)
+                    problem = self._check_multi_pane(fr, guess, t2, fr.h - b2)
+                    if problem:
+                        self.failed.emit(problem)
+                        self._cleanup()
+                        return
+                self.failed.emit(
+                    "画面内容变化过快，无法对齐拼接。\n"
+                    + ("拖拽滚动条模式下最常见的原因：点在了滚动条的**轨道**上而不是**滑块**上——"
+                       "那样会一次翻整页，无法拼接。请重新框选并点中滑块本身。\n"
+                       if self.driver is not None and self.driver.mode == "drag" else
+                       "（请关闭动画/视频后重试）\n"))
+                self._cleanup()
+                return
+            if s == 0:
+                self._no_progress += 1
+            else:
+                H = fr.h
+                top, bpad = static_strips(self._prev, fr)
+                bottom = H - bpad
+                # 多块独立滚动区域（上方列表 + 下方明细面板）拼不出来，早点说清楚
+                problem = self._check_multi_pane(fr, s, top, bottom)
+                if problem:
+                    self.failed.emit(problem)
+                    self._cleanup()
+                    return
+                if self._frames == 1:
+                    # 首次拼接：裁掉首帧的静止边缘，只保留真正的滚动内容区
+                    kept = self._acc.rows[top:bottom]
+                    self._acc = Frame(kept, self._acc.w, len(kept), self._acc.dpr)
+                start = max(top, bottom - s)
+                if bottom - start > 0:
+                    self._acc.rows.extend(fr.rows[start:bottom])
+                    self._acc.h = len(self._acc.rows)
+                self._debug_dump(fr, f"拼接 +{s}px（静止边缘 top={top} bottom={bpad}）")
+                self._no_progress = 0
+                if self.driver is not None:
+                    self.driver.moved_ever = True
+                    self.driver.observe(s)      # 用实测位移校准步长
+        self._prev = fr
+        self._frames += 1
+        self.bar.set_progress(self._frames,
+                              int(self._acc.h / self._dpr),
+                              s if s > 0 else None)
+        # 拖拽没生效会先自动降级到滚轮重试（见下方 no_progress 分支）；
+        # 这里不再硬失败。
+        # 自动模式：连续几帧没新内容说明滚到底了；手动模式由用户点"完成"结束
+        if not self.manual and self._no_progress >= 3:
+            d = self.driver
+            if (d is not None and d.mode == "drag" and not d.moved_ever
+                    and d.used_fallback is None):
+                # 拖拽一直没用（多半没点中滑块/该应用不吃拖拽）→ 自动改滚轮再试
+                d.used_fallback = "wheel"
+                d.mode = "wheel"
+                d.px_per_unit = _UNIT_DEFAULTS["wheel"]
+                self._no_progress = 0
+                self.bar.set_title("拖拽没生效，改用滚轮重试")
+                self.bar.set_progress(self._frames,
+                                      int(self._acc.h / self._dpr))
+                self._do_scroll()
+                return
+            if d is not None and not d.moved_ever and d.used_fallback == "wheel":
+                self.failed.emit(
+                    "拖拽和滚轮都没能让页面滚动。\n"
+                    "可能原因：点击位置不在滚动区域，或该窗口不响应注入的输入。\n"
+                    "建议改用「滚动长截图（PageDown 自动滚动）」或「手动滚动」。")
+                self._cleanup()
+                return
+            self._finish()
+            return
+        self._do_scroll()
+
+    def _finish(self):
+        self._cleanup()
+        if self._acc is None:
+            self.failed.emit("没有抓到任何内容")
+            return
+        self.finished_ok.emit(frame_to_pixmap(self._acc, self._dpr))
+
+    def _cleanup(self):
+        self._timer.stop()
+        self.bar.hide()
+        self.bar.deleteLater()
+
+
+# ========================================================================
+# 来自 editor.py
+# ========================================================================
+# -*- coding: utf-8 -*-
+"""编辑器窗口：左侧工具栏 + 顶部属性栏 + 可缩放画布。"""
+import math
+
+from PySide6.QtCore import (QPoint, QPointF, QRect, QRectF, QSize, Qt,
+                            Signal)
+from PySide6.QtGui import (QAction, QColor, QGuiApplication, QIcon, QKeySequence,
+                           QPainter, QPainterPath, QPen, QPixmap)
+from PySide6.QtWidgets import (QApplication, QColorDialog, QDialog, QFileDialog,
+                               QFrame, QHBoxLayout, QLabel, QLayout, QLineEdit,
+                               QMainWindow, QMessageBox, QPushButton,
+                               QScrollArea, QSizePolicy, QSpinBox, QTabBar,
+                               QTabWidget, QToolButton, QVBoxLayout, QWidget,
+                               QButtonGroup)
+
+
+
+
+
+TOOLS = [
+    ("select",    "选择",   "选择并移动已有标注（Delete 删除）"),
+    ("rect",      "矩形",   "拖拽画矩形，Shift 画正方形"),
+    ("ellipse",   "椭圆",   "拖拽画椭圆，Shift 画正圆"),
+    ("line",      "直线",   "拖拽画直线，Shift 锁定水平/垂直/45°"),
+    ("arrow",     "箭头",   "拖拽画箭头，指引方向"),
+    ("pen",       "画笔",   "自由手绘"),
+    ("step",      "序号",   "单击放置递增序号，做步骤指引"),
+    ("text",      "文字",   "单击后输入文字，Enter 确认"),
+    ("highlight", "高亮",   "拖拽涂抹半透明高亮"),
+    ("mosaic",    "马赛克", "拖拽对区域打码"),
+    ("pick",      "取色",   "单击吸取图上颜色作为当前标注颜色"),
+    ("crop",      "裁剪",   "拖拽选择保留区域，Enter 应用"),
+]
+
+PALETTE = ["#e53935", "#fb8c00", "#fdd835", "#43a047",
+           "#1e88e5", "#8e24aa", "#ffffff", "#000000"]
+
+HANDLE_SIZE = 8      # 选中图形四角/四边句柄的显示大小（屏幕像素）
+HANDLE_HIT = 11      # 句柄的点击容差
+
+
+class FlowLayout(QLayout):
+    """可换行的水平布局：空间不够时自动把控件换到下一行。
+
+    用来替代 QToolBar 做顶栏 —— QToolBar 在窗口变窄时会把放不下的控件
+    吞进溢出"»"菜单，用户就找不到了；流式布局会直接换行，始终可见。
+    """
+
+    def __init__(self, parent=None, margin=0, spacing=6):
+        super().__init__(parent)
+        if parent is not None:
+            self.setContentsMargins(margin, margin, margin, margin)
+        self._spacing = spacing
+        self._items = []
+
+    def __del__(self):
+        while self.count():
+            self.takeAt(0)
+
+    def addItem(self, item):
+        self._items.append(item)
+
+    def count(self):
+        return len(self._items)
+
+    def itemAt(self, index):
+        return self._items[index] if 0 <= index < len(self._items) else None
+
+    def takeAt(self, index):
+        if 0 <= index < len(self._items):
+            return self._items.pop(index)
+        return None
+
+    def expandingDirections(self):
+        return Qt.Orientations(Qt.Orientation(0))
+
+    def hasHeightForWidth(self):
+        return True
+
+    def heightForWidth(self, width):
+        return self._do_layout(QRect(0, 0, width, 0), True)
+
+    def setGeometry(self, rect):
+        super().setGeometry(rect)
+        self._do_layout(rect, False)
+
+    def sizeHint(self):
+        return self.minimumSize()
+
+    def minimumSize(self):
+        size = QSize()
+        for item in self._items:
+            size = size.expandedTo(item.minimumSize())
+        m = self.contentsMargins()
+        return size + QSize(m.left() + m.right(), m.top() + m.bottom())
+
+    def _do_layout(self, rect, test_only):
+        """逐行排布：同一行内**垂直居中**（不同高度的控件才能对齐），
+        放不下就换行。"""
+        m = self.contentsMargins()
+        eff = rect.adjusted(m.left(), m.top(), -m.right(), -m.bottom())
+        right = eff.right() + 1
+        x, y = eff.x(), eff.y()
+        line_height = 0
+        line = []                      # [(item, sizeHint, x)]
+
+        def place_line():
+            nonlocal y, line_height
+            for it, hint, ix in line:
+                if not test_only:
+                    iy = y + (line_height - hint.height()) // 2   # 垂直居中
+                    it.setGeometry(QRect(QPoint(ix, iy), hint))
+            y += line_height + self._spacing
+            line.clear()
+            line_height = 0
+
+        for item in self._items:
+            hint = item.sizeHint()
+            if line and x + hint.width() > right:
+                place_line()
+                x = eff.x()
+            line.append((item, hint, x))
+            line_height = max(line_height, hint.height())
+            x += hint.width() + self._spacing
+        if line:
+            for it, hint, ix in line:
+                if not test_only:
+                    iy = y + (line_height - hint.height()) // 2
+                    it.setGeometry(QRect(QPoint(ix, iy), hint))
+            y += line_height
+        return max(self._spacing, y - rect.y() + m.bottom())
+
+
+class Canvas(QWidget):
+    """底图 + 标注列表的绘制与交互。坐标均为图像像素坐标。"""
+
+    shapes_changed = Signal()
+    color_picked = Signal(QColor)
+    zoom_changed = Signal(float)
+    escape_idle = Signal()   # Esc 按下且画布无任何待取消状态
+    selection_changed = Signal(object)   # 当前选中的图形（或 None）
+
+    def __init__(self, pixmap: QPixmap, parent=None):
+        super().__init__(parent)
+        self.base_pixmap = QPixmap(pixmap)
+        # 保留截图自带的 devicePixelRatio：图形坐标统一用"图像物理像素"，
+        # 画布控件尺寸用"逻辑像素"（物理 / dpr），这样 100% 缩放时
+        # 1 个图像像素恰好落在 1 个屏幕物理像素上，不会被系统放大而发虚。
+        self.dpr = float(self.base_pixmap.devicePixelRatio() or 1.0)
+        self.shapes: list = []
+        self.tool = "select"
+        self.color = QColor(PALETTE[0])
+        self.pen_width = 3
+        self.font_size = 20
+        self.step_diameter = 36        # 序号圆直径，独立于字号
+        self.step_counter = 1
+
+        self.zoom = 1.0
+        self._current: Shape | None = None   # 正在拖拽中的图形
+        self._drag_start = QPointF()
+        self._dragging = False
+        self._moving: Shape | None = None    # 选择模式下拖动的图形
+        self._move_last = QPointF()
+        self._move_snapshot = False
+        self._selected: Shape | None = None
+        self._resizing: tuple | None = None   # (shape, handle_index)
+        self._crop_rect: QRectF | None = None
+        self._hover_pos = None   # 取色放大镜用的光标位置（窗口坐标）
+
+        self._undo_stack: list = []
+        self._redo_stack: list = []
+
+        self._text_edit: QLineEdit | None = None
+        self._text_pos = QPointF()
+
+        self.setMouseTracking(True)
+        self.setFocusPolicy(Qt.StrongFocus)
+        self._apply_size()
+
+    # ---------- 基础 ----------
+    def _apply_size(self):
+        """画布逻辑尺寸 = 图像物理像素 / dpr × 缩放。"""
+        self.setFixedSize(max(1, round(self.base_pixmap.width() / self.dpr * self.zoom)),
+                          max(1, round(self.base_pixmap.height() / self.dpr * self.zoom)))
+
+    def to_image(self, widget_pos) -> QPointF:
+        """控件坐标 → 图像物理像素坐标。"""
+        return QPointF(widget_pos.x() * self.dpr / self.zoom,
+                       widget_pos.y() * self.dpr / self.zoom)
+
+    def clamp(self, p: QPointF) -> QPointF:
+        r = QRectF(self.base_pixmap.rect())
+        return QPointF(min(max(p.x(), r.left()), r.right()),
+                       min(max(p.y(), r.top()), r.bottom()))
+
+    # ---------- 撤销 / 重做 ----------
+    def _snapshot(self):
+        return (QPixmap(self.base_pixmap), clone_shapes(self.shapes),
+                self.step_counter)
+
+    def push_undo(self):
+        self._undo_stack.append(self._snapshot())
+        if len(self._undo_stack) > 60:
+            self._undo_stack.pop(0)
+        self._redo_stack.clear()
+
+    def undo(self):
+        if not self._undo_stack:
+            return
+        self._redo_stack.append(self._snapshot())
+        self._restore(self._undo_stack.pop())
+
+    def redo(self):
+        if not self._redo_stack:
+            return
+        self._undo_stack.append(self._snapshot())
+        self._restore(self._redo_stack.pop())
+
+    def _restore(self, snap):
+        self.base_pixmap, self.shapes, self.step_counter = snap
+        self.base_pixmap = QPixmap(self.base_pixmap)
+        self.shapes = clone_shapes(self.shapes)
+        self._selected = None
+        self._crop_rect = None
+        self._apply_size()
+        self.update()
+        self.shapes_changed.emit()
+
+    # ---------- 鼠标交互 ----------
+    def mousePressEvent(self, e):
+        self._commit_text()
+        if e.button() != Qt.LeftButton:
+            return
+        pos = self.clamp(self.to_image(e.position()))
+        self._drag_start = pos
+        self._dragging = True
+
+        if self.tool == "select":
+            self._resizing = None
+            # 先看是否点在缩放句柄上（优先于选中/移动）
+            if self._selected is not None:
+                hit = int(HANDLE_HIT / self.zoom) + 2
+                for i, hp in enumerate(self._selected.handles()):
+                    if (abs(hp.x() - pos.x()) <= hit and abs(hp.y() - pos.y()) <= hit):
+                        self.push_undo()
+                        self._resizing = (self._selected, i)
+                        self._dragging = False
+                        self.update()
+                        return
+            self._moving = None
+            self._selected = None
+            self._move_snapshot = False
+            for shape in reversed(self.shapes):  # 最上层优先
+                if shape.contains(pos, 6 / self.zoom):
+                    self._selected = shape
+                    self._moving = shape
+                    self._move_last = pos
+                    break
+            self.selection_changed.emit(self._selected)
+            self.update()
+            return
+
+        if self.tool == "crop":
+            self._crop_rect = QRectF(pos, pos)
+            self.update()
+            return
+
+        if self.tool == "pick":
+            img = self.base_pixmap.toImage()
+            c = img.pixelColor(int(pos.x()), int(pos.y()))
+            self.color = c
+            self.color_picked.emit(c)
+            self._dragging = False
+            return
+
+        if self.tool == "text":
+            self._open_text_editor(pos)
+            self._dragging = False
+            return
+
+        if self.tool == "step":
+            self.push_undo()
+            self.shapes.append(StepShape(self.color, self.pen_width, pos,
+                                         self.step_counter, self.font_size,
+                                         self.step_diameter))
+            self.step_counter += 1
+            self._dragging = False
+            self.update()
+            self.shapes_changed.emit()
+            return
+
+        if self.tool == "pen":
+            self._current = PenShape(self.color, self.pen_width, [pos])
+        elif self.tool == "rect":
+            self._current = RectShape(self.color, self.pen_width, QRectF(pos, pos))
+        elif self.tool == "ellipse":
+            self._current = EllipseShape(self.color, self.pen_width, QRectF(pos, pos))
+        elif self.tool == "line":
+            self._current = LineShape(self.color, self.pen_width, pos, pos)
+        elif self.tool == "arrow":
+            self._current = ArrowShape(self.color, self.pen_width, pos, pos)
+        elif self.tool == "highlight":
+            self._current = HighlightShape(self.color, self.pen_width, QRectF(pos, pos))
+        elif self.tool == "mosaic":
+            self._current = MosaicShape(self.color, self.pen_width, QRectF(pos, pos))
+        self.update()
+
+    def mouseMoveEvent(self, e):
+        self._hover_pos = e.position()
+        if self.tool == "pick":
+            self.update()  # 刷新取色放大镜
+        pos = self.clamp(self.to_image(e.position()))
+        if self.tool == "select" and self._resizing is not None:
+            shape, index = self._resizing
+            shape.resize_by_handle(index, pos)
+            self.update()
+            return
+        if self.tool == "select" and self._moving is not None:
+            if not self._move_snapshot:
+                self.push_undo()  # 移动开始前记录一次快照
+                self._move_snapshot = True
+            d = pos - self._move_last
+            self._moving.move_by(d.x(), d.y())
+            self._move_last = pos
+            self.update()
+            return
+        if self.tool == "crop" and self._dragging and self._crop_rect is not None:
+            self._crop_rect = QRectF(self._drag_start, pos)
+            self.update()
+            return
+        if not self._dragging or self._current is None:
+            return
+        cur = self._current
+        if isinstance(cur, PenShape):
+            cur.add_point(pos)
+        elif isinstance(cur, LineShape):
+            p2 = pos
+            if e.modifiers() & Qt.ShiftModifier:  # 锁定 45° 方向
+                d = p2 - self._drag_start
+                ang = round(math.atan2(d.y(), d.x()) / (math.pi / 4))
+                length = math.hypot(d.x(), d.y())
+                p2 = self._drag_start + QPointF(
+                    length * math.cos(ang * math.pi / 4),
+                    length * math.sin(ang * math.pi / 4))
+            cur.p2 = p2
+        else:  # 矩形类
+            rect = QRectF(self._drag_start, pos)
+            if e.modifiers() & Qt.ShiftModifier:  # 正方形
+                side = max(abs(rect.width()), abs(rect.height()))
+                sx = side if pos.x() >= self._drag_start.x() else -side
+                sy = side if pos.y() >= self._drag_start.y() else -side
+                rect = QRectF(self._drag_start,
+                              self._drag_start + QPointF(sx, sy))
+            cur.rect = rect.normalized()
+        self.update()
+
+    def leaveEvent(self, e):
+        if self._hover_pos is not None:
+            self._hover_pos = None
+            if self.tool == "pick":
+                self.update()
+        super().leaveEvent(e)
+
+    def mouseReleaseEvent(self, e):
+        if e.button() != Qt.LeftButton:
+            return
+        if self.tool == "select":
+            self._moving = None
+            self._move_snapshot = False
+            self._resizing = None
+            self.shapes_changed.emit()
+            return
+        if self.tool == "crop":
+            self._dragging = False
+            return
+        if self._current is not None:
+            # 过滤掉过小的误触
+            br = self._current.bounding_rect()
+            too_small = (not isinstance(self._current, PenShape)
+                         and br.width() < 3 and br.height() < 3)
+            if isinstance(self._current, PenShape) and len(self._current.points) < 2:
+                too_small = True
+            if not too_small:
+                self.push_undo()
+                self.shapes.append(self._current)
+                self.shapes_changed.emit()
+            self._current = None
+        self._dragging = False
+        self.update()
+
+    def mouseDoubleClickEvent(self, e):
+        if self.tool == "crop":
+            self.apply_crop()
+
+    def keyPressEvent(self, e):
+        if e.key() in (Qt.Key_Delete, Qt.Key_Backspace):
+            if self._selected is not None and self._selected in self.shapes:
+                self.push_undo()
+                self.shapes.remove(self._selected)
+                self._selected = None
+                self.selection_changed.emit(None)
+                self.update()
+                self.shapes_changed.emit()
+            return
+        if e.key() in (Qt.Key_Return, Qt.Key_Enter):
+            if self.tool == "crop":
+                self.apply_crop()
+            return
+        if e.key() == Qt.Key_Escape:
+            # 分层取消：文字输入 → 裁剪框 → 选中图形 → 绘制中 → 都空闲则请求关闭窗口
+            if self._text_edit is not None:
+                self._cancel_text()
+            elif self._crop_rect is not None:
+                self._crop_rect = None
+                self.update()
+            elif self._selected is not None:
+                self._selected = None
+                self.selection_changed.emit(None)
+                self.update()
+            elif self._current is not None:
+                self._current = None
+                self._dragging = False
+                self.update()
+            else:
+                self.escape_idle.emit()
+            return
+        super().keyPressEvent(e)
+
+    # ---------- 文字输入 ----------
+    def _open_text_editor(self, pos: QPointF):
+        self._text_pos = pos
+        edit = QLineEdit(self)
+        edit.setPlaceholderText("输入文字，Enter 确认 / Esc 取消")
+        font = edit.font()
+        font.setPixelSize(max(12, int(self.font_size * self.zoom)))
+        edit.setFont(font)
+        edit.setStyleSheet(f"color: {self.color.name()}; background: rgba(255,255,255,220);"
+                           "border: 1px dashed #888;")
+        edit.move(int(pos.x() * self.zoom), int(pos.y() * self.zoom))
+        edit.resize(max(240, int(self.font_size * self.zoom * 12)), edit.sizeHint().height() + 6)
+        edit.returnPressed.connect(self._commit_text)
+        edit.editingFinished.connect(self._commit_text)
+        edit.show()
+        edit.setFocus()
+        self._text_edit = edit
+
+    def _cancel_text(self):
+        """丢弃正在输入的文字。"""
+        if self._text_edit is None:
+            return
+        edit = self._text_edit
+        self._text_edit = None
+        edit.blockSignals(True)   # 防止 editingFinished 触发提交
+        edit.deleteLater()
+
+    def _commit_text(self):
+        if self._text_edit is None:
+            return
+        edit = self._text_edit
+        self._text_edit = None
+        text = edit.text().strip()
+        edit.deleteLater()
+        if text:
+            self.push_undo()
+            self.shapes.append(TextShape(self.color, self.pen_width, self._text_pos,
+                                         text, self.font_size))
+            self.update()
+            self.shapes_changed.emit()
+
+    # ---------- 裁剪 ----------
+    def apply_crop(self):
+        if self._crop_rect is None:
+            return
+        r = self._crop_rect.normalized().toAlignedRect().intersected(
+            self.base_pixmap.rect())
+        if r.width() < 10 or r.height() < 10:
+            self._crop_rect = None
+            self.update()
+            return
+        self.push_undo()
+        cropped = self.base_pixmap.copy(r)
+        cropped.setDevicePixelRatio(self.dpr)
+        self.base_pixmap = cropped
+        kept = []
+        for shape in self.shapes:
+            shape.translate(-r.x(), -r.y())
+            if shape.bounding_rect().intersects(QRectF(self.base_pixmap.rect())):
+                kept.append(shape)
+        self.shapes = kept
+        self._crop_rect = None
+        self._selected = None
+        self._apply_size()
+        self.update()
+        self.shapes_changed.emit()
+
+    def cancel_crop(self):
+        self._crop_rect = None
+        self.update()
+
+    # ---------- 序号大小 ----------
+    def selected_step(self):
+        """当前选中的序号图形（没有则返回 None）。"""
+        return self._selected if isinstance(self._selected, StepShape) else None
+
+    def resize_selected_step(self, diameter: float, push_undo: bool = True):
+        step = self.selected_step()
+        if step is None:
+            return False
+        if abs(step.diameter - diameter) < 0.5:
+            return False
+        if push_undo:
+            self.push_undo()
+        step.set_diameter(diameter)
+        self.update()
+        self.shapes_changed.emit()
+        return True
+
+    # ---------- 缩放 ----------
+    def set_zoom(self, zoom: float):
+        self.zoom = min(4.0, max(0.1, zoom))
+        self._apply_size()
+        self.update()
+        self.zoom_changed.emit(self.zoom)
+
+    # ---------- 导出 ----------
+    def render_result(self) -> QPixmap:
+        """导出为图像物理像素的完整结果（无损，不做任何缩放）。"""
+        w, h = self.base_pixmap.width(), self.base_pixmap.height()
+        out = QPixmap(w, h)          # 先在 dpr=1 的工作画布上按物理像素绘制
+        out.fill(Qt.transparent)
+        p = QPainter(out)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setRenderHint(QPainter.TextAntialiasing)
+        # 用显式源/目标矩形绘制，避免源 pixmap 的 dpr 影响落点尺寸
+        p.drawPixmap(QRect(0, 0, w, h), self.base_pixmap,
+                     QRect(0, 0, w, h))
+        for shape in self.shapes:
+            shape.draw(p, self)
+        p.end()
+        out.setDevicePixelRatio(self.dpr)   # 带上 dpr，显示按逻辑尺寸、像素不丢
+        return out
+
+    # ---------- 绘制 ----------
+    def paintEvent(self, e):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.TextAntialiasing)
+        painter.save()
+        painter.scale(self.zoom, self.zoom)
+        # 缩小时用平滑滤波（不然文字发虚/锯齿）；放大时保持像素锐利；
+        # 只对底图启用，马赛克等图形的像素化效果不受影响。
+        painter.setRenderHint(QPainter.SmoothPixmapTransform, self.zoom < 1.0)
+        painter.drawPixmap(0, 0, self.base_pixmap)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform, False)
+        for shape in self.shapes:
+            shape.draw(painter, self)
+        if self._current is not None:
+            self._current.draw(painter, self)
+        # 选中框 + 缩放句柄（细实线 + 白色句柄，现代编辑器风格）
+        if self._selected is not None and self.tool == "select":
+            rect = self._selected.bounding_rect().adjusted(-2, -2, 2, 2)
+            painter.setPen(QPen(QColor(ACCENT), 1.4 / self.zoom))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawRect(rect)
+            hs = HANDLE_SIZE / self.zoom
+            painter.setPen(QPen(QColor(ACCENT), 1.2 / self.zoom))
+            painter.setBrush(QColor("#ffffff"))
+            for hp in self._selected.handles():
+                painter.drawRect(QRectF(hp.x() - hs / 2, hp.y() - hs / 2, hs, hs))
+        # 裁剪遮罩
+        if self.tool == "crop" and self._crop_rect is not None:
+            rect = self._crop_rect.normalized()
+            full = QRectF(self.base_pixmap.rect())
+            path = QPainterPath()
+            path.addRect(full)
+            path.addRect(rect)
+            painter.fillPath(path, QColor(0, 0, 0, 130))
+            painter.setPen(QPen(QColor(255, 255, 255), 1.5 / self.zoom, Qt.DashLine))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawRect(rect)
+            # 尺寸提示
+            painter.setPen(QPen(QColor(255, 255, 255)))
+            painter.drawText(rect.bottomRight() + QPointF(-70, -6),
+                             f"{int(rect.width())} × {int(rect.height())}")
+        painter.restore()
+        # 取色工具的像素放大镜（窗口坐标，不随画布缩放）
+        if self.tool == "pick" and self._hover_pos is not None:
+            self._draw_pick_magnifier(painter)
+        painter.end()
+
+    # ---------- 取色放大镜 ----------
+    PICK_CELL_N = 9     # 奇数格，正中心即取样像素
+    PICK_CELL_PX = 22   # 每格屏幕像素
+
+    def _draw_pick_magnifier(self, p: QPainter):
+        n, cpx = self.PICK_CELL_N, self.PICK_CELL_PX
+        size = n * cpx
+        half = n // 2
+        img = self.base_pixmap.toImage()
+        src = self.to_image(self._hover_pos)
+        cx, cy = int(src.x()), int(src.y())
+
+        # 位置：光标右下，越界翻转，最后整体夹回画布内
+        wx, wy = self._hover_pos.x() + 20, self._hover_pos.y() + 20
+        if wx + size > self.width() - 4:
+            wx = self._hover_pos.x() - size - 20
+        if wy + size + 34 > self.height() - 4:
+            wy = self._hover_pos.y() - size - 54
+        wx = min(max(4.0, wx), max(4.0, self.width() - size - 4))
+        wy = min(max(4.0, wy), max(4.0, self.height() - size - 34 - 4))
+        wx, wy = int(wx), int(wy)
+
+        # 逐像素填格（真实源像素，未经缩放混合）
+        for j in range(n):
+            for i in range(n):
+                px, py = cx + i - half, cy + j - half
+                if 0 <= px < img.width() and 0 <= py < img.height():
+                    p.fillRect(wx + i * cpx, wy + j * cpx, cpx, cpx,
+                               img.pixelColor(px, py))
+                else:
+                    p.fillRect(wx + i * cpx, wy + j * cpx, cpx, cpx,
+                               QColor(40, 40, 40))
+        # 网格 + 外框
+        p.setPen(QPen(QColor(255, 255, 255, 36), 1))
+        p.setBrush(Qt.NoBrush)
+        for i in range(1, n):
+            p.drawLine(wx + i * cpx, wy, wx + i * cpx, wy + size)
+            p.drawLine(wx, wy + i * cpx, wx + size, wy + i * cpx)
+        p.setPen(QPen(QColor(255, 255, 255), 2))
+        p.drawRect(wx, wy, size, size)
+        # 红框标出实际取样的像素
+        if 0 <= cx < img.width() and 0 <= cy < img.height():
+            p.setPen(QPen(QColor(229, 57, 53), 2))
+            p.drawRect(wx + half * cpx, wy + half * cpx, cpx, cpx)
+            # 色值标签
+            color = img.pixelColor(cx, cy)
+            text = color.name().upper()
+            metrics = p.fontMetrics()
+            lw = metrics.horizontalAdvance(text) + 30
+            lh = metrics.height() + 10
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor(0, 0, 0, 200))
+            p.drawRoundedRect(wx, wy + size + 6, lw, lh, 4, 4)
+            p.setBrush(color)
+            p.drawRect(wx + 6, wy + size + 11, lh - 12, lh - 12)
+            p.setPen(QColor(255, 255, 255))
+            p.drawText(wx + lh, wy + size + 6 + metrics.ascent() + 5, text)
+
+
+class EditorWindow(QMainWindow):
+    """FSCapture 风格编辑器主窗口。"""
+
+    pin_requested = Signal(QPixmap)
+    capture_requested = Signal()   # 点顶栏"截图"按钮：去截下一张（会自动最小化编辑器）
+
+    def __init__(self, pixmap: QPixmap | None = None, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("PyShot 编辑器")
+        self._prev_tool = "select"
+        # 跨标签共享的绘制属性（切标签/新截图沿用当前工具与样式）
+        self._shared = {"tool": "select", "color": QColor(PALETTE[0]),
+                        "pen_width": 3, "font_size": 20, "step_diameter": 36}
+
+        # 标签页：一次会话里的多张截图
+        self.tabs = QTabWidget()
+        self.tabs.setObjectName("canvasTabs")
+        self.tabs.setMovable(True)
+        self.tabs.setDocumentMode(True)
+        self.tabs.tabCloseRequested.connect(self.close_tab)
+        self.tabs.currentChanged.connect(self._on_tab_changed)
+
+        central = QWidget()
+        root = QVBoxLayout(central)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+        root.addWidget(self._build_topbar())       # 可换行的顶栏
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(0)
+        row.addWidget(self._build_toolbar())
+        row.addWidget(self.tabs, 1)
+        root.addLayout(row, 1)
+        self.setCentralWidget(central)
+
+        self._build_shortcuts()
+
+        if pixmap is not None:
+            self.add_canvas(pixmap)
+            w = min(int(pixmap.width() * self.canvas.zoom) + 190,
+                    int(QGuiApplication.primaryScreen().availableGeometry().width() * 0.92))
+            h = min(int(pixmap.height() * self.canvas.zoom) + 120,
+                    int(QGuiApplication.primaryScreen().availableGeometry().height() * 0.92))
+            self.resize(max(w, 760), max(h, 500))
+        self._refresh_actions()
+
+    # ---------- 标签页 ----------
+    @property
+    def canvas(self) -> "Canvas | None":
+        """当前标签的画布。"""
+        page = self.tabs.currentWidget()
+        return page.widget() if isinstance(page, QScrollArea) else None
+
+    @property
+    def scroll(self) -> "QScrollArea | None":
+        page = self.tabs.currentWidget()
+        return page if isinstance(page, QScrollArea) else None
+
+    def add_canvas(self, pixmap: QPixmap, title: str | None = None) -> Canvas:
+        """新增一个截图标签页并切换过去。"""
+        canvas = Canvas(pixmap)
+        canvas.tool = self._shared["tool"]
+        canvas.color = QColor(self._shared["color"])
+        canvas.pen_width = self._shared["pen_width"]
+        canvas.font_size = self._shared["font_size"]
+        canvas.step_diameter = self._shared["step_diameter"]
+        canvas.setCursor(Qt.CrossCursor if canvas.tool != "select" else Qt.ArrowCursor)
+        canvas.shapes_changed.connect(self._refresh_actions)
+        canvas.color_picked.connect(self._on_color_picked)
+        canvas.selection_changed.connect(self._on_selection_changed)
+        canvas.escape_idle.connect(self.close)  # 空闲时 Esc 关闭编辑器
+        canvas.zoom_changed.connect(lambda z, c=canvas: self._on_canvas_zoom(c, z))
+
+        scroll = QScrollArea()
+        scroll.setWidget(canvas)
+        scroll.setWidgetResizable(False)
+        scroll.setAlignment(Qt.AlignCenter)
+
+        idx = self.tabs.addTab(scroll, title or f"截图 {self.tabs.count() + 1}")
+        self.tabs.setTabToolTip(
+            idx, f"{pixmap.width()} × {pixmap.height()} px\n"
+                 "滚轮/Ctrl+滚轮 缩放 · 中键拖动滚动")
+        # 自定义关闭按钮（自带图标在深色主题下几乎看不见）
+        close_btn = QToolButton()
+        close_btn.setObjectName("tabclose")
+        close_btn.setText("✕")
+        close_btn.setToolTip("关闭此标签 (Ctrl+W)")
+        close_btn.setCursor(Qt.PointingHandCursor)
+        close_btn.clicked.connect(lambda _=False, page=scroll: self._close_page(page))
+        self.tabs.tabBar().setTabButton(idx, QTabBar.RightSide, close_btn)
+
+        self.tabs.setCurrentIndex(idx)
+        self._fit_canvas(canvas, scroll)
+        # 设为默认的水印：新截图自动加上（可 Ctrl+Z 撤销）
+        defaults = load_default()
+        if defaults.get("auto"):
+            canvas.push_undo()
+            canvas.shapes.append(WatermarkShape(defaults,
+                                                canvas.base_pixmap.size()))
+        return canvas
+
+    def close_tab(self, idx: int):
+        page = self.tabs.widget(idx)
+        if page is not None:
+            self._close_page(page)
+
+    def _close_page(self, page):
+        idx = self.tabs.indexOf(page)
+        if idx < 0:
+            return
+        self.tabs.removeTab(idx)
+        page.setParent(None)
+        page.deleteLater()
+        if self.tabs.count() == 0:
+            self.close()          # 关掉最后一个标签 → 关闭编辑器
+        else:
+            self._on_tab_changed(self.tabs.currentIndex())
+
+    def _on_tab_changed(self, idx: int):
+        canvas = self.canvas
+        if canvas is None:
+            return
+        # 新标签沿用当前工具/颜色/线宽/字号
+        canvas.tool = self._shared["tool"]
+        canvas.color = QColor(self._shared["color"])
+        canvas.pen_width = self._shared["pen_width"]
+        canvas.font_size = self._shared["font_size"]
+        canvas.step_diameter = self._shared["step_diameter"]
+        canvas.setCursor(Qt.CrossCursor if canvas.tool != "select" else Qt.ArrowCursor)
+        self.zoom_label.setText(f"{round(canvas.zoom * 100)}%")
+        self._refresh_swatch_state()
+        self._refresh_actions()
+        self._refresh_size_label()
+        self._on_selection_changed(canvas._selected)
+
+    def _on_canvas_zoom(self, canvas: Canvas, zoom: float):
+        if canvas is self.canvas:
+            self.zoom_label.setText(f"{round(zoom * 100)}%")
+            self._refresh_size_label()
+
+    def _refresh_size_label(self):
+        canvas = self.canvas
+        if canvas is None:
+            return
+        self.size_label.setText(
+            f"{canvas.base_pixmap.width()} × {canvas.base_pixmap.height()} px")
+
+    # ---------- 工具栏 ----------
+    # 工具分组（用细线分隔），让工具轨道有清晰的层级
+    _TOOL_GROUPS = [
+        ["select"],
+        ["rect", "ellipse", "line", "arrow", "pen"],
+        ["step", "text", "highlight", "mosaic"],
+        ["pick", "crop"],
+    ]
+
+    def _build_toolbar(self) -> QWidget:
+        bar = QFrame()
+        bar.setObjectName("sidebar")
+        bar.setAttribute(Qt.WA_StyledBackground, True)
+        bar.setFrameShape(QFrame.NoFrame)      # 去掉默认立体边框
+        v = QVBoxLayout(bar)
+        v.setContentsMargins(6, 10, 6, 8)
+        v.setSpacing(4)
+        self.tool_group = QButtonGroup(self)
+        self.tool_group.setExclusive(True)
+        self.tool_buttons = {}
+        tips = {tid: (name, tip) for tid, name, tip in TOOLS}
+        first_group = True
+        for group in self._TOOL_GROUPS:
+            if not first_group:
+                sep = QFrame()
+                sep.setObjectName("railsep")
+                sep.setFrameShape(QFrame.HLine)
+                v.addWidget(sep)
+            first_group = False
+            for tid in group:
+                name, tip = tips[tid]
+                btn = QToolButton()
+                btn.setObjectName("toolbtn")
+                btn.setIcon(make_tool_icon(tid))
+                btn.setIconSize(QSize(24, 24))
+                btn.setFixedSize(44, 42)
+                btn.setToolButtonStyle(Qt.ToolButtonIconOnly)
+                btn.setToolTip(f"{name} — {tip}")
+                btn.setCheckable(True)
+                btn.setCursor(Qt.PointingHandCursor)
+                btn.clicked.connect(lambda checked, t=tid: self.set_tool(t))
+                self.tool_group.addButton(btn)
+                self.tool_buttons[tid] = btn
+                v.addWidget(btn, 0, Qt.AlignHCenter)
+        self.tool_buttons["select"].setChecked(True)
+        v.addStretch(1)
+        return bar
+
+    def _action_button(self, action: QAction) -> QToolButton:
+        """把一个 QAction 包成普通按钮（用于流式顶栏）。"""
+        btn = QToolButton()
+        btn.setObjectName("topbtn")
+        btn.setDefaultAction(action)
+        btn.setCursor(Qt.PointingHandCursor)
+        return btn
+
+    _CTRL_H = 30          # 顶栏控件统一高度（对齐的关键）
+
+    def _group(self, *widgets) -> QWidget:
+        """把若干控件打包成"原子组"：换行时整组一起走，不会被拆散。"""
+        box = QWidget()
+        h = QHBoxLayout(box)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(6)
+        for w in widgets:
+            h.addWidget(w)
+        return box
+
+    def _labeled(self, text: str, widget: QWidget) -> QWidget:
+        """标签 + 控件的原子组（垂直居中，换行时不会分开）。"""
+        lab = QLabel(text)
+        lab.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
+        return self._group(lab, widget)
+
+    def _top_sep(self) -> QFrame:
+        """顶栏分组之间的细竖分隔线（与控件等高居中）。"""
+        sep = QFrame()
+        sep.setObjectName("topsep")
+        sep.setFrameShape(QFrame.VLine)
+        sep.setFixedSize(1, 20)
+        return sep
+
+    def _build_topbar(self):
+        """顶栏：**两行有设计的分组**（不是随机换行）。
+
+        第 1 行 = 截图 + 颜色 + 尺寸参数；第 2 行 = 编辑操作 + 输出操作。
+        每行内部用流式布局，窗口过窄时该行内部才会继续折行；
+        所有控件统一高度并垂直居中，保证水平基线对齐。
+        """
+        bar = QWidget()
+        bar.setObjectName("topbar")
+        bar.setAttribute(Qt.WA_StyledBackground, True)
+        outer = QVBoxLayout(bar)
+        outer.setContentsMargins(10, 8, 10, 8)
+        outer.setSpacing(8)
+
+        def row() -> FlowLayout:
+            host = QWidget()
+            fl = FlowLayout(host, margin=0, spacing=10)
+            outer.addWidget(host)
+            return fl
+
+        # ---------- 第 1 行：截图 / 颜色 / 尺寸 ----------
+        r1 = row()
+        btn_shot = QPushButton("截图")
+        btn_shot.setObjectName("primarybtn")
+        btn_shot.setIcon(make_icon("camera"))
+        btn_shot.setIconSize(QSize(17, 17))
+        btn_shot.setFixedHeight(self._CTRL_H)
+        btn_shot.setToolTip("截取新区域\n会自动最小化编辑器，截完回到这里新增标签")
+        btn_shot.setCursor(Qt.PointingHandCursor)
+        btn_shot.clicked.connect(self.capture_requested)
+        self.btn_shot = btn_shot
+        r1.addWidget(btn_shot)
+        r1.addWidget(self._top_sep())
+
+        color_label = QLabel("颜色")
+        color_label.setAlignment(Qt.AlignVCenter)
+        swatches = []
+        self.color_buttons = []
+        for hexs in PALETTE:
+            b = QPushButton()
+            b.setObjectName("swatch")
+            b.setFixedSize(20, 20)
+            b.setStyleSheet(f"background:{hexs};")
+            b.clicked.connect(lambda checked, c=hexs: self.set_color(QColor(c)))
+            swatches.append(b)
+            self.color_buttons.append(b)
+        more = QPushButton("…")
+        more.setObjectName("swatchMore")
+        more.setFixedSize(20, 20)
+        more.setToolTip("自定义颜色")
+        more.clicked.connect(self._pick_color)
+        r1.addWidget(self._group(color_label, *swatches, more))
+        self._refresh_swatch_state()
+        r1.addWidget(self._top_sep())
+
+        self.width_spin = SpinBox()
+        self.width_spin.setRange(1, 20)
+        self.width_spin.setValue(self._shared["pen_width"])
+        self.width_spin.setFixedHeight(self._CTRL_H)
+        self.width_spin.setFixedWidth(62)
+        self.width_spin.valueChanged.connect(self._on_width_changed)
+        r1.addWidget(self._labeled("线宽", self.width_spin))
+
+        self.font_spin = SpinBox()
+        self.font_spin.setRange(10, 96)
+        self.font_spin.setValue(self._shared["font_size"])
+        self.font_spin.setFixedHeight(self._CTRL_H)
+        self.font_spin.setFixedWidth(62)
+        self.font_spin.valueChanged.connect(self._on_font_changed)
+        r1.addWidget(self._labeled("字号", self.font_spin))
+
+        self.step_spin = SpinBox()
+        self.step_spin.setRange(16, 240)
+        self.step_spin.setSingleStep(2)
+        self.step_spin.setSuffix(" px")
+        self.step_spin.setValue(int(self._shared["step_diameter"]))
+        self.step_spin.setFixedHeight(self._CTRL_H)
+        self.step_spin.setFixedWidth(80)
+        self.step_spin.setToolTip("序号圆的大小\n选中已有序号时可直接调整它的大小")
+        self.step_spin.valueChanged.connect(self._on_step_size_changed)
+        r1.addWidget(self._labeled("序号", self.step_spin))
+
+        # ---------- 第 2 行：编辑 / 输出 ----------
+        r2 = row()
+        self.act_undo = QAction("撤销", self)
+        self.act_undo.setToolTip("撤销 (Ctrl+Z)")
+        self.act_undo.triggered.connect(lambda: self.canvas and self.canvas.undo())
+        self.act_redo = QAction("重做", self)
+        self.act_redo.setToolTip("重做 (Ctrl+Y)")
+        self.act_redo.triggered.connect(lambda: self.canvas and self.canvas.redo())
+        self.act_crop_ok = QAction("应用裁剪", self)
+        self.act_crop_ok.setToolTip("应用裁剪框 (Enter)")
+        self.act_crop_ok.triggered.connect(
+            lambda: self.canvas and self.canvas.apply_crop())
+        act_copy = QAction("复制", self)
+        act_copy.setToolTip("复制到剪贴板 (Ctrl+C)")
+        act_copy.triggered.connect(self.copy_to_clipboard)
+        act_pin = QAction("贴图", self)
+        act_pin.setToolTip("把当前结果钉在屏幕最上层（Snipaste 风格）")
+        act_pin.triggered.connect(self.pin_to_screen)
+        act_wm = QAction("水印", self)
+        act_wm.setToolTip("给当前图片加水印（文字/图片、九宫格或平铺、可设为默认）")
+        act_wm.triggered.connect(self.add_watermark)
+        act_save = QAction("保存", self)
+        act_save.setToolTip("保存为文件 (Ctrl+S)")
+        act_save.triggered.connect(self.save_as)
+        act_close = QAction("关闭", self)
+        act_close.setToolTip("关闭编辑器 (Esc)")
+        act_close.triggered.connect(self.close)
+
+        undo_btn = self._icon_button("undo", "撤销 (Ctrl+Z)",
+                                     lambda: self.canvas and self.canvas.undo())
+        redo_btn = self._icon_button("redo", "重做 (Ctrl+Y)",
+                                     lambda: self.canvas and self.canvas.redo())
+        self.btn_undo, self.btn_redo = undo_btn, redo_btn
+        r2.addWidget(self._group(undo_btn, redo_btn))
+        r2.addWidget(self._action_button(self.act_crop_ok))
+        r2.addWidget(self._top_sep())
+        for act in (act_copy, act_pin, act_wm, act_save, act_close):
+            r2.addWidget(self._action_button(act))
+
+        self._build_statusbar_zoom()
+        return bar
+
+    def _icon_button(self, icon_name: str, tip: str, fn) -> QToolButton:
+        btn = QToolButton()
+        btn.setObjectName("topbtn")
+        btn.setIcon(make_icon(icon_name))
+        btn.setIconSize(QSize(18, 18))
+        btn.setFixedSize(self._CTRL_H + 4, self._CTRL_H)
+        btn.setToolTip(tip)
+        btn.setCursor(Qt.PointingHandCursor)
+        btn.clicked.connect(fn)
+        return btn
+        for act in (self.act_undo, self.act_redo, self.act_crop_ok,
+                    act_copy, act_pin, act_wm, act_save, act_close):
+            lay.addWidget(self._action_button(act))
+
+        self._build_statusbar_zoom()
+        return bar
+
+    def _build_statusbar_zoom(self):
+        """状态栏：左侧当前工具，右侧缩放胶囊。"""
+        sb = self.statusBar()
+        sb.setSizeGripEnabled(False)      # 去掉右下角的多余手柄
+        self.tool_name_label = QLabel()
+        self.tool_name_label.setObjectName("toolname")
+        self.tool_name_label.setText("工具：选择")
+        sb.addWidget(self.tool_name_label)
+        self.size_label = QLabel("")
+        self.size_label.setObjectName("sizelabel")
+        sb.addPermanentWidget(self.size_label)
+        zoom_group = QWidget()
+        zoom_group.setObjectName("zoomgroup")
+        zoom_group.setAttribute(Qt.WA_StyledBackground, True)
+        zlay = QHBoxLayout(zoom_group)
+        zlay.setContentsMargins(6, 2, 6, 2)
+        zlay.setSpacing(2)
+
+        def _zbtn(text, tip, fn, width=28):
+            b = QPushButton(text)
+            b.setObjectName("zoombtn")
+            b.setFixedSize(width, 24)
+            b.setToolTip(tip)
+            b.clicked.connect(fn)
+            return b
+
+        zoom_out = _zbtn("−", "缩小 (Ctrl+滚轮)",
+                         lambda: self.canvas and self.canvas.set_zoom(self.canvas.zoom / 1.2))
+        self.zoom_label = QLabel("100%")
+        self.zoom_label.setObjectName("zoomlabel")
+        self.zoom_label.setMinimumWidth(46)
+        self.zoom_label.setAlignment(Qt.AlignCenter)
+        zoom_in = _zbtn("＋", "放大 (Ctrl+滚轮)",
+                        lambda: self.canvas and self.canvas.set_zoom(self.canvas.zoom * 1.2))
+        zlay.addWidget(zoom_out)
+        zlay.addWidget(self.zoom_label)
+        zlay.addWidget(zoom_in)
+        sep = QFrame()
+        sep.setObjectName("zoomsep")
+        sep.setFrameShape(QFrame.VLine)
+        zlay.addWidget(sep)
+        zlay.addWidget(_zbtn("100%", "实际像素 (1:1)",
+                             lambda: self.canvas and self.canvas.set_zoom(1.0), width=44))
+        zlay.addWidget(_zbtn("适应", "缩放以适应窗口",
+                             self._zoom_fit, width=44))
+        sb.addPermanentWidget(zoom_group)
+
+    def _build_shortcuts(self):
+        for seq, fn in [
+            ("Ctrl+Z", lambda: self.canvas and self.canvas.undo()),
+            ("Ctrl+Y", lambda: self.canvas and self.canvas.redo()),
+            ("Ctrl+Shift+Z", lambda: self.canvas and self.canvas.redo()),
+            ("Ctrl+S", self.save_as),
+            ("Ctrl+C", self.copy_to_clipboard),
+            ("Ctrl+W", lambda: self.close_tab(self.tabs.currentIndex())),
+            ("Ctrl+Tab", lambda: self.tabs.setCurrentIndex(
+                (self.tabs.currentIndex() + 1) % max(1, self.tabs.count()))),
+        ]:
+            a = QAction(self)
+            a.setShortcut(QKeySequence(seq))
+            a.triggered.connect(fn)
+            self.addAction(a)
+        # 工具快捷键
+        for key, tid in zip("VRELAPSTHMIC", [t[0] for t in TOOLS]):
+            a = QAction(self)
+            a.setShortcut(QKeySequence(key))
+            a.triggered.connect(lambda checked, t=tid: self.set_tool(t))
+            self.addAction(a)
+
+    def set_hotkey_hint(self, hotkey: str):
+        """把当前生效的全局热键告知编辑器（显示在截图按钮提示里）。"""
+        if not hasattr(self, "btn_shot"):
+            return
+        suffix = f"（{hotkey}）" if hotkey else ""
+        self.btn_shot.setToolTip(
+            f"截取新区域{suffix}\n会自动最小化编辑器，截完回到这里新增标签")
+
+    # ---------- 行为 ----------
+    def set_tool(self, tid: str):
+        canvas = self.canvas
+        if canvas is not None:
+            canvas._commit_text()
+        if tid != "pick":
+            self._prev_tool = tid
+        self._shared["tool"] = tid
+        # 应用到所有标签，切换标签时保持一致
+        for i in range(self.tabs.count()):
+            c = self.tabs.widget(i).widget()
+            if isinstance(c, Canvas):
+                c.tool = tid
+                c.cancel_crop() if tid != "crop" else None
+                c._selected = None
+                c._hover_pos = None
+                c.setCursor(Qt.CrossCursor if tid != "select" else Qt.ArrowCursor)
+                c.update()
+        self.tool_buttons[tid].setChecked(True)
+        self._refresh_actions()
+        name = dict((t, n) for t, n, _ in TOOLS).get(tid, tid)
+        self.tool_name_label.setText(f"工具：{name}")
+
+    def _on_color_picked(self, color: QColor):
+        self._refresh_swatch_state()
+        self.statusBar().showMessage(
+            f"已取色 {color.name().upper()}，切回 {dict((t, n) for t, n, _ in TOOLS)[self._prev_tool]} 工具",
+            3000)
+        self.set_tool(self._prev_tool)  # 取色后自动切回之前的工具
+
+    def set_color(self, color: QColor):
+        self._shared["color"] = QColor(color)
+        for i in range(self.tabs.count()):
+            c = self.tabs.widget(i).widget()
+            if isinstance(c, Canvas):
+                c.color = QColor(color)
+        self._refresh_swatch_state()
+
+    def _on_width_changed(self, v: int):
+        self._shared["pen_width"] = v
+        for i in range(self.tabs.count()):
+            c = self.tabs.widget(i).widget()
+            if isinstance(c, Canvas):
+                c.pen_width = v
+
+    def _on_font_changed(self, v: int):
+        self._shared["font_size"] = v
+        for i in range(self.tabs.count()):
+            c = self.tabs.widget(i).widget()
+            if isinstance(c, Canvas):
+                c.font_size = v
+
+    def _on_step_size_changed(self, v: int):
+        """序号大小：作用于新序号，同时也实时调整选中的序号。"""
+        self._shared["step_diameter"] = v
+        for i in range(self.tabs.count()):
+            c = self.tabs.widget(i).widget()
+            if isinstance(c, Canvas):
+                c.step_diameter = v
+        canvas = self.canvas
+        if canvas is not None:
+            canvas.resize_selected_step(v)
+
+    def _on_selection_changed(self, shape):
+        """选中序号时把它的实际大小同步到控件上（控件即所见：新序号也用这个值）。"""
+        if not hasattr(self, "step_spin"):
+            return
+        if isinstance(shape, StepShape):
+            d = int(round(shape.diameter))
+            self.step_spin.blockSignals(True)
+            self.step_spin.setValue(d)
+            self.step_spin.blockSignals(False)
+            self._shared["step_diameter"] = d
+            for i in range(self.tabs.count()):
+                c = self.tabs.widget(i).widget()
+                if isinstance(c, Canvas):
+                    c.step_diameter = d
+
+    def _refresh_swatch_state(self):
+        canvas = self.canvas
+        cur = canvas.color.name() if canvas is not None else self._shared["color"].name()
+        for b, hexs in zip(self.color_buttons, PALETTE):
+            b.setProperty("selected", QColor(hexs).name() == cur)
+            b.style().unpolish(b)
+            b.style().polish(b)
+
+    def _pick_color(self):
+        current = self.canvas.color if self.canvas is not None else self._shared["color"]
+        c = QColorDialog.getColor(current, self, "选择颜色")
+        if c.isValid():
+            self.set_color(c)
+
+    def _fit_canvas(self, canvas: Canvas, scroll: QScrollArea):
+        """让新标签的图片适配可视区（小图不放大超过 100%）。"""
+        iw = max(1, canvas.base_pixmap.width() / canvas.dpr)
+        ih = max(1, canvas.base_pixmap.height() / canvas.dpr)
+        vw = scroll.viewport().width()
+        vh = scroll.viewport().height()
+        if vw > 80 and vh > 80:
+            zx = (vw - 24) / iw
+            zy = (vh - 24) / ih
+        else:
+            screen = QGuiApplication.primaryScreen().availableGeometry()
+            zx = (screen.width() * 0.85 - 190) / iw
+            zy = (screen.height() * 0.85 - 120) / ih
+        canvas.set_zoom(min(1.0, max(0.1, min(zx, zy))))
+
+    def _zoom_fit(self):
+        """缩放画布以适应当前窗口可视区。"""
+        canvas, scroll = self.canvas, self.scroll
+        if canvas is None or scroll is None:
+            return
+        iw = max(1, canvas.base_pixmap.width() / canvas.dpr)
+        ih = max(1, canvas.base_pixmap.height() / canvas.dpr)
+        zx = (scroll.viewport().width() - 24) / iw
+        zy = (scroll.viewport().height() - 24) / ih
+        canvas.set_zoom(min(4.0, max(0.1, min(zx, zy))))
+
+    def _refresh_actions(self):
+        canvas = self.canvas
+        self.act_undo.setEnabled(bool(canvas and canvas._undo_stack))
+        self.act_redo.setEnabled(bool(canvas and canvas._redo_stack))
+        self.act_crop_ok.setEnabled(bool(canvas and canvas.tool == "crop"))
+
+    def copy_to_clipboard(self):
+        canvas = self.canvas
+        if canvas is None:
+            return
+        canvas._commit_text()
+        QApplication.clipboard().setPixmap(canvas.render_result())
+        self.statusBar().showMessage("已复制到剪贴板", 2000)
+
+    def pin_to_screen(self):
+        canvas = self.canvas
+        if canvas is None:
+            return
+        canvas._commit_text()
+        self.pin_requested.emit(canvas.render_result())
+
+    # ---------- 水印 ----------
+    def add_watermark(self):
+        """打开水印设置对话框，把水印加到当前标签（可撤销、可拖动）。"""
+        canvas = self.canvas
+        if canvas is None:
+            return
+        dlg = WatermarkDialog(self, load_default(), canvas.base_pixmap.size())
+        if dlg.exec() != QDialog.Accepted:
+            return
+        settings = dlg.settings()
+        if settings.get("auto"):
+            saved = save_default(settings)
+            msg = ("已设为默认水印，之后每次新截图会自动添加"
+                   if saved else "已设为默认水印（本次运行有效，配置写入失败）")
+            self.statusBar().showMessage(msg, 4000)
+        self.apply_watermark(canvas, settings)
+
+    def apply_watermark(self, canvas: Canvas, settings: dict):
+        canvas.push_undo()
+        canvas.shapes.append(WatermarkShape(settings, canvas.base_pixmap.size()))
+        canvas.update()
+        canvas.shapes_changed.emit()
+
+    def save_as(self):
+        canvas = self.canvas
+        if canvas is None:
+            return
+        canvas._commit_text()
+        idx = self.tabs.currentIndex() + 1
+        default = f"screenshot-{idx}.png"
+        path, _ = QFileDialog.getSaveFileName(
+            self, "保存截图", default,
+            "PNG 图片 (*.png);;JPEG 图片 (*.jpg);;BMP 图片 (*.bmp)")
+        if not path:
+            return
+        img = canvas.render_result().toImage()
+        if path.lower().endswith((".jpg", ".jpeg")):
+            # JPEG 无透明通道，补白底；先归一化 dpr 以免按逻辑尺寸缩小
+            img.setDevicePixelRatio(1.0)
+            bg = QPixmap(img.size())
+            bg.fill(QColor("white"))
+            p = QPainter(bg)
+            p.drawPixmap(0, 0, QPixmap.fromImage(img))
+            p.end()
+            bg.save(path, "JPG", 92)
+        else:
+            img.setDevicePixelRatio(1.0)   # PNG 存原始像素，不带 dpr 元数据
+            img.save(path)
+        self.statusBar().showMessage(f"已保存：{path}", 4000)
+
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_Escape:
+            self.close()
+            return
+        super().keyPressEvent(e)
+
+    def wheelEvent(self, e):
+        if e.modifiers() & Qt.ControlModifier and self.canvas is not None:
+            delta = e.angleDelta().y()
+            factor = 1.15 if delta > 0 else 1 / 1.15
+            self.canvas.set_zoom(self.canvas.zoom * factor)
+            e.accept()
+            return
+        super().wheelEvent(e)
+
+
+# ========================================================================
+# 来自 main.py
+# ========================================================================
+# -*- coding: utf-8 -*-
+"""PyShot —— 仿 FSCapture 的截图 + 标注编辑工具。
+
+功能
+====
+- 区域截图：全屏覆盖层拖拽框选，带放大镜与尺寸提示
+- 全屏截图：一键截取整个虚拟桌面
+- 打开图片编辑：把已有图片载入编辑器
+- 标注工具：选择 / 矩形 / 椭圆 / 直线 / 箭头 / 画笔 / 序号步骤 / 文字 / 高亮 / 马赛克 / 裁剪
+- 撤销(Ctrl+Z) / 重做(Ctrl+Y)、复制(Ctrl+C)、保存(Ctrl+S)
+- 系统托盘常驻，PrintScreen 全局热键唤起截图
+
+运行::
+
+    python main.py
+"""
+import ctypes
+import ctypes.wintypes
+import os
+import sys
+from pathlib import Path
+
+# 依赖自举：缺 PySide6 / numpy 时自动 pip 安装（必须在导入 PySide6 之前）
+
+
+
+from PySide6.QtCore import (QAbstractNativeEventFilter, QObject, QPoint, QRect,
+                            Qt, QTimer)
+from PySide6.QtGui import (QAction, QColor, QCursor, QGuiApplication, QIcon,
+                           QPainter, QPixmap)
+from PySide6.QtWidgets import (QApplication, QFileDialog, QMenu,
+                               QSystemTrayIcon)
+
+
+
+
+
+
+
+WM_HOTKEY = 0x0312
+MOD_ALT, MOD_CONTROL, MOD_SHIFT, MOD_WIN, MOD_NOREPEAT = 0x1, 0x2, 0x4, 0x8, 0x4000
+HOTKEY_ID_BASE = 0x5053          # "PS"
+
+# 候选全局热键（按优先级尝试，选第一个没被占用的）。
+# 刻意避开被系统或常用软件注册的组合：
+#   PrintScreen / Win+Shift+S  → Windows 11 截图工具
+#   Ctrl+Alt+A / Ctrl+Shift+A / Alt+A → QQ、微信的截图
+DEFAULT_HOTKEYS = ["ctrl+alt+x", "ctrl+shift+x", "ctrl+alt+f9", "ctrl+shift+f9"]
+
+_VK_NAMES = {
+    "printscreen": 0x2C, "prtsc": 0x2C, "insert": 0x2D, "delete": 0x2E,
+    "home": 0x24, "end": 0x23, "pageup": 0x21, "pagedown": 0x22,
+    "space": 0x20, "tab": 0x09, "enter": 0x0D, "esc": 0x1B, "escape": 0x1B,
+}
+for _i in range(1, 13):                     # F1..F12
+    _VK_NAMES[f"f{_i}"] = 0x6F + _i
+for _c in "abcdefghijklmnopqrstuvwxyz":     # A..Z
+    _VK_NAMES[_c] = ord(_c.upper())
+for _d in "0123456789":                     # 0..9
+    _VK_NAMES[_d] = ord(_d)
+
+
+def parse_hotkey(spec: str):
+    """解析 "ctrl+alt+x" 这类热键描述，返回 (modifiers, vk, 显示名)；非法返回 None。"""
+    if not spec:
+        return None
+    parts = [p.strip().lower() for p in spec.replace(" ", "").split("+") if p.strip()]
+    if not parts:
+        return None
+    mods = 0
+    labels = []
+    vk = None
+    for part in parts:
+        if part in ("ctrl", "control"):
+            mods |= MOD_CONTROL
+            labels.append("Ctrl")
+        elif part == "alt":
+            mods |= MOD_ALT
+            labels.append("Alt")
+        elif part == "shift":
+            mods |= MOD_SHIFT
+            labels.append("Shift")
+        elif part in ("win", "super", "meta"):
+            mods |= MOD_WIN
+            labels.append("Win")
+        elif part in _VK_NAMES:
+            if vk is not None:
+                return None                 # 两个主键，非法
+            vk = _VK_NAMES[part]
+            labels.append(part.upper() if len(part) == 1 else part.capitalize())
+        else:
+            return None
+    if vk is None or mods == 0:
+        return None                          # 必须有主键，且至少一个修饰键
+    return mods | MOD_NOREPEAT, vk, "+".join(labels)
+
+
+def register_global_hotkeys(candidates) -> dict:
+    """依次尝试注册，返回 {热键 id: 显示名}（只注册第一个成功的）。
+
+    candidates 为空表示不注册。注册失败（被其他程序占用）会自动尝试下一个。
+    """
+    user32 = ctypes.windll.user32
+    for i, spec in enumerate(candidates):
+        parsed = parse_hotkey(spec)
+        if parsed is None:
+            continue
+        mods, vk, name = parsed
+        hid = HOTKEY_ID_BASE + i
+        if user32.RegisterHotKey(None, hid, mods, vk):
+            return {hid: name}
+    return {}
+
+
+def make_tray_icon() -> QIcon:
+    """自绘一个醒目的相机图标，避免系统标准图标在任务栏里认不出来。"""
+    pix = QPixmap(64, 64)
+    pix.fill(Qt.transparent)
+    p = QPainter(pix)
+    p.setRenderHint(QPainter.Antialiasing)
+    p.setPen(Qt.NoPen)
+    p.setBrush(QColor("#1e88e5"))
+    p.drawRoundedRect(4, 4, 56, 56, 14, 14)
+    p.setBrush(QColor("#ffffff"))
+    p.drawRoundedRect(14, 22, 36, 26, 5, 5)          # 机身
+    p.drawRect(24, 15, 16, 9)                         # 顶部凸起
+    p.setBrush(QColor("#1e88e5"))
+    p.drawEllipse(24, 26, 16, 16)                     # 镜头
+    p.setBrush(QColor("#ffffff"))
+    p.drawEllipse(29, 31, 6, 6)
+    p.end()
+    return QIcon(pix)
+
+
+class HotkeyFilter(QAbstractNativeEventFilter):
+    """监听已注册的全局热键（Windows WM_HOTKEY）。"""
+
+    def __init__(self, ids, callback):
+        super().__init__()
+        self.ids = set(ids)
+        self.callback = callback
+
+    def nativeEventFilter(self, eventType, message):
+        if eventType == b"windows_generic_MSG":
+            msg = ctypes.wintypes.MSG.from_address(int(message))
+            if msg.message == WM_HOTKEY and msg.wParam in self.ids:
+                self.callback()
+        return False, 0
+
+
+class PyShotApp(QObject):
+    def __init__(self, app: QApplication):
+        super().__init__()
+        self.app = app
+        self.tray_available = QSystemTrayIcon.isSystemTrayAvailable()
+        self.snipper: SnipperOverlay | None = None
+        self._overlay: SnipperOverlay | None = None   # 主屏覆盖层（兼容）
+        self._overlays: list = []                     # 每块屏一个
+        self._overlay_screens: list = []
+        self._want_scroll = False
+        self.scroller: ScrollCapture | None = None
+        self.editors: list[EditorWindow] = []
+        self.pins: list[PinWindow] = []
+        self._minimized_by_capture: list[EditorWindow] = []
+        self._hotkey_ok = False
+        self.hotkey_text = ""
+        self._hotkeys: dict = {}
+        self._scroll_mode: str | None = None   # None / "wheel" / "drag" / "key" / "manual"
+        self._pending_scroll_region = None
+
+        self._init_hotkey()   # 先注册热键，托盘文案才知道该显示哪个按键
+        self._init_tray()
+        # 启动后台预热（延迟一点，不影响启动速度）
+        QTimer.singleShot(400, self._warmup)
+
+    # ---------- 全局热键 ----------
+    def _init_hotkey(self):
+        """注册全局热键：按候选列表挑第一个没被占用的组合。"""
+        env_spec = os.environ.get("PYSHOT_HOTKEY")
+        candidates = [env_spec] if env_spec else DEFAULT_HOTKEYS
+        self._hotkeys = register_global_hotkeys(candidates)
+        self._hotkey_ok = bool(self._hotkeys)
+        self.hotkey_text = next(iter(self._hotkeys.values()), "")
+        if self._hotkey_ok:
+            self._filter = HotkeyFilter(self._hotkeys.keys(), self._on_hotkey)
+            self.app.installNativeEventFilter(self._filter)
+            print(f"[PyShot] 全局热键已注册：{self.hotkey_text}")
+        else:
+            print("[PyShot] 热键注册失败，已尝试：" + "、".join(candidates))
+
+    # ---------- 托盘 ----------
+    def _init_tray(self):
+        if not self.tray_available:
+            # 无托盘环境：关掉最后一个窗口就退出，避免程序"隐身"
+            self.app.setQuitOnLastWindowClosed(True)
+            return
+        self.tray = QSystemTrayIcon(make_tray_icon(), self.app)
+        menu = QMenu()
+        act_region = QAction("区域截图", self.app)
+        act_region.triggered.connect(lambda: self._deferred(self.capture_region))
+        menu.addAction(act_region)
+        self.act_region = act_region
+        act_scroll = QAction("滚动长截图（滚轮自动）", self.app)
+        act_scroll.setToolTip("框选可滚动区域，程序自己发滚轮逐屏拼接")
+        act_scroll.triggered.connect(lambda: self._deferred(self.capture_scrolling))
+        menu.addAction(act_scroll)
+        act_scroll_drag = QAction("滚动长截图（点滚动条自动滚动）", self.app)
+        act_scroll_drag.setToolTip(
+            "框选区域后点一下滚动条滑块，程序按住滑块匀速拖拽滚动。\n"
+            "远程桌面 / Citrix 里最稳：步长会实测标定，重叠充足")
+        act_scroll_drag.triggered.connect(
+            lambda: self._deferred(lambda: self.capture_scrolling(mode="drag")))
+        menu.addAction(act_scroll_drag)
+        act_scroll_key = QAction("滚动长截图（PageDown 自动滚动）", self.app)
+        act_scroll_key.setToolTip(
+            "框选区域后程序发送 PageDown / 空格翻页。\n"
+            "适合没有滚动条的应用")
+        act_scroll_key.triggered.connect(
+            lambda: self._deferred(lambda: self.capture_scrolling(mode="key")))
+        menu.addAction(act_scroll_key)
+        act_scroll_manual = QAction("滚动长截图（手动滚动）", self.app)
+        act_scroll_manual.setToolTip(
+            "自己用滚轮/Page Down 滚动，程序负责逐帧拼接。\n"
+            "适用于 Citrix、远程桌面等无法注入滚轮的窗口")
+        act_scroll_manual.triggered.connect(
+            lambda: self._deferred(lambda: self.capture_scrolling(manual=True)))
+        menu.addAction(act_scroll_manual)
+        act_full = QAction("全屏截图", self.app)
+        act_full.triggered.connect(lambda: self._deferred(self.capture_fullscreen))
+        menu.addAction(act_full)
+        menu.addSeparator()
+        act_color = QAction("屏幕取色", self.app)
+        act_color.setToolTip("单击屏幕任意位置，复制色值到剪贴板")
+        act_color.triggered.connect(lambda: self._deferred(self.pick_color))
+        menu.addAction(act_color)
+        act_pin_clip = QAction("贴出剪贴板图片", self.app)
+        act_pin_clip.triggered.connect(self.pin_clipboard)
+        menu.addAction(act_pin_clip)
+        act_open = QAction("打开图片编辑…", self.app)
+        act_open.triggered.connect(self.open_image)
+        menu.addAction(act_open)
+        act_editor = QAction("打开编辑器", self.app)
+        act_editor.setToolTip("把编辑器窗口恢复到前台（取消截图后找不到编辑器时点这里）")
+        act_editor.triggered.connect(self.show_editor)
+        menu.addAction(act_editor)
+        menu.addSeparator()
+        act_quit = QAction("退出 PyShot", self.app)
+        act_quit.triggered.connect(self.app.quit)
+        menu.addAction(act_quit)
+        self.tray.setContextMenu(menu)
+        if self._hotkey_ok:
+            act_region.setText(f"区域截图 ({self.hotkey_text})")
+            self.tray.setToolTip(
+                f"PyShot 截图工具\n{self.hotkey_text} 框选截图 · "
+                "双击图标截图 · 右键退出")
+        else:
+            self.tray.setToolTip("PyShot 截图工具\n双击图标截图 · 右键退出")
+        self.tray.activated.connect(self._on_tray_activated)
+        self.tray.show()
+        # 注意：启动提示不在这里弹 —— 由 notify_ready() 统一负责，
+        # 否则构造托盘和 main() 会各弹一次，用户看到两个气泡。
+
+    def _on_hotkey(self):
+        # 来自原生消息回调（WM_HOTKEY），延后一拍再开覆盖层
+        self._deferred(self.capture_region, delay=30)
+
+    def shutdown(self):
+        if getattr(self, "_hotkeys", None):
+            user32 = ctypes.windll.user32
+            for hid in self._hotkeys:
+                user32.UnregisterHotKey(None, hid)
+
+    # ---------- 截图流程 ----------
+    def capture_region(self):
+        self._start_snipper("region")
+
+    def _start_snipper(self, mode: str, scroll_mode: str | None = None,
+                       point_region: QRect | None = None):
+        if self.snipper is not None:
+            return  # 已有覆盖层在运行
+        self._prepare_capture()
+        self._scroll_mode = scroll_mode      # None / "wheel" / "drag" / "key" / "manual"
+        overlays = self._ensure_overlays()
+        self.snipper = overlays[0]           # 代表整个会话（哪个屏先按就用哪个屏）
+        for ov in overlays:
+            ov.start(mode)
+            if mode == "point" and point_region is not None:
+                # 选区挖空后可穿透点击（能真的点到应用里的滚动条）
+                ov.set_point_hole(point_region)
+
+    # ---------- 截图触发（统一延后到事件循环） ----------
+    def _deferred(self, fn, delay: int = 40):
+        """把截图动作延后到 Qt 事件循环里执行。
+
+        托盘双击/托盘菜单都发生在 shell 的原生消息回调中，此时直接创建并显示
+        全屏覆盖层会被前台激活锁和鼠标捕获影响，表现为"窗口在但没画出来"。
+        延后一拍即可稳定显示；延迟保持很小，避免拖慢首帧。
+        """
+        QTimer.singleShot(delay, fn)
+
+    def _on_tray_activated(self, reason):
+        if reason == QSystemTrayIcon.DoubleClick:
+            self._deferred(self.capture_region)
+
+    # ---------- 覆盖层复用与预热 ----------
+    def _ensure_overlays(self) -> list:
+        """确保每一块显示器都有一个覆盖层。
+
+        多屏必须"一屏一窗"：单个窗口横跨多显示器时，Windows 的每显示器 DPI
+        会让非主屏部分被裁剪或缩放，导致多屏基本不可用。
+        """
+        screens = QGuiApplication.screens()
+        names = [s.name() for s in screens]
+        if self._overlays and self._overlay_screens == names:
+            return self._overlays
+        for ov in self._overlays:             # 屏幕组合变了：重建
+            ov.deleteLater()
+        self._overlays = []
+        for scr in screens:
+            ov = SnipperOverlay("region", screen=scr)
+            ov.captured.connect(self._on_captured)
+            ov.region_selected.connect(self._on_region_selected)
+            ov.point_selected.connect(self._on_scroll_anchor)
+            ov.color_picked.connect(self._on_color_picked)
+            ov.cancelled.connect(self._on_snip_cancelled)
+            self._overlays.append(ov)
+        self._overlay_screens = names
+        self._overlay = self._overlays[0] if self._overlays else None
+        return self._overlays
+
+    def _warmup(self):
+        """启动后预热：抓屏路径 + 每块屏的覆盖层窗口，让第一次截图也能秒开遮罩。"""
+        if self.snipper is not None:        # 正在截图中，别去动覆盖层
+            return
+        try:
+            grab_virtual_desktop()          # 预热抓屏（首次调用较慢）
+            for ov in self._ensure_overlays():
+                ov.warmup()                 # 预建置顶全屏窗口（Windows 首次极慢）
+        except Exception:                    # noqa: BLE001
+            pass                             # 预热失败不影响正常使用
+
+    def _on_region_selected(self, region):
+        mode = self._scroll_mode
+        self._scroll_mode = None
+        if not mode:
+            return
+        if mode == "drag":
+            # 选区外遮罩、选区内可点击：让用户直接点到应用里的滚动条滑块
+            self._on_snip_done()      # 先释放覆盖层引用，才能再用它做选点
+            self._pending_scroll_region = QRect(region)
+            self._start_snipper("point", point_region=QRect(region))
+            return
+        if mode == "manual":
+            self._start_scrolling(region, manual=True)
+        else:
+            self._start_scrolling(region, mode=mode)
+
+    # ---------- 截图会话：截图时最小化编辑器，结束后恢复 ----------
+    def _prepare_capture(self):
+        """开始截图前把编辑器最小化，免得自己被拍进图里。"""
+        self._minimized_by_capture = [
+            ed for ed in list(self.editors)
+            if ed.isVisible() and not ed.isMinimized()
+        ]
+        for ed in self._minimized_by_capture:
+            ed.showMinimized()
+
+    def _finish_capture_session(self):
+        """截图流程结束后把之前最小化的编辑器还原。"""
+        for ed in getattr(self, "_minimized_by_capture", []):
+            if ed in self.editors:
+                ed.showNormal()
+                ed.raise_()
+                ed.activateWindow()
+        self._minimized_by_capture = []
+
+    def _on_snip_cancelled(self, *args):
+        self._on_snip_done()
+        self._pending_scroll_region = None   # 取消时清掉滚动截图的待选状态
+        self._finish_capture_session()
+
+    def _on_snip_done(self, *args):
+        # 所有屏幕的覆盖层都要收起（多屏时可能有好几个）
+        for ov in getattr(self, "_overlays", []):
+            if ov.isVisible():
+                ov.finish()
+        self.snipper = None
+        if not self.tray_available and not self.editors:
+            self.app.quit()  # 无托盘且无窗口时退出，避免程序"隐身"残留
+
+    def _on_captured(self, pixmap: QPixmap):
+        self._on_snip_done()
+        if self._scroll_mode:      # 滚动截图的选区，不是要编辑的截图
+            self._scroll_mode = None
+            return
+
+        # 等覆盖层彻底关闭再开编辑器，否则置顶的覆盖层可能压在编辑器上面；
+        # 并且把异常显式暴露出来，避免"截图后什么都没发生"这种静默失败。
+        def _open():
+            try:
+                self.open_editor(pixmap)
+            except Exception as ex:  # noqa: BLE001
+                import traceback
+                traceback.print_exc()
+                self._notify("打开编辑器失败", f"{type(ex).__name__}: {ex}")
+            finally:
+                self._finish_capture_session()
+
+        QTimer.singleShot(120, _open)
+
+    def capture_fullscreen(self):
+        self._prepare_capture()
+        # 等最小化动画结束再抓，否则窗口残影会进图
+        def _grab():
+            pix, _ = grab_virtual_desktop()
+            self.open_editor(pix)
+            self._finish_capture_session()
+        QTimer.singleShot(280, _grab)
+
+    # ---------- 滚动长截图 ----------
+    def capture_scrolling(self, manual: bool = False, mode: str = "wheel"):
+        """mode: wheel 滚轮 | drag 拖拽滚动条 | key 按键；manual=True 为手动模式。"""
+        if self.snipper is not None or self.scroller is not None:
+            return
+        # 用 "scroll" 模式：只取选区，不会触发普通截图流程（否则编辑器会被弹到前面挡住目标）
+        self._start_snipper("scroll", scroll_mode="manual" if manual else mode)
+
+    def _start_scrolling(self, region, manual: bool = False, mode: str = "wheel"):
+        self._on_snip_done()   # 只清引用：滚动期间编辑器保持最小化，否则会被拍进画面
+        if region.width() < 50 or region.height() < 120:
+            self._notify("滚动截图", "区域太小，请框选更高的可滚动区域")
+            self._finish_capture_session()
+            return
+        driver = None
+        if not manual:
+            driver = ScrollDriver(mode, region)
+        self._launch_scroller(region, manual=manual, driver=driver)
+
+    def _launch_scroller(self, region, manual=False, driver=None, title=None):
+        self.scroller = ScrollCapture(region, manual=manual, driver=driver)
+        if title:
+            self.scroller.bar.set_title(title)
+        self.scroller.finished_ok.connect(self._on_scroll_finished)
+        self.scroller.failed.connect(self._on_scroll_failed)
+        # 等覆盖层完全关闭再开始，否则会拍到残影
+        QTimer.singleShot(500, self.scroller.start)
+
+    def _on_scroll_anchor(self, point):
+        """用户在滚动条滑块上点了一下：开始"拖拽滚动条"自动滚动。"""
+        self._on_snip_done()
+        region = self._pending_scroll_region
+        self._pending_scroll_region = None
+        if region is None:
+            self._finish_capture_session()
+            return
+        driver = ScrollDriver("drag", region, anchor=point)
+        self._launch_scroller(region, manual=False, driver=driver,
+                              title="拖拽滚动条自动滚动")
+        self._notify("已记录滚动条位置",
+                     f"滑块锚点 ({point.x()}, {point.y()})，开始自动拖拽滚动。\n"
+                     "滚到底会自动结束；想中途停止点控制条上的按钮。")
+
+    def _on_scroll_finished(self, pixmap: QPixmap):
+        self.scroller = None
+        self._notify("滚动截图完成", f"已拼接 {pixmap.height()} px 长图")
+        self.open_editor(pixmap)
+        self._finish_capture_session()
+
+    def _on_scroll_failed(self, msg: str):
+        self.scroller = None
+        self._notify("滚动截图失败", msg)
+        self._finish_capture_session()
+
+    # ---------- 屏幕取色 ----------
+    def pick_color(self):
+        self._start_snipper("color")
+
+    def _on_color_picked(self, color):
+        self._on_snip_done()
+        text = color.name().upper()
+        QApplication.clipboard().setText(text)
+        self._notify("屏幕取色",
+                     f"{text}  RGB({color.red()}, {color.green()}, {color.blue()}) 已复制")
+
+    # ---------- 贴图钉板 ----------
+    def pin_pixmap(self, pixmap: QPixmap, pos=None):
+        pin = PinWindow(pixmap, pos)
+        pin.closed.connect(
+            lambda w: self.pins.remove(w) if w in self.pins else None)
+        self.pins.append(pin)
+        pin.show()
+        return pin
+
+    def pin_clipboard(self):
+        pix = QApplication.clipboard().pixmap()
+        if pix.isNull():
+            self._notify("贴图", "剪贴板里没有图片")
+            return
+        self.pin_pixmap(pix, QCursor.pos())
+
+    def _notify(self, title: str, msg: str):
+        if self.tray_available:
+            self.tray.showMessage(title, msg, QSystemTrayIcon.Information, 4000)
+        else:
+            print(f"[{title}] {msg}")
+
+    def notify_ready(self):
+        """启动就绪提示（整个启动过程只弹这一条）。
+
+        把热键、托盘用法、退出方式一次说清，避免"启动"和"就绪"两条气泡。
+        """
+        if not self._hotkey_ok:
+            tried = "、".join(DEFAULT_HOTKEYS)
+            self._notify(
+                "PyShot 热键不可用",
+                f"热键（{tried}）都被占用，请双击托盘图标截图。\n"
+                "可用环境变量 PYSHOT_HOTKEY 指定其他组合，"
+                "例如 PYSHOT_HOTKEY=ctrl+alt+j")
+            return
+        self._notify(
+            "PyShot 已启动",
+            f"按 {self.hotkey_text} 框选截图，或双击托盘图标。\n"
+            "右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n"
+            "找不到图标时点任务栏右侧的 ∧ 展开。")
+
+    def open_image(self):
+        path, _ = QFileDialog.getOpenFileName(
+            None, "打开图片", str(Path.home()),
+            "图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)")
+        if not path:
+            return
+        pix = QPixmap(path)
+        if pix.isNull():
+            return
+        self.open_editor(pix)
+
+    def show_editor(self):
+        """把编辑器恢复到前台；没有就开图片选择对话框。"""
+        if self.editors:
+            ed = self.editors[-1]
+            ed.show()
+            ed.setWindowState(ed.windowState() & ~Qt.WindowMinimized)
+            ed.raise_()
+            ed.activateWindow()
+        else:
+            self.open_image()
+
+    def open_editor(self, pixmap: QPixmap):
+        """把截图送进编辑器：已有编辑器就新增标签页，否则新建窗口。"""
+        editor = self.editors[-1] if self.editors else None
+        if editor is None:
+            editor = EditorWindow()
+            editor.setWindowIcon(make_tray_icon())
+            editor.setAttribute(Qt.WA_DeleteOnClose)
+            editor.destroyed.connect(
+                lambda: self.editors.remove(editor) if editor in self.editors else None)
+            editor.pin_requested.connect(lambda pix: self.pin_pixmap(pix, QCursor.pos()))
+            editor.capture_requested.connect(self.capture_region)
+            self.editors.append(editor)
+        editor.add_canvas(pixmap)
+        editor.set_hotkey_hint(self.hotkey_text)
+        editor.show()
+        editor.setWindowState(editor.windowState() & ~Qt.WindowMinimized)
+        editor.raise_()
+        editor.activateWindow()
+
+
+def main():
+    # --check-deps：只检查依赖，不开界面
+    if "--check-deps" in sys.argv:
+        print(deps_report())
+        return
+
+    # Windows 任务栏图标分组
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("pyshot.app")
+    except Exception:
+        pass
+    QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
+        Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)  # 托盘常驻
+    app.setApplicationName("PyShot")
+    apply_theme(app)
+
+    core = PyShotApp(app)
+    app.aboutToQuit.connect(core.shutdown)
+
+    # 命令行直接给图片路径则直接进入编辑
+    if len(sys.argv) > 1 and Path(sys.argv[1]).is_file():
+        pix = QPixmap(sys.argv[1])
+        if not pix.isNull():
+            core.open_editor(pix)
+        else:
+            core.capture_region()
+    elif not core.tray_available:
+        # 没有系统托盘的环境（极少数）：直接进截图，否则用户看不到任何入口
+        core.capture_region()
+    else:
+        # 正常启动：只驻留托盘，不自动开始截图（避免启动就被全屏覆盖层挡住而以为卡死）
+        core.notify_ready()
+
+    sys.exit(app.exec())
+
+
+
+# ---------------------------------------------------------------------------
+# 单文件版入口
+# ---------------------------------------------------------------------------
+if __name__ == "__main__":
+    if "--check-deps" in sys.argv:
+        print(deps_report())
+    else:
+        main()
