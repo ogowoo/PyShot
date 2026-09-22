@@ -116,6 +116,7 @@ class Editor:
         self.cur = len(self.docs) - 1
         self._selected = None
         self._drag = None
+        self._invalidate_base()
         self._zoom_fit()
         self._render_all()
         self._build_tabs()
@@ -142,6 +143,7 @@ class Editor:
         self._finish_text_edit()
         self.cur = index
         self._selected = None
+        self._invalidate_base()
         self._render_all()
         self._build_tabs()
 
@@ -482,16 +484,16 @@ class Editor:
             if self._selected is not None:
                 self._selected.move_by(dx, dy)
                 self._drag = ("select-move", ix, iy)
-                self._render_all()
+                self._render_shapes()          # 只重画图形层，不重编码底图
             return
         if self._drag and self._drag[0] == "resize":
             index = self._drag[3]
             self._selected.resize_by_handle(index, (ix, iy))
-            self._render_all()
+            self._render_shapes()
             return
         if self._drag and self._drag[0] == "pen":
             self._draw_shape.add_point((ix, iy))
-            self._render_all()
+            self._render_shapes()
             return
         if self._drag and self._drag[0] in ("rect", "ellipse", "highlight",
                                             "mosaic", "crop"):
@@ -701,6 +703,7 @@ class Editor:
             return
         x, y, w, h = self._crop_rect
         self.image = self.image.crop(int(x), int(y), int(w), int(h))
+        self._invalidate_base()
         # 把图形平移到裁剪后的坐标
         for sh in self.shapes:
             sh.move_by(-x, -y)
@@ -712,6 +715,7 @@ class Editor:
 
     def _set_zoom(self, z):
         self.zoom = max(0.1, min(6.0, z))
+        self._invalidate_base()
         self._render_all()
 
     def _zoom_by(self, factor):
@@ -732,42 +736,69 @@ class Editor:
         pass
 
     # ---------------------------------------------------------------- 渲染
+    #
+    # 分三层，避免每次交互都重编码整张底图（那是最贵的部分）：
+    #   base    底图 —— 只在图像/缩放变化时重做（含 PPM 编码与 Tk 解析）
+    #   shapes  图形 —— 每次重画，但只有几十个画布项，很便宜
+    #   overlay 选中框/句柄/裁剪框 —— 同上
+    # 拖拽过程中只调 _render_shapes()，所以跟手。
 
-    def _render_all(self):
-        """重画整张画布：图像 + 图形（Tk 画布项）+ 选中框。"""
+    def _invalidate_base(self):
+        self._base_key = None
+
+    def _render_all(self, base: bool = True):
+        if base:
+            self._render_base()
+        self._render_shapes()
+
+    def _render_base(self):
+        """底图 + 滚动区域（贵：只在必要时重做）。"""
+        key = (self.cur, round(self.zoom, 6), self.image.w, self.image.h)
+        if key == getattr(self, "_base_key", None):
+            return
+        self._base_key = key
         c = self.canvas
-        c.delete("all")
-        # 图像
-        disp = self.image
-        if self.zoom != 1.0:
-            disp = self._scale_for_display(self.image)
-        self._photo = tk.PhotoImage(data=disp.to_ppm(), master=self.canvas)
-        c.create_image(self.ox, self.oy, anchor="nw", image=self._photo,
-                       tags="base")
-        # 裁剪框（最上层背景之下）
-        # 图形
+        c.delete("base")
+        disp = self.image if self.zoom == 1.0 \
+            else self._scale_for_display(self.image)
+        self._photo = tk.PhotoImage(data=disp.to_ppm(), master=c)
+        self.ox = self.oy = 0.0
+        c.create_image(0, 0, anchor="nw", image=self._photo, tags=("base",))
+        c.configure(scrollregion=(0, 0, disp.w, disp.h))
+
+    def _render_shapes(self):
+        """图形层 + 选中叠加层（便宜，可高频调用）。"""
+        c = self.canvas
+        c.delete("shapes")
+        c.delete("overlay")
+        ids = []
         for sh in self.shapes:
-            sh.draw_tk(c, self.ox, self.oy, self.zoom)
+            got = sh.draw_tk(c, self.ox, self.oy, self.zoom)
+            if got:
+                ids.extend(got)
+        if ids:
+            # addtag_withtag 一次只能加一项，循环打标签（图形项很少，开销可忽略）
+            for item in ids:
+                c.addtag_withtag("shapes", item)
         # 裁剪框
         if getattr(self, "_crop_rect", None):
             x, y, w, h = self._crop_rect
             cx0, cy0 = self._to_canvas(x, y)
             cx1, cy1 = self._to_canvas(x + w, y + h)
             c.create_rectangle(cx0, cy0, cx1, cy1, outline="#ffffff", width=2,
-                               dash=(6, 4), tags="crop")
+                               dash=(6, 4), tags=("overlay",))
         # 选中框 + 句柄
         if self._selected is not None:
             x0, y0, x1, y1 = self._selected.bounding()
             cx0, cy0 = self._to_canvas(x0 - 2, y0 - 2)
             cx1, cy1 = self._to_canvas(x1 + 2, y1 + 2)
             c.create_rectangle(cx0, cy0, cx1, cy1, outline=wintk.ACCENT,
-                               width=1.5, tags="selbox")
+                               width=1.5, tags=("overlay",))
             for hx, hy in self._selected.handles():
                 chx, chy = self._to_canvas(hx, hy)
                 c.create_rectangle(chx - 4, chy - 4, chx + 4, chy + 4,
                                    fill="#ffffff", outline=wintk.ACCENT,
-                                   tags="selhandle")
-        c.configure(scrollregion=c.bbox("all"))
+                                   tags=("overlay",))
         self._update_status()
 
     def _scale_for_display(self, img: wi.Image) -> wi.Image:

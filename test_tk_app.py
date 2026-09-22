@@ -200,6 +200,25 @@ check("标签栏显示出标签", "截图 1" in tab_texts and "截图 2" in tab_
 ed._switch_document(0)
 pump(root, 150)
 check("切回标签 1 图形还在", len(ed.shapes) == 3, str(len(ed.shapes)))
+
+# 分层渲染：底图只该有一份，且图形要盖在底图上面（高频重画不能把底图弄丢/堆叠）
+for _ in range(5):
+    ed._render_shapes()
+pump(root, 100)
+base_items = ed.canvas.find_withtag("base")
+check("多次重画后底图仍只有一份", len(base_items) == 1, f"{len(base_items)} 份")
+ed._set_zoom(0.6)
+pump(root, 150)
+check("缩放后底图仍只有一份",
+      len(ed.canvas.find_withtag("base")) == 1)
+shape_items = ed.canvas.find_withtag("shapes")
+check("图形项存在", len(shape_items) > 0, f"{len(shape_items)} 项")
+if base_items and shape_items:
+    check("图形盖在底图之上", min(shape_items) > max(base_items),
+          f"base={base_items} shapes={shape_items[:3]}")
+ed._set_zoom(1.0)
+pump(root, 150)
+
 ed.close_document(1)
 pump(root, 150)
 check("关闭标签页", len(ed.docs) == 1)
