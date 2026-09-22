@@ -1,5 +1,7 @@
 # PyShot —— 截图 + 标注工具（零依赖）
 
+> 版本控制与提交历史见 [VERSIONING.md](VERSIONING.md)
+
 FSCapture 风格的 Windows 截图与标注工具，专为**做操作指引/步骤说明**优化。
 **不依赖任何第三方库**：界面用 Python 标准库 `tkinter`，抓屏/绘图/编码/输入模拟
 全部用 `ctypes` 直接调 Windows API（GDI / GDI+ / Win32）。
