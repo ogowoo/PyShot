@@ -40,6 +40,7 @@ opts = {
     "bevel": dict(width=12, color="#c9cdd4"),
     "fade": dict(width=22, color="#ffffff"),
     "polaroid": dict(width=14, color="#ffffff"),
+    "torn": dict(width=18, color="#ffffff", tear=9, seed=7),
 }
 
 cells = []

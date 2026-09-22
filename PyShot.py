@@ -925,14 +925,16 @@ FSCapture 的边缘效果和「水印」在同一个菜单下，做法是**在�
 - 提供对话框（样式 + 宽度 + 颜色 + 实时预览 + 用设为默认）
 
 样式列表（FSCapture 的样式名各版本略有出入，这里给了一套常用的）：
-    单线 / 双线 / 虚线 / 圆角 / 投影阴影 / 立体浮雕 / 边缘渐隐 / 拍立得白边
+    单线 / 双线 / 虚线 / 圆角 / 投影阴影 / 立体浮雕 / 边缘渐隐 / 拍立得白边 / 手撕纸
 """
 import json
+import math
+import random
 from pathlib import Path
 
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt
-from PySide6.QtGui import (QColor, QLinearGradient, QPainter, QPainterPath,
-                           QPen, QPixmap)
+from PySide6.QtGui import (QBrush, QColor, QLinearGradient, QPainter,
+                           QPainterPath, QPen, QPixmap)
 from PySide6.QtWidgets import (QCheckBox, QColorDialog, QComboBox, QDialog,
                                QDialogButtonBox, QFormLayout, QGroupBox,
                                QHBoxLayout, QLabel, QPushButton, QSlider,
@@ -948,16 +950,19 @@ STYLES = [
     ("bevel", "立体浮雕", "左上亮、右下暗，做出凹凸感"),
     ("fade", "边缘渐隐", "图片四边渐隐到边框色"),
     ("polaroid", "拍立得白边", "下方留宽白边，像拍立得"),
+    ("torn", "手撕纸", "图片贴在一张撕下来的纸上，边缘不规则 + 投影"),
 ]
 STYLE_NAMES = {k: name for k, name, _ in STYLES}
 
 BORDER_DEFAULTS = {
     "style": "shadow",
     "width": 16,             # 边框 / 阴影宽度（像素）
-    "color": "#ffffff",      # 边框色 / 渐隐目标色
+    "color": "#ffffff",      # 边框色 / 渐隐目标色 / 纸张色
     "shadow_alpha": 110,     # 阴影浓度 0-255
     "shadow_spread": 0,      # 阴影额外扩散
     "radius": 16,            # 圆角半径
+    "tear": 9,               # 手撕纸：撕边起伏幅度（像素）
+    "seed": 7,               # 手撕纸：随机种子（同一种子撕法一致，预览=成品）
     "auto": False,           # 设为默认后新截图自动加边框
 }
 
@@ -979,6 +984,9 @@ def normalize_border(settings: dict | None) -> dict:
     out["shadow_alpha"] = max(0, min(255, int(out["shadow_alpha"])))
     out["shadow_spread"] = max(0, min(200, int(out["shadow_spread"])))
     out["radius"] = max(0, min(400, int(out["radius"])))
+    # 撕边幅度不能超过纸边宽度，否则锯齿会超出画布
+    out["tear"] = max(0, min(int(out["tear"]), out["width"] or 1, 200))
+    out["seed"] = int(out["seed"]) % 100000
     out["auto"] = bool(out["auto"])
     if not isinstance(out["color"], str):
         out["color"] = BORDER_DEFAULTS["color"]
@@ -1031,9 +1039,116 @@ def border_padding(settings: dict) -> tuple:
         return extra, extra, extra, extra
     if style == "polaroid":
         return w, w, w, max(w * 3, 24)
+    if style == "torn":
+        # 纸边 = width，撕边在此基础上上下起伏 tear，所以要再多留 tear
+        extra = w + s["tear"]
+        return extra, extra, extra, extra
     if w <= 0:
         return 0, 0, 0, 0
     return w, w, w, w
+
+
+# ---------------------------------------------------------------- 手撕纸
+
+def _torn_outline(rect: QRectF, tear: float, seed: int, step: float = 0.0):
+    """围绕 rect 生成一圈**不规则撕边**的采样点（确定性随机）。
+
+    整圈一次性做带惯性的随机游走（不是按边分段），所以撕痕会自然地绕过四角，
+    不会在角上被"掐尖"；偶尔来一道更深的撕裂，像真的撕过头。
+    """
+    rnd = random.Random(seed)
+    if step <= 0:
+        step = max(3.0, tear * 0.75)
+
+    # 1) 沿周长按顺序采样整圈：位置 + 指向纸外的法线
+    ring = []
+
+    def seg(x0, y0, x1, y1, nx, ny):
+        length = math.hypot(x1 - x0, y1 - y0)
+        n = max(1, int(length / step))
+        for i in range(n):
+            t = i / n
+            ring.append((x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, nx, ny))
+
+    seg(rect.left(), rect.top(), rect.right(), rect.top(), 0, -1)
+    seg(rect.right(), rect.top(), rect.right(), rect.bottom(), 1, 0)
+    seg(rect.right(), rect.bottom(), rect.left(), rect.bottom(), 0, 1)
+    seg(rect.left(), rect.bottom(), rect.left(), rect.top(), -1, 0)
+    if not ring:
+        return []
+
+    # 2) 沿整圈做连续随机游走（惯性能让相邻点相关，形成连续撕痕）
+    offs = []
+    off = 0.0
+    for _ in ring:
+        off = off * 0.72 + rnd.uniform(-1.0, 1.0) * tear * 0.55
+        if rnd.random() < 0.10:                 # 偶尔一道深撕
+            off -= tear * rnd.uniform(0.4, 1.1)
+        offs.append(max(-tear, min(tear, off)))
+    # 首尾相接处取平均，消除闭合时的台阶
+    offs[0] = offs[-1] = (offs[0] + offs[-1]) / 2.0
+
+    return [(x + nx * o, y + ny * o)
+            for (x, y, nx, ny), o in zip(ring, offs)]
+
+
+def _torn_path(rect: QRectF, tear: float, seed: int) -> QPainterPath:
+    pts = _torn_outline(rect, tear, seed)
+    if not pts:
+        path = QPainterPath()
+        path.addRect(rect)
+        return path
+    # 用折线而不是曲线：撕纸的断口本来就该是硬边
+    path = QPainterPath(QPointF(*pts[0]))
+    for x, y in pts[1:]:
+        path.lineTo(x, y)
+    path.closeSubpath()
+    return path
+
+
+def _draw_torn(painter: QPainter, pix: QPixmap, out_h: int, img_rect: QRectF,
+               s: dict):
+    """画"贴在一张撕下来的纸上"的效果：投影 → 纸面 → 撕边描边 → 纤维 → 图片。"""
+    tear = float(s["tear"])
+    paper = QColor(s["color"])
+    seed = int(s["seed"])
+
+    # 纸的"标称外沿"：距图片 width，撕边在 ±tear 起伏
+    nominal = img_rect.adjusted(-s["width"], -s["width"],
+                                s["width"], s["width"])
+    pts = _torn_outline(nominal, tear, seed)
+    path = _torn_path(nominal, tear, seed)
+
+    # 1) 投影：同一路径多次小偏移叠加，得到柔和阴影
+    shade = max(10, s["shadow_alpha"] // 4)
+    for i in (4, 3, 2, 1):
+        painter.save()
+        painter.translate(i * 0.9, i * 1.1)
+        painter.fillPath(path, QColor(0, 0, 0, shade))
+        painter.restore()
+
+    # 2) 纸面（带极淡的纵向渐变，像纸张受光）
+    grad = QLinearGradient(0, 0, 0, out_h)
+    grad.setColorAt(0.0, paper.lighter(103))
+    grad.setColorAt(1.0, paper.darker(104))
+    painter.fillPath(path, QBrush(grad))
+
+    # 3) 撕边描一条极淡的灰线，纸才有厚度感
+    painter.setPen(QPen(QColor(0, 0, 0, 34), 1))
+    painter.setBrush(Qt.NoBrush)
+    painter.drawPath(path)
+
+    # 4) 断口纤维：沿撕边取点，画 1px 短须
+    rnd = random.Random(seed + 991)
+    painter.setPen(QPen(QColor(0, 0, 0, 26), 1))
+    for _ in range(max(12, int(len(pts) * 0.5))):
+        px, py = pts[rnd.randrange(len(pts))]
+        painter.drawLine(QPointF(px, py),
+                         QPointF(px + rnd.uniform(-1.4, 1.4),
+                                 py + rnd.uniform(-1.4, 1.4)))
+
+    # 5) 图片本体
+    painter.drawPixmap(img_rect, pix, QRectF(pix.rect()))
 
 
 def _fill(painter, rect: QRectF, color: QColor):
@@ -1060,7 +1175,6 @@ def _draw_shadow(painter, image_rect: QRectF, s: dict):
         r = image_rect.adjusted(-grow_x, -grow_y, grow_x, grow_y)
         radius = max(0.0, s["radius"] * k)
         painter.setBrush(c)
-        radius = max(0.0, s["radius"] * k)
         painter.drawRoundedRect(r, radius, radius)
 
 
@@ -1076,8 +1190,8 @@ def render_border(pix: QPixmap, settings: dict) -> QPixmap:
     dpr = float(pix.devicePixelRatio() or 1.0)
     style = s["style"]
     color = QColor(s["color"])
-    # 阴影与渐隐需要透明背景（贴到文档里才自然）
-    transparent_bg = style in ("shadow", "fade")
+    # 阴影 / 渐隐 / 手撕纸需要透明背景（贴到文档里才自然）
+    transparent_bg = style in ("shadow", "fade", "torn")
 
     out = QPixmap(w, h)
     out.fill(Qt.transparent if transparent_bg else color)
@@ -1091,6 +1205,8 @@ def render_border(pix: QPixmap, settings: dict) -> QPixmap:
     if style == "shadow":
         _draw_shadow(p, img_rect, s)
         p.drawPixmap(img_rect, pix, QRectF(pix.rect()))
+    elif style == "torn":
+        _draw_torn(p, pix, h, img_rect, s)
     elif style == "bevel":
         # 先画底色，再在图片外圈画亮/暗两条边
         p.fillRect(QRectF(0, 0, w, h), color)
@@ -1237,6 +1353,21 @@ class BorderDialog(QDialog):
         row2.addWidget(self.radius_label)
         row2.addWidget(self.radius)
 
+        # 手撕纸专用：撕边幅度 + 换一个撕法
+        self.tear_label = QLabel("撕边")
+        self.tear = QSpinBox()
+        self.tear.setRange(0, 200)
+        self.tear.setSuffix(" px")
+        self.tear.setToolTip("撕口的起伏幅度；不能超过纸边宽度")
+        self.tear.setValue(self._s["tear"])
+        self.tear.valueChanged.connect(self._on_tear)
+        self.reseed = QPushButton("换一个撕法")
+        self.reseed.setToolTip("重新随机撕口（同一个种子预览和成品一致）")
+        self.reseed.clicked.connect(self._on_reseed)
+        row2.addWidget(self.tear_label)
+        row2.addWidget(self.tear)
+        row2.addWidget(self.reseed)
+
         self.alpha = QSlider(Qt.Horizontal)
         self.alpha.setRange(0, 100)
         self.alpha.setValue(int(round(self._s["shadow_alpha"] * 100 / 255)))
@@ -1283,19 +1414,39 @@ class BorderDialog(QDialog):
         key = self.style.currentData()
         self._s["style"] = key
         # 每种样式只显示相关参数
-        show_radius = key in ("shadow", "round")
-        show_alpha = key == "shadow"
-        self.radius.setVisible(show_radius)
-        self.radius_label.setVisible(show_radius)
+        is_torn = key == "torn"
+        show_radius = key in ("shadow", "round") or is_torn
+        show_alpha = key in ("shadow", "torn")
+        self.radius.setVisible(show_radius and not is_torn)
+        self.radius_label.setVisible(show_radius and not is_torn)
+        self.tear.setVisible(is_torn)
+        self.tear_label.setVisible(is_torn)
+        self.reseed.setVisible(is_torn)
         self.alpha.setVisible(show_alpha)
         self.alpha_label.setVisible(show_alpha)
         self.alpha_text.setVisible(show_alpha)
+        if is_torn:
+            self.alpha_text.setText("投影浓度")
+            self.tear.setMaximum(max(1, self.width.value()))
+        else:
+            self.alpha_text.setText("阴影浓度")
         tips = {k: t for k, _, t in STYLES}
         self.note.setText(tips.get(key, ""))
         self._refresh_preview()
 
     def _on_width(self, v):
         self._s["width"] = v
+        # 撕边幅度不能超过纸边宽度
+        if self._s.get("style") == "torn":
+            self.tear.setMaximum(max(1, v))
+        self._refresh_preview()
+
+    def _on_tear(self, v):
+        self._s["tear"] = v
+        self._refresh_preview()
+
+    def _on_reseed(self):
+        self._s["seed"] = int(self._s.get("seed", 0)) + 1
         self._refresh_preview()
 
     def _on_radius(self, v):
@@ -1361,6 +1512,7 @@ class BorderDialog(QDialog):
         self._s["style"] = self.style.currentData()
         self._s["width"] = self.width.value()
         self._s["radius"] = self.radius.value()
+        self._s["tear"] = self.tear.value()
         self._s["shadow_alpha"] = int(round(self.alpha.value() * 255 / 100))
         return normalize_border(self._s)
 

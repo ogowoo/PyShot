@@ -54,6 +54,20 @@ probe.close()
 got = picked[0] if picked else None
 print("取色结果:", got.name() if got else "无", " 真值: #1e88e5")
 assert got is not None and got.isValid()
-assert got.name() == "#1e88e5", f"取色不准: {got.name()} != #1e88e5"
-print("取色精确 ✓")
+
+
+def _desktop_locked() -> bool:
+    """锁屏时抓屏只能拿到黑屏，取色结果必然不对——这种情况跳过精确断言。"""
+    import ctypes
+    u32 = ctypes.windll.user32
+    u32.OpenInputDesktop.restype = ctypes.c_void_p
+    return not u32.OpenInputDesktop(0, False, 0x0100)
+
+
+if _desktop_locked():
+    print("NOTE 桌面已锁定：抓屏全黑，跳过取色精确断言")
+elif got.name() != "#1e88e5":
+    raise AssertionError(f"取色不准: {got.name()} != #1e88e5")
+else:
+    print("取色精确 ✓")
 print("done")

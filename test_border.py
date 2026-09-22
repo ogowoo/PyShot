@@ -211,6 +211,70 @@ try:
 except OSError:
     pass
 
+# ---------- 手撕纸 ----------
+from border import _torn_outline
+
+torn = settings(style="torn", width=18, tear=9, seed=7)
+check("手撕纸边距 = 纸边 + 撕边幅度",
+      border_padding(torn) == (27, 27, 27, 27), str(border_padding(torn)))
+torn_out = render_border(base, torn)
+check("手撕纸输出尺寸正确",
+      torn_out.width() == base.width() + 54
+      and torn_out.height() == base.height() + 54,
+      f"{torn_out.width()}x{torn_out.height()}")
+check("手撕纸背景透明（撕掉的地方要透）", has_alpha(torn_out))
+
+# 撕边确实不规则：外沿到图片边的距离各处不同
+outline = _torn_outline(QRectF(27, 27, base.width(), base.height()), 9, 7)
+dists = [min(abs(x - 27), abs(x - (27 + base.width())),
+             abs(y - 27), abs(y - (27 + base.height())))
+         for x, y in outline]
+check("撕边有起伏（外沿距离不等）", max(dists) - min(dists) > 4,
+      f"{min(dists):.1f}~{max(dists):.1f}px")
+check("撕边不超出画布",
+      all(0 <= x <= torn_out.width() and 0 <= y <= torn_out.height()
+          for x, y in outline))
+
+# 确定性：同种子逐像素一致，换种子必须不同
+_a = render_border(base, settings(style="torn", width=18, tear=9, seed=7))
+_b = render_border(base, settings(style="torn", width=18, tear=9, seed=7))
+_c = render_border(base, settings(style="torn", width=18, tear=9, seed=8))
+check("同种子结果逐像素一致（预览=成品）", _a.toImage() == _b.toImage())
+check("换种子撕法不同", _a.toImage() != _c.toImage())
+
+check("撕边幅度不会超过纸边宽度（否则会超出画布）",
+      normalize_border({"style": "torn", "width": 10, "tear": 99})["tear"] == 10)
+
+paper = render_border(base, settings(style="torn", width=18, tear=6, seed=3,
+                                     color="#fff3c4"))
+mid = paper.toImage().pixelColor(paper.width() // 2, 6)
+check("纸张颜色生效", mid.red() > 240 and mid.blue() < 220, mid.name())
+
+# ---------- 对话框：手撕纸相关控件 ----------
+dlg2 = BorderDialog(None, settings(style="torn", width=18, tear=9, seed=7),
+                    QSize(400, 300))
+check("对话框：当前样式是手撕纸",
+      [k for k, _, _ in STYLES][dlg2.style.currentIndex()] == "torn")
+check("对话框：手撕纸显示撕边控件",
+      not dlg2.tear.isHidden() and not dlg2.reseed.isHidden())
+check("对话框：撕边幅度同步", dlg2.tear.value() == 9)
+check("对话框：手撕纸隐藏圆角", dlg2.radius.isHidden())
+check("对话框：浓度标签改叫投影浓度", dlg2.alpha_text.text() == "投影浓度")
+_seed_before = dlg2.settings()["seed"]
+dlg2.reseed.click()
+app.processEvents()
+check("对话框：换一个撕法会换种子",
+      dlg2.settings()["seed"] != _seed_before,
+      f"{_seed_before} -> {dlg2.settings()['seed']}")
+dlg2.tear.setValue(14)
+app.processEvents()
+check("对话框：撕边幅度进设置", dlg2.settings()["tear"] == 14)
+dlg2.style.setCurrentIndex([k for k, _, _ in STYLES].index("solid"))
+app.processEvents()
+check("对话框：换到单线后隐藏撕边控件", dlg2.tear.isHidden())
+check("对话框：单线时浓度标签恢复", dlg2.alpha_text.text() == "阴影浓度")
+dlg2.deleteLater()
+
 # ---------- 持久化 ----------
 orig = border.BORDER_CONFIG_PATH
 tmp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_bd_conf.json")
