@@ -37,12 +37,43 @@ MODULES = [
 LOCAL_MODULES = ("bootstrap", "watermark", "border", "shapes", "style", "capture_utils",
                  "pinboard", "snipper", "scroller", "editor", "main")
 
-# 匹配模块间的本地导入（含函数内延迟导入与多行括号写法），不碰 PySide6 等第三方导入
+_LOCAL_ALT = "|".join(LOCAL_MODULES)
+
+# from X import a, b as c   （含括号多行写法）—— 合并后只保留"名字本身"，
+# 但 `as` 别名要**补一条赋值**，否则别名悬空（曾因此崩过：border_load 未定义）
+LOCAL_FROM_IMPORT_RE = re.compile(
+    r"^([ \t]*)from[ \t]+(?:" + _LOCAL_ALT + r")[ \t]+import[ \t]+"
+    r"(\([^)]*\)|[^\n]*)",
+    re.MULTILINE)
+
+# import X / import X as Y（本地模块）—— 合并后没有模块对象，无法支持，
+# 必须报错让开发者改成 from X import 名字
+LOCAL_MODULE_IMPORT_RE = re.compile(
+    r"^[ \t]*import[ \t]+(?:" + _LOCAL_ALT + r")(?:[ \t]+as[ \t]+\w+)?[ \t]*$",
+    re.MULTILINE)
+
+# 兜底：其它形式的本地导入（如 from X import *）
 LOCAL_IMPORT_RE = re.compile(
-    r"^[ \t]*(?:from[ \t]+(?:" + "|".join(LOCAL_MODULES) + r")[ \t]+import"
-    r"|import[ \t]+(?:" + "|".join(LOCAL_MODULES) + r"))\b"
+    r"^[ \t]*(?:from[ \t]+(?:" + _LOCAL_ALT + r")[ \t]+import"
+    r"|import[ \t]+(?:" + _LOCAL_ALT + r"))\b"
     r"(?:[ \t]*\([^)]*\)[^\n]*|[^\n]*)",
     re.MULTILINE)
+
+
+def _aliases_of(imported: str) -> list:
+    """从 `a, b as c` 里取出需要补的别名赋值 [(别名, 真名), ...]。"""
+    text = imported.strip()
+    if text.startswith("(") and text.endswith(")"):
+        text = text[1:-1]
+    out = []
+    for part in text.replace("\n", " ").split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if " as " in part:
+            real, alias = [p.strip() for p in part.split(" as ", 1)]
+            out.append((alias, real))
+    return out
 
 # main.py 里的依赖检查要挪到合并文件最顶部执行（必须在任何 PySide6 导入之前）
 BOOTSTRAP_CALL_RE = re.compile(
@@ -83,11 +114,34 @@ if __name__ == "__main__":
 
 
 def strip_module(path: str) -> str:
-    """读入模块源码，去掉本地 import、__main__ 入口和重复的依赖检查。"""
+    """读入模块源码，去掉本地 import、__main__ 入口和重复的依赖检查。
+
+    本地 import 在合并后是多余的（名字已在同一命名空间），但**必须处理别名**：
+    直接删掉 `from border import x as y` 会让 `y` 悬空（曾因此崩过）。
+    这里把别名补成 `y = x`；模块导入（`import x`）无法支持，构建期报错。
+    """
     with open(path, encoding="utf-8-sig") as f:   # utf-8-sig：兼容带 BOM 的源文件
         src = f.read()
-    src = src.lstrip("﻿")                          # 双保险：去掉残留的 BOM
+    src = src.lstrip("\ufeff")                     # 双保险：去掉残留的 BOM
+
+    bad = LOCAL_MODULE_IMPORT_RE.findall(src)
+    if bad:
+        raise SystemExit(
+            f"{os.path.basename(path)} 里有本地模块导入（import {'; import '.join(bad)}），"
+            "合并成单文件后没有模块对象可用。\n"
+            "请改成 `from 模块 import 名字` 的形式。")
+
+    def _replace(match):
+        # 关键：补的赋值必须**保留原来的缩进**（导入可能在函数体内）
+        indent, imported = match.group(1), match.group(2)
+        aliases = _aliases_of(imported)
+        if not aliases:
+            return ""
+        return "\n".join(f"{indent}{alias} = {real}"
+                         for alias, real in aliases)
+
     src = LOCAL_IMPORT_RE.sub("", src)
+    src = LOCAL_IMPORT_RE.sub("", src)             # 兜底：清掉剩余形式
     src = BOOTSTRAP_CALL_RE.sub("", src)
     # 去掉 __main__ 入口（单文件自己提供）
     src = re.sub(r"\nif __name__ == [\"']__main__[\"']:\n    main\(\)\s*$", "\n", src)

@@ -12,8 +12,8 @@ TARGET = os.path.join(HERE, "PyShot.py")
 failures = []
 
 
-def check(name, cond):
-    print(("PASS" if cond else "FAIL"), name)
+def check(name, cond, extra=""):
+    print(("PASS" if cond else "FAIL"), name, extra)
     if not cond:
         failures.append(name)
 
@@ -99,6 +99,33 @@ check("单文件：平铺水印能算出多处位置",
       len(mod.placements(tiled, mod.QSize(400, 300),
                          mod.watermark_size(tiled, mod.QSize(400, 300)))) > 3)
 dlg.deleteLater()
+
+# --- 用户真正点的按钮：走 EditorWindow 的方法（会弹模态对话框）---
+# 这里必须测，因为踩过两次坑：
+#   1) 跨模块重名（style 覆盖 watermark 的 _draw_text）——一画水印就崩
+#   2) 本地导入用了 as 别名，合并后导入被删、别名悬空 —— 一点边框就 NameError
+# 两次都是"多文件正常、单文件崩"，且都因为只测了底层函数、没测用户路径。
+_orig_exec = mod.QDialog.exec
+mod.QDialog.exec = lambda self: mod.QDialog.Accepted      # 不弹模态框，直接确定
+try:
+    win3 = mod.EditorWindow(mod.QPixmap(220, 160))
+    before_w, before_h = (win3.canvas.base_pixmap.width(),
+                          win3.canvas.base_pixmap.height())
+    win3.add_border()                     # ← 用户点「边框」按钮
+    check("单文件：点「边框」真的加上边框了",
+          win3.canvas.base_pixmap.width() > before_w,
+          f"{before_w} -> {win3.canvas.base_pixmap.width()}")
+    win3.canvas.undo()
+    check("单文件：撤销能退回加边框前",
+          win3.canvas.base_pixmap.width() == before_w,
+          str(win3.canvas.base_pixmap.width()))
+    win3.canvas.redo()
+    win3.add_watermark()                  # ← 用户点「水印」按钮
+    check("单文件：点「水印」不报错",
+          any(isinstance(s, mod.WatermarkShape) for s in win3.canvas.shapes),
+          str([type(s).__name__ for s in win3.canvas.shapes]))
+finally:
+    mod.QDialog.exec = _orig_exec
 
 # --- 构建期就该拦住的重名 ---
 from build_single import MODULES, find_collisions

@@ -5502,19 +5502,24 @@ class EditorWindow(QMainWindow):
 
     # ---------- 边框（FSCapture 的「特效 → 边缘」）----------
     def add_border(self):
-        """打开边框对话框，给当前标签加边框（图会变大，可撤销）。"""
+        """打开边框对话框，给当前标签加边框（图会变大，可撤销）。
+
+        注意：这里导入的是**真实名字**，不要用 `as` 起别名 ——
+        合并成单文件时本地 import 会被删掉，别名就悬空了（曾因此崩过）。
+        """
         canvas = self.canvas
         if canvas is None:
             return
 
 
-        dlg = BorderDialog(self, border_load(), canvas.base_pixmap.size())
+        dlg = BorderDialog(self, load_border_default(),
+                           canvas.base_pixmap.size())
         if dlg.exec() != QDialog.Accepted:
             return
         settings = dlg.settings()
         if dlg.save_as_default():
             settings["auto"] = True
-            saved = border_save(settings)
+            saved = save_border_default(settings)
             self.statusBar().showMessage(
                 "已设为默认边框，之后每次新截图会自动加"
                 if saved else "已设为默认边框（本次运行有效，配置写入失败）",

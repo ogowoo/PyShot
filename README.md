@@ -209,6 +209,42 @@ python test_scrollbar_drag.py    # 滚动条拖拽滚动
 python test_flow.py              # 真机端到端
 ```
 
+## 踩过的坑（都已在代码里处理）
+
+### 单文件构建（`build_single.py` 把各模块拼进同一个命名空间）
+
+1. **顶层同名会静默覆盖**：`style.py` 的图标函数 `_draw_text(p, c)` 覆盖了
+   `watermark.py` 里同名的 `_draw_text(painter, settings, box)` —— 多文件版正常，
+   **单文件版一点「水印」就 `TypeError`**。
+2. **本地导入的 `as` 别名会悬空**：合并后本地 import 一律被删（名字已在同一命名空间），
+   但 `from border import load_border_default as border_load` 这种写法删掉导入后
+   `border_load` 就不存在了 —— **单文件版一点「边框」就 `NameError`**。
+
+两道防线：
+
+- **构建期**：检测跨模块重名并拒绝构建（同名常量且赋值完全相同的除外，比如各模块都写
+  `user32 = ctypes.windll.user32`）；带 `as` 的本地导入**自动补一条 `别名 = 真名`**
+  赋值（保留缩进）；本地模块导入（`import x`）直接报错，要求改成 `from x import 名字`。
+- **测试期**：`test_single_file.py` 在**合并件上真跑用户路径** —— 直接调
+  `EditorWindow.add_watermark()` / `add_border()`（把模态 `exec` 打成自动确定），
+  而不是只测底层函数。
+
+> 教训：这类"多文件正常、单文件崩"的问题，只有在合并件上跑**用户真正点的那条路径**
+> 才拦得住；只测底层函数会一直漏。
+
+### 其它
+
+- **ctypes 默认按 32 位返回**，x64 下会截断 64 位句柄/指针 → 所有返回句柄的函数
+  与带句柄参数的函数都显式声明了 `restype`/`argtypes`（否则窗口创建会莫名失败）
+- `COLORREF` 是 `0x00BBGGRR`（**低位是红**），不是 RGB 顺序
+- `AlphaBlend` 在 `Msimg32.dll`，不在 `gdi32.dll`；`DrawTextW` 在 `user32.dll`，
+  `TextOutW` 在 `gdi32.dll`
+- `NOTIFYICONDATAW` 少了 `guidItem` / `hBalloonIcon` 字段会导致结构体过小 → 访问越界崩溃
+- `ScrollControlBar` 可能已被 Qt 回收，直接调方法会抛
+  `Internal C++ object already deleted` → 调用前判活（`shiboken6.isValid`）
+- **系统缩放下的坐标必须严格互逆**（见「坐标约定」）：图形用图像物理像素、
+  底图按 dpr 感知绘制，所以画图形前要 `scale(1/dpr)`
+
 ## 环境
 - Windows 10/11
 - Python 3.10+，PySide6（唯一第三方依赖；拼接/图像统计已是纯 Python，不需要 numpy）
