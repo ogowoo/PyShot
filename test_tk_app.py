@@ -150,6 +150,19 @@ if done and not isinstance(done[0], tuple) or (done and done[0][0] != "ERR"):
           f"{res.w}x{res.h}" if hasattr(res, 'h') else str(res))
 
 # ---------- 4. 编辑器 ----------
+import struct
+
+import wintk
+icon = wintk.make_icon_image("rect", (200, 205, 215), 22)
+png = icon.to_png_rgba()
+_w, _h, _depth, ctype = struct.unpack(">IIBB", png[16:26])
+check("图标 PNG 带 alpha 通道（颜色类型 6）", ctype == 6, f"ctype={ctype}")
+check("图标四角透明", icon.data[3] == 0 and icon.data[-1] == 0)
+_alphas = set(icon.data[3::4])
+check("图标有抗锯齿（多种 alpha）", len(_alphas) > 1,
+      f"alpha 种类 {len(_alphas)}")
+check("图标图形处不透明", any(a > 200 for a in _alphas))
+
 import wineditor
 base = doc.crop(0, 0, 400, 320)
 ed = wineditor.Editor(base)

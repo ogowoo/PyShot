@@ -352,6 +352,10 @@ class Image:
     def to_png(self) -> bytes:
         return _png_bytes(self.data, self.w, self.h)
 
+    def to_png_rgba(self) -> bytes:
+        """带 alpha 的 PNG（颜色类型 6）——图标等需要透明的地方用。"""
+        return _png_bytes_rgba(self.data, self.w, self.h)
+
     def save_png(self, path: str):
         with open(path, "wb") as f:
             f.write(self.to_png())
@@ -615,6 +619,26 @@ def _png_bytes(bgra: bytearray, w: int, h: int) -> bytes:
         raw.append(0)
         raw += out[y * w * 3:(y + 1) * w * 3]
     ihdr = struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr)
+            + chunk(b"IDAT", zlib.compress(bytes(raw), 6))
+            + chunk(b"IEND", b""))
+
+
+def _png_bytes_rgba(bgra: bytearray, w: int, h: int) -> bytes:
+    """颜色类型 6（RGBA）。BGRA → RGBA 用切片交错赋值。"""
+    def chunk(tag, data):
+        return (struct.pack(">I", len(data)) + tag + data
+                + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF))
+    out = bytearray(w * h * 4)
+    out[0::4] = bgra[2::4]      # R
+    out[1::4] = bgra[1::4]      # G
+    out[2::4] = bgra[0::4]      # B
+    out[3::4] = bgra[3::4]      # A
+    raw = bytearray()
+    for y in range(h):
+        raw.append(0)
+        raw += out[y * w * 4:(y + 1) * w * 4]
+    ihdr = struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0)
     return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr)
             + chunk(b"IDAT", zlib.compress(bytes(raw), 6))
             + chunk(b"IEND", b""))

@@ -30,6 +30,8 @@ u32.DestroyWindow.argtypes = [ctypes.c_void_p]
 u32.DestroyIcon.argtypes = [ctypes.c_void_p]
 u32.CreateIconIndirect.restype = ctypes.c_void_p
 u32.CreateIconIndirect.argtypes = [ctypes.c_void_p]
+wi.g32.SetBitmapBits.argtypes = [ctypes.c_void_p, ctypes.c_long,
+                                 ctypes.c_void_p]
 shell.Shell_NotifyIconW.argtypes = [wt.DWORD, ctypes.c_void_p]
 shell.Shell_NotifyIconW.restype = wt.BOOL
 
@@ -134,34 +136,116 @@ class _Tooltip:
 # ---------------------------------------------------------------- 图标（沿用现有矢量图标）
 
 _icon_drawers = {}
+_SENTINEL = (255, 0, 255)      # 品红哨兵：画完仍是这个颜色 = 没画到 = 透明
+
+
+class _ScaledRenderer:
+    """按倍数缩放坐标的绘制代理。
+
+    GDI 的画笔不做抗锯齿，而图标绘制函数是按 22x22 写死坐标的。
+    先在 ss 倍尺寸上画、再降采样平均，就能得到干净的抗锯齿边缘和 alpha。
+    """
+
+    def __init__(self, r, ss: int):
+        self._r = r
+        self._ss = ss
+
+    def use_pen(self, color, width):
+        self._r.use_pen(color, max(1, int(round(width * self._ss))))
+
+    def use_brush(self, color=None):
+        self._r.use_brush(color)
+
+    def line(self, x1, y1, x2, y2, color, width=1):
+        s = self._ss
+        self._r.line(x1 * s, y1 * s, x2 * s, y2 * s, color,
+                     max(1, int(round(width * s))))
+
+    def rect(self, x, y, w, h, color, width=1, fill=False, round_=0):
+        s = self._ss
+        self._r.rect(x * s, y * s, w * s, h * s, color,
+                     max(1, int(round(width * s))), fill, round_ * s)
+
+    def ellipse(self, x, y, w, h, color, width=1, fill=False):
+        s = self._ss
+        self._r.ellipse(x * s, y * s, w * s, h * s, color,
+                        max(1, int(round(width * s))), fill)
+
+    def polygon(self, pts, color, width=1, fill=False):
+        s = self._ss
+        self._r.polygon([(x * s, y * s) for x, y in pts], color,
+                        max(1, int(round(width * s))), fill)
+
+    def text(self, x, y, s_, color, family="Microsoft YaHei", size_px=18,
+             bold=False, italic=False):
+        s = self._ss
+        self._r.text(x * s, y * s, s_, color, family,
+                     max(1, int(round(size_px * s))), bold, italic)
+
+    def text_center(self, x, y, w, h, s_, color, family="Microsoft YaHei",
+                    size_px=18, bold=False):
+        s = self._ss
+        self._r.text_center(x * s, y * s, w * s, h * s, s_, color, family,
+                            max(1, int(round(size_px * s))), bold)
 
 
 def register_icon(name, fn):
     _icon_drawers[name] = fn
 
 
-def make_icon_image(name: str, color=(230, 57, 53), size: int = 22) -> wi.Image:
-    """把矢量图标画成一张 Image（透明底）。"""
-    img = wi.Image(size, size)
-    img.data = bytearray(size * size * 4)      # 全透明
-    r = img.renderer()
-    fn = _icon_drawers[name]
-    # 图标绘制函数约定：在 22x22 区域内，线条宽约 1.8，颜色为 color
-    r.use_pen(color, 1.8)
-    fn(r, color)
+def make_icon_image(name: str, color=(230, 57, 53), size: int = 22,
+                    ss: int = 4) -> wi.Image:
+    """把矢量图标画成一张**带 alpha** 的 Image。
+
+    做法：哨兵色铺底 → 在 ss 倍尺寸上用 GDI 画 → 降采样时
+    alpha = 覆盖到的子像素比例、RGB = 覆盖像素的颜色均值。
+    这样既有抗锯齿边缘，背景又真透明（Tk 会把它合到控件底色上）。
+    """
+    big = size * ss
+    buf = wi.Image(big, big)
+    sr, sg, sb = _SENTINEL
+    buf.data = bytearray(bytes((sb, sg, sr, 255)) * (big * big))   # BGRA 哨兵
+    r = buf.renderer()
+    _icon_drawers[name](_ScaledRenderer(r, ss), color)
     r.close()
-    return img
+
+    out = wi.Image(size, size)
+    d = buf.data
+    o = out.data
+    denom = ss * ss
+    for y in range(size):
+        for x in range(size):
+            tr = tg = tb = cnt = 0
+            for dy in range(ss):
+                base = ((y * ss + dy) * big + x * ss) * 4
+                for dx in range(ss):
+                    i = base + dx * 4
+                    b, g, rr = d[i], d[i + 1], d[i + 2]
+                    if b == sb and g == sg and rr == sr:
+                        continue          # 哨兵色 = 没画到
+                    tr += rr
+                    tg += g
+                    tb += b
+                    cnt += 1
+            j = (y * size + x) * 4
+            if cnt:
+                o[j] = tb // cnt          # B
+                o[j + 1] = tg // cnt      # G
+                o[j + 2] = tr // cnt      # R
+                o[j + 3] = min(255, int(round(cnt * 255 / denom)))   # A
+            # 否则保持全 0（完全透明）
+    return out
 
 
 def make_icon_photo(name: str, color=(230, 57, 53), size: int = 22,
                     master=None):
-    """生成图标 PhotoImage。
+    """生成图标 PhotoImage（带透明通道，背景不会挡住控件底色）。
 
     必须传 master（通常是它所属的窗口）：tk.PhotoImage 默认绑到**默认
     解释器**上，多 Tk 窗口时会报 image doesn't exist。
     """
-    return tk.PhotoImage(data=make_icon_image(name, color, size).photo_bytes(),
-                         master=master)
+    img = make_icon_image(name, color, size)
+    return tk.PhotoImage(data=img.to_png_rgba(), master=master)
 
 
 # 由 winshapes / wineditor 注册图标；这里先内置几个基础图标
@@ -470,7 +554,7 @@ class Win32Pump:
 
 
 def _make_tray_hicon():
-    """画出托盘图标并转成 HICON。"""
+    """画出托盘图标并转成 HICON（圆角处的透明用 AND 掩码表达）。"""
     img = wi.Image(32, 32)
     r = img.renderer()
     r.rect(0, 0, 32, 32, (76, 154, 255), 0, fill=True, round_=10)
@@ -479,6 +563,7 @@ def _make_tray_hicon():
     r.ellipse(12, 13, 8, 8, (76, 154, 255), 1.5, fill=True)
     r.ellipse(14.5, 15.5, 3, 3, (255, 255, 255), 1.5, fill=True)
     r.close()
+    # 画到 DIB 上取回 32bpp 数据
     hdc = u32.GetDC(None)
     memdc = wi.g32.CreateCompatibleDC(hdc)
     color_bmp = wi.g32.CreateCompatibleBitmap(hdc, 32, 32)
@@ -488,7 +573,15 @@ def _make_tray_hicon():
                      ctypes.byref(wi._bmi(32, 32)), 0)
     wi.g32.DeleteDC(memdc)
     u32.ReleaseDC(None, hdc)
+    # 圆角外缘（未绘制到 → alpha 0）用 1bpp AND 掩码标出来，否则 Windows 会画成黑角
+    row_bytes = ((32 + 31) // 32) * 4
+    mask = bytearray(row_bytes * 32)
+    for y in range(32):
+        for x in range(32):
+            if img.data[(y * 32 + x) * 4 + 3] < 128:
+                mask[y * row_bytes + (x // 8)] |= 0x80 >> (x % 8)
     mask_bmp = wi.g32.CreateBitmap(32, 32, 1, 1, None)
+    wi.g32.SetBitmapBits(mask_bmp, len(mask), bytes(mask))
 
     class ICONINFO(ctypes.Structure):
         _fields_ = [("fIcon", wt.BOOL), ("xHotspot", wt.DWORD),
