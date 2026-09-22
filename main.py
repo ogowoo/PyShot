@@ -37,7 +37,7 @@ from editor import EditorWindow
 from pinboard import PinWindow
 from scroller import ScrollCapture, ScrollDriver
 from snipper import SnipperOverlay, grab_screen, grab_virtual_desktop
-from style import apply_theme
+from style import apply_theme, make_menu_icon
 
 WM_HOTKEY = 0x0312
 MOD_ALT, MOD_CONTROL, MOD_SHIFT, MOD_WIN, MOD_NOREPEAT = 0x1, 0x2, 0x4, 0x8, 0x4000
@@ -220,80 +220,104 @@ class PyShotApp(QObject):
             return
         self.tray = QSystemTrayIcon(make_tray_icon(), self.app)
         menu = QMenu()
-        act_region = QAction("区域截图", self.app)
+        self.menu = menu
+
+        # ---------- 截图 ----------
+        # 高频动作置顶；快捷键用 "\t" 放到右侧列（只是显示，不注册 Qt 快捷键，
+        # 避免与全局热键同时触发一次截图）
+        act_region = QAction(make_menu_icon("crop"), "区域截图", self.app)
+        act_region.setToolTip("框选一块区域截图")
         act_region.triggered.connect(lambda: self._deferred(self.capture_region))
         menu.addAction(act_region)
         self.act_region = act_region
-        act_scroll = QAction("滚动长截图（滚轮自动）", self.app)
-        act_scroll.setToolTip("框选可滚动区域，程序自己发滚轮逐屏拼接")
-        act_scroll.triggered.connect(lambda: self._deferred(self.capture_scrolling))
-        menu.addAction(act_scroll)
-        act_scroll_drag = QAction("滚动长截图（点滚动条自动滚动）", self.app)
-        act_scroll_drag.setToolTip(
-            "框选区域后点一下滚动条滑块，程序按住滑块匀速拖拽滚动。\n"
-            "远程桌面 / Citrix 里最稳：步长会实测标定，重叠充足")
-        act_scroll_drag.triggered.connect(
-            lambda: self._deferred(lambda: self.capture_scrolling(mode="drag")))
-        menu.addAction(act_scroll_drag)
-        act_scroll_key = QAction("滚动长截图（PageDown 自动滚动）", self.app)
-        act_scroll_key.setToolTip(
-            "框选区域后程序发送 PageDown / 空格翻页。\n"
-            "适合没有滚动条的应用")
-        act_scroll_key.triggered.connect(
-            lambda: self._deferred(lambda: self.capture_scrolling(mode="key")))
-        menu.addAction(act_scroll_key)
-        act_scroll_manual = QAction("滚动长截图（手动滚动）", self.app)
-        act_scroll_manual.setToolTip(
-            "自己用滚轮/Page Down 滚动，程序负责逐帧拼接。\n"
-            "适用于 Citrix、远程桌面等无法注入滚轮的窗口")
-        act_scroll_manual.triggered.connect(
-            lambda: self._deferred(lambda: self.capture_scrolling(manual=True)))
-        menu.addAction(act_scroll_manual)
-        act_full = QAction("全屏截图（当前显示器）", self.app)
-        act_full.setToolTip("截取鼠标所在的那块显示器；可用全屏热键触发")
+
+        act_full = QAction(make_menu_icon("camera"), "全屏截图", self.app)
+        act_full.setToolTip("截取鼠标所在的那块显示器")
         act_full.triggered.connect(lambda: self._deferred(self.capture_fullscreen))
         menu.addAction(act_full)
-        # 指定显示器：内容在弹出菜单时按当前屏幕列表重建
-        self.menu_screens = QMenu("截取指定显示器", menu)
+        self.act_full = act_full
+
+        # 选择显示器（含"所有显示器拼一张"）：弹出时按当前屏幕列表重建
+        self.menu_screens = QMenu("选择显示器截图", menu)
+        self.menu_screens.setIcon(make_menu_icon("monitor"))
         self.menu_screens.aboutToShow.connect(self._rebuild_screen_menu)
         menu.addMenu(self.menu_screens)
-        act_full_all = QAction("全屏截图（所有显示器拼成一张）", self.app)
-        act_full_all.triggered.connect(
-            lambda: self._deferred(self.capture_all_screens))
-        menu.addAction(act_full_all)
+
         menu.addSeparator()
-        act_color = QAction("屏幕取色", self.app)
-        act_color.setToolTip("单击屏幕任意位置，复制色值到剪贴板")
+
+        # ---------- 滚动长截图（收进子菜单，避免主菜单过长）----------
+        menu_scroll = QMenu("滚动长截图", menu)
+        menu_scroll.setIcon(make_menu_icon("scroll"))
+        for label, tip, fn in [
+                ("自动滚轮",
+                 "框选可滚动区域，程序自己发滚轮逐屏拼接（普通网页/文档）",
+                 lambda: self.capture_scrolling()),
+                ("拖拽滚动条",
+                 "框选区域后点一下滚动条滑块，程序按住滑块匀速拖拽。\n"
+                 "远程桌面 / Citrix 里最稳：步长会实测标定",
+                 lambda: self.capture_scrolling(mode="drag")),
+                ("按键翻页",
+                 "框选区域后程序发送 PageDown 翻页（适合没有滚动条的应用）",
+                 lambda: self.capture_scrolling(mode="key")),
+                ("手动滚动",
+                 "自己用滚轮滚动，程序只负责逐帧拼接",
+                 lambda: self.capture_scrolling(manual=True))]:
+            act = QAction(label, menu_scroll)
+            act.setToolTip(tip)
+            act.triggered.connect(
+                lambda checked=False, f=fn: self._deferred(f))
+            menu_scroll.addAction(act)
+        menu.addMenu(menu_scroll)
+
+        menu.addSeparator()
+
+        # ---------- 小工具 ----------
+        act_color = QAction(make_menu_icon("pick"), "屏幕取色", self.app)
+        act_color.setToolTip("单击屏幕任意位置，把色值复制到剪贴板")
         act_color.triggered.connect(lambda: self._deferred(self.pick_color))
         menu.addAction(act_color)
-        act_pin_clip = QAction("贴出剪贴板图片", self.app)
+
+        act_pin_clip = QAction(make_menu_icon("pin"), "贴出剪贴板图片", self.app)
+        act_pin_clip.setToolTip("把剪贴板里的图片钉在屏幕最上层")
         act_pin_clip.triggered.connect(self.pin_clipboard)
         menu.addAction(act_pin_clip)
-        act_open = QAction("打开图片编辑…", self.app)
+
+        menu.addSeparator()
+
+        # ---------- 窗口 ----------
+        act_open = QAction(make_menu_icon("image"), "打开图片编辑…", self.app)
+        act_open.setToolTip("打开一张已有图片进行标注")
         act_open.triggered.connect(self.open_image)
         menu.addAction(act_open)
-        act_editor = QAction("打开编辑器", self.app)
-        act_editor.setToolTip("把编辑器窗口恢复到前台（取消截图后找不到编辑器时点这里）")
+
+        act_editor = QAction(make_menu_icon("window"), "打开编辑器", self.app)
+        act_editor.setToolTip(
+            "把编辑器窗口恢复到前台（取消截图后找不到编辑器时点这里）")
         act_editor.triggered.connect(self.show_editor)
         menu.addAction(act_editor)
+
         menu.addSeparator()
-        act_quit = QAction("退出 PyShot", self.app)
+        act_quit = QAction(make_menu_icon("exit"), "退出 PyShot", self.app)
         act_quit.triggered.connect(self.app.quit)
         menu.addAction(act_quit)
+
         self.tray.setContextMenu(menu)
+        # 快捷键写进右侧列（\t 之后的部分由 Qt 右对齐显示）
+        if self.hotkey_text:
+            act_region.setText(f"区域截图\t{self.hotkey_text}")
+        if self.full_hotkey_text:
+            act_full.setText(f"全屏截图\t{self.full_hotkey_text}")
         hints = []
         if self.hotkey_text:
             hints.append(f"{self.hotkey_text} 区域截图")
         if self.full_hotkey_text:
             hints.append(f"{self.full_hotkey_text} 全屏截图")
         if hints:
-            act_region.setText(f"区域截图 ({self.hotkey_text})")
-            if self.full_hotkey_text:
-                act_full.setText(f"全屏截图（当前显示器）({self.full_hotkey_text})")
             self.tray.setToolTip(
-                "PyShot 截图工具\n" + " · ".join(hints) + " · 双击图标截图")
+                "PyShot 截图工具\n" + " · ".join(hints) + "\n双击图标截图")
         else:
-            self.tray.setToolTip("PyShot 截图工具\n双击图标截图 · 右键退出")
+            self.tray.setToolTip(
+                "PyShot 截图工具\n双击图标截图 · 右键菜单")
         self.tray.activated.connect(self._on_tray_activated)
         self.tray.show()
         # 注意：启动提示不在这里弹 —— 由 notify_ready() 统一负责，
@@ -342,7 +366,10 @@ class PyShotApp(QObject):
         QTimer.singleShot(delay, fn)
 
     def _rebuild_screen_menu(self):
-        """按当前显示器列表重建"截取指定显示器"子菜单（插拔显示器后自动更新）。"""
+        """按当前显示器列表重建子菜单（插拔显示器后自动更新）。
+
+        除了每块屏一项，末尾再放"所有显示器拼成一张"——都属于"截哪块屏"这件事。
+        """
         self.menu_screens.clear()
         primary = QGuiApplication.primaryScreen()
         for i, scr in enumerate(QGuiApplication.screens()):
@@ -353,13 +380,22 @@ class PyShotApp(QObject):
             act = QAction(
                 f"{tag}：{geo.width()}×{geo.height()}{scale}  ({scr.name()})",
                 self.menu_screens)
+            act.setIcon(make_menu_icon("monitor"))
             act.triggered.connect(
                 lambda checked=False, s=scr: self._deferred(
                     lambda: self.capture_fullscreen(s)))
             self.menu_screens.addAction(act)
         if not self.menu_screens.actions():
-            self.menu_screens.addAction(QAction("（未检测到显示器）",
-                                                self.menu_screens))
+            act = QAction("（未检测到显示器）", self.menu_screens)
+            act.setEnabled(False)
+            self.menu_screens.addAction(act)
+        self.menu_screens.addSeparator()
+        act_all = QAction("所有显示器拼成一张", self.menu_screens)
+        act_all.setIcon(make_menu_icon("monitor"))
+        act_all.setToolTip("把每块显示器按逻辑位置拼成一张长图")
+        act_all.triggered.connect(
+            lambda: self._deferred(self.capture_all_screens))
+        self.menu_screens.addAction(act_all)
 
     def _on_tray_activated(self, reason):
         if reason == QSystemTrayIcon.DoubleClick:

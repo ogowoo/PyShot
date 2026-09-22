@@ -148,12 +148,16 @@ from PySide6.QtWidgets import QMenu
 app_real.menu_screens = QMenu()
 main_mod.QGuiApplication = fake
 main_mod.PyShotApp._rebuild_screen_menu(app_real)
-labels = [a.text() for a in app_real.menu_screens.actions()]
-check("子菜单列出全部显示器", len(labels) == 2, str(labels))
+all_labels = [a.text() for a in app_real.menu_screens.actions()
+              if not a.isSeparator()]
+labels = [s for s in all_labels if "：" in s]        # 只取"每块屏"的项
+check("子菜单列出全部显示器", len(labels) == 2, str(all_labels))
 check("主屏有标记与分辨率", any("主屏" in s and "1280×720" in s
                                 for s in labels), str(labels))
 check("副屏标出缩放比例", any("150%" in s and "1920×1080" in s
                               for s in labels), str(labels))
+check("末尾附带所有显示器拼成一张",
+      all_labels[-1] == "所有显示器拼成一张", str(all_labels))
 
 # ---------- 4. 指定显示器全屏截图 → 编辑器尺寸正确 ----------
 opened = []

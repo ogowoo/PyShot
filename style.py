@@ -374,6 +374,62 @@ def _draw_camera(p, c):
     p.drawEllipse(QPointF(12, 13.5), 3.4, 3.4)
 
 
+# ---- 托盘菜单图标 ----
+
+def _draw_monitor(p, c):
+    """显示器：屏幕 + 底座。"""
+    p.drawRoundedRect(3, 5, 18, 12, 2, 2)
+    p.drawLine(QPointF(12, 17), QPointF(12, 20))
+    p.drawLine(QPointF(8, 20), QPointF(16, 20))
+
+
+def _draw_scroll(p, c):
+    """滚动长截图：向下的箭头 + 两横线。"""
+    p.drawLine(QPointF(12, 3.5), QPointF(12, 14))
+    p.drawLine(QPointF(12, 14), QPointF(8, 10))
+    p.drawLine(QPointF(12, 14), QPointF(16, 10))
+    p.drawLine(QPointF(5, 18), QPointF(19, 18))
+    p.drawLine(QPointF(5, 21), QPointF(19, 21))
+
+
+def _draw_image(p, c):
+    """图片：相框 + 山形。"""
+    p.drawRoundedRect(3.5, 5, 17, 14, 2, 2)
+    p.drawEllipse(QPointF(8, 9.5), 1.6, 1.6)
+    p.drawLine(QPointF(5, 17), QPointF(10.5, 11.5))
+    p.drawLine(QPointF(10.5, 11.5), QPointF(14, 15))
+    p.drawLine(QPointF(14, 15), QPointF(16.5, 12.5))
+    p.drawLine(QPointF(16.5, 12.5), QPointF(20, 17))
+
+
+def _draw_window(p, c):
+    """窗口/编辑器：标题栏 + 内容。"""
+    p.drawRoundedRect(3.5, 4.5, 17, 15, 2, 2)
+    p.drawLine(QPointF(3.5, 9), QPointF(20.5, 9))
+    p.drawLine(QPointF(6, 6.8), QPointF(6.2, 6.8))
+    p.drawLine(QPointF(9, 6.8), QPointF(9.2, 6.8))
+
+
+def _draw_pin(p, c):
+    """图钉：贴图用。"""
+    p.drawLine(QPointF(12, 12), QPointF(12, 20))
+    path = QPainterPath(QPointF(7, 11))
+    path.lineTo(17, 11)
+    path.lineTo(14.5, 5)
+    path.lineTo(9.5, 5)
+    path.closeSubpath()
+    p.drawPath(path)
+
+
+def _draw_exit(p, c):
+    """退出：电源符号。"""
+    path = QPainterPath(QPointF(7, 5.5))
+    path.cubicTo(QPointF(2.5, 9), QPointF(4, 19), QPointF(12, 19))
+    path.cubicTo(QPointF(20, 19), QPointF(21.5, 9), QPointF(17, 5.5))
+    p.drawPath(path)
+    p.drawLine(QPointF(12, 3), QPointF(12, 10))
+
+
 def _draw_undo(p, c):
     """撤销：左向弧线箭头。"""
     path = QPainterPath(QPointF(5, 9))
@@ -400,7 +456,14 @@ _ICON_DRAWERS = {
     "step": _draw_step, "text": _draw_text, "highlight": _draw_highlight,
     "mosaic": _draw_mosaic, "pick": _draw_pick, "crop": _draw_crop,
     "camera": _draw_camera, "undo": _draw_undo, "redo": _draw_redo,
+    "monitor": _draw_monitor, "scroll": _draw_scroll, "image": _draw_image,
+    "window": _draw_window, "pin": _draw_pin, "exit": _draw_exit,
 }
+
+
+def make_menu_icon(name: str) -> QIcon:
+    """托盘/菜单项图标（浅灰，深色菜单上清晰）。"""
+    return make_icon(name, off_color="#c8ccd4", on_color="#ffffff")
 
 
 def make_icon(name: str, off_color: str = "#b8c0cc",
