@@ -1001,7 +1001,10 @@ class EditorWindow(QMainWindow):
         act_pin.setToolTip("把当前结果钉在屏幕最上层（Snipaste 风格）")
         act_pin.triggered.connect(self.pin_to_screen)
         act_wm = QAction("水印", self)
-        act_wm.setToolTip("给当前图片加水印（文字/图片、九宫格或平铺、可设为默认）")
+        act_wm.setToolTip(
+            "水印：文字与图片可各自开关（也可同时用）\n"
+            "九宫格位置或平铺、各自调不透明度、可旋转与设边距\n"
+            "还能「应用并设为默认」，之后新截图自动加")
         act_wm.triggered.connect(self.add_watermark)
         act_save = QAction("保存", self)
         act_save.setToolTip("保存为文件 (Ctrl+S)")
