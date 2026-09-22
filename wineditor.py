@@ -193,7 +193,7 @@ class Editor:
         shot = wintk.top_bar_button(
             top_inner, "  截图", accent=True,
             tooltip="截取新区域（编辑器会先最小化，截完回来）")
-        shot._icon = wintk.make_icon_photo("camera", (255, 255, 255))
+        shot._icon = wintk.make_icon_photo("camera", (255, 255, 255), master=self.win)
         shot.config(image=shot._icon, compound="left")
         shot.config(command=self._on_capture)
         shot.pack(side="left", padx=(0, 6))
@@ -308,7 +308,7 @@ class Editor:
                     fill="x", padx=10, pady=5)
             first = False
             for tid in group:
-                icon = wintk.make_icon_photo(tid, (170, 175, 185))
+                icon = wintk.make_icon_photo(tid, (170, 175, 185), master=self.win)
                 b = tk.Label(rail, image=icon, bg=wintk.SURFACE, width=42,
                              height=40, cursor="hand2")
                 b._icon = icon
@@ -348,7 +348,7 @@ class Editor:
         return sb
 
     def _icon_btn(self, parent, icon_name, cmd, tip):
-        icon = wintk.make_icon_photo(icon_name, (200, 205, 215))
+        icon = wintk.make_icon_photo(icon_name, (200, 205, 215), master=self.win)
         b = tk.Button(parent, image=icon, command=cmd, relief="flat", bd=0,
                       bg=wintk.SURFACE, activebackground=wintk.SURFACE_2,
                       cursor="hand2", width=34, height=30)
@@ -386,7 +386,7 @@ class Editor:
             if tid == tool:
                 btn.configure(bg=wintk.ACCENT_SOFT)
                 # 强调色图标
-                new_icon = wintk.make_icon_photo(tid, (92, 164, 255))
+                new_icon = wintk.make_icon_photo(tid, (92, 164, 255), master=self.win)
                 btn.configure(image=new_icon)
                 btn._icon = new_icon
             else:
@@ -741,7 +741,7 @@ class Editor:
         disp = self.image
         if self.zoom != 1.0:
             disp = self._scale_for_display(self.image)
-        self._photo = tk.PhotoImage(data=disp.to_ppm())
+        self._photo = tk.PhotoImage(data=disp.to_ppm(), master=self.canvas)
         c.create_image(self.ox, self.oy, anchor="nw", image=self._photo,
                        tags="base")
         # 裁剪框（最上层背景之下）

@@ -40,7 +40,6 @@ class Snipper:
         self._dragging = False
         self._finished = False
         self._last_crop_rect = None
-        self._photo_bg = tk.PhotoImage(data=self.dim_img.to_ppm())
         self._photo_sel = None
 
         self.win = tk.Toplevel(root)
@@ -51,6 +50,10 @@ class Snipper:
         self.win.geometry(f"{self.win.winfo_screenwidth()}x"
                           f"{self.win.winfo_screenheight()}+{self.vx}+{self.vy}")
         self.win.config(cursor="crosshair")
+
+        # 必须在窗口建好之后再建 PhotoImage（要指定 master，见 wintk 注释）
+        self._photo_bg = tk.PhotoImage(data=self.dim_img.to_ppm(),
+                                       master=self.win)
 
         self.cv = tk.Canvas(self.win, highlightthickness=0, bg=wintk.BG,
                             cursor="crosshair")
@@ -246,7 +249,7 @@ class Snipper:
         if w < 1 or h < 1 or crop.w < 1 or crop.h < 1:
             return
         # 显示为逻辑尺寸（物理/ dpr = 逻辑）
-        self._photo_sel = tk.PhotoImage(data=crop.to_ppm())
+        self._photo_sel = tk.PhotoImage(data=crop.to_ppm(), master=self.win)
         self.cv.itemconfigure(self.sel_img_item, image=self._photo_sel)
         self.cv.coords(self.sel_img_item, rx1, ry1)
         self.cv.itemconfigure(self.sel_img_item, state="normal")
@@ -272,7 +275,7 @@ class Snipper:
             return
         # 放大 MAG_ZOOM 倍（nearest）
         big = self._upscale_nearest(crop, MAG_ZOOM)
-        self._photo_mag = tk.PhotoImage(data=big.to_ppm())
+        self._photo_mag = tk.PhotoImage(data=big.to_ppm(), master=self.win)
         mx = x + 18
         my = y + 18
         sw = self.cv.winfo_width()

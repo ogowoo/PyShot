@@ -103,7 +103,9 @@ pyshot/
 ├── wincapture.py    # 抓屏工具（空白检测、PrintWindow 回退、原生滚动条 API）
 ├── stitch.py        # 纯 Python 滚动拼接算法（零依赖，可离屏单测）
 ├── build_portable.py# 构建零安装便携版
-├── test_tk_app.py   # 端到端测试（27 项）
+├── test_tk_app.py  # 端到端测试（27 项）
+├── test_mainloop.py # 真实 mainloop + Win32 消息投递（防 ctypes 回调致命崩溃）
+├── test_e2e_process.py # 另起子进程从外部投递消息，验证真实运行场景
 └── legacy_qt/       # 早期 PySide6 实现（已弃用，仅供查阅）
 ```
 
@@ -122,6 +124,15 @@ PNG 用 `zlib` 手写编码器、JPEG 走 GDI+、BMP 手写；剪贴板用 CF_DI
 - Tk 显示用 PPM（免压缩）喂 `PhotoImage`，避免 PNG 编码开销
 
 **踩过的坑**（都已在代码里处理）：
+- **ctypes 回调不能放在 Tk 主线程**：Tk 的 `mainloop` 泵消息时会释放 GIL，
+  此时 Windows 把消息派发给我们用 ctypes 建的窗口过程，ctypes 恢复线程状态会
+  直接触发致命错误 `PyEval_RestoreThread: ... the current Python thread state
+  is NULL`，整个进程死掉（Python 层抓不住）。所以托盘图标与全局热键放在
+  **独立线程**里跑自己的消息循环（`wintk.Win32Pump`），回调只往队列塞数据，
+  Tk 主线程用 `after()` 轮询 —— 跨线程只传数据，绝不碰 Tk 对象
+- **`tk.PhotoImage` 必须指定 `master`**：默认绑到"默认解释器"，多 Tk 窗口时
+  会报 `image "pyimage1" doesn't exist`
+- 模态菜单（`tk_popup`）会开嵌套事件循环，回调里要防止重复弹出
 - ctypes 默认按 32 位返回，x64 下会截断 64 位句柄 → 所有返回句柄/指针的函数
   以及带句柄参数的函数都显式声明了 `restype`/`argtypes`
 - `COLORREF` 是 `0x00BBGGRR`（低位是红），不是 RGB 顺序
@@ -129,6 +140,13 @@ PNG 用 `zlib` 手写编码器、JPEG 走 GDI+、BMP 手写；剪贴板用 CF_DI
 - `DrawTextW` 在 `user32.dll`，`TextOutW` 在 `gdi32.dll`
 - `NOTIFYICONDATAW` 少了 `guidItem`/`hBalloonIcon` 字段会导致结构体过小 → 访问越界崩溃
 - Tk 画布需要 `#RRGGBB` 字符串，图形模型里存的是 `(r,g,b)` 元组
+
+**测试为什么分三层**：上面第一条是**进程级致命错误**，单元测试抓不住
+（它会连测试进程一起杀掉）。所以除了常规单元/集成测试，还有
+`test_mainloop.py`（真实 `mainloop` + 真实 Win32 消息投递）和
+`test_e2e_process.py`（另起 `winmain.py` 子进程，从外部投递消息，检查输出里
+有没有 `Fatal Python error`）。早期只用 `root.update()` 手动泵消息的测试漏掉了
+这个 bug，教训记在这里。
 
 ## 环境
 

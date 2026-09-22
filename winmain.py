@@ -52,56 +52,6 @@ def _parse_hotkey(spec: str):
     return mods, vk
 
 
-class HotkeyManager:
-    """全局热键（RegisterHotKey + 隐藏消息窗口，消息由 Tk 主循环泵出）。"""
-
-    WNDPROC = ctypes.WINFUNCTYPE(wt.LPARAM, wt.HWND, wt.UINT, wt.WPARAM,
-                                 wt.LPARAM)
-    _cls_counter = 0
-
-    def __init__(self, tk_root, on_hotkey):
-        self.root = tk_root
-        self.on_hotkey = on_hotkey
-        self.registered = []
-        self._wndproc_ref = self.WNDPROC(self._proc)
-        HotkeyManager._cls_counter += 1
-        self.cls = f"PyShotHotkey_{HotkeyManager._cls_counter}"
-        hinst = wi.k32.GetModuleHandleW(0)
-        wc_ = wintk.WNDCLASSW()
-        wc_.lpfnWndProc = ctypes.cast(self._wndproc_ref, ctypes.c_void_p)
-        wc_.hInstance = hinst
-        wc_.lpszClassName = self.cls
-        user32.RegisterClassW(ctypes.byref(wc_))
-        self.hwnd = user32.CreateWindowExW(0, self.cls, self.cls, 0, 0, 0, 0, 0,
-                                           -3, 0, hinst, 0)
-
-    def _proc(self, hwnd, msg, wparam, lparam):
-        if msg == WM_HOTKEY:
-            self.root.after_idle(self.on_hotkey)
-        return user32.DefWindowProcW(hwnd, msg, wparam, lparam)
-
-    def register(self, specs=None):
-        specs = specs or DEFAULT_HOTKEYS
-        env = os.environ.get("PYSHOT_HOTKEY")
-        if env:
-            specs = [env] + list(specs)
-        for i, spec in enumerate(specs):
-            mods, vk = _parse_hotkey(spec)
-            if not vk:
-                continue
-            if user32.RegisterHotKey(self.hwnd, 0xB000 + i, mods, vk):
-                self.registered.append((0xB000 + i, spec))
-                return spec
-        return None
-
-    def unregister(self):
-        for hid, _ in self.registered:
-            user32.UnregisterHotKey(self.hwnd, hid)
-        self.registered.clear()
-        if self.hwnd:
-            user32.DestroyWindow(self.hwnd)
-
-
 # ---------------------------------------------------------------- 贴图窗口
 
 class PinWindow:
@@ -113,7 +63,7 @@ class PinWindow:
         self.win.overrideredirect(True)
         self.win.attributes("-topmost", True)
         self.win.configure(bg="#3d8bfd")
-        self.photo = tk.PhotoImage(data=image.to_ppm())
+        self.photo = tk.PhotoImage(data=image.to_ppm(), master=self.win)
         self.label = tk.Label(self.win, image=self.photo, bd=0,
                               bg="#000000", cursor="fleur")
         self.label.pack(padx=2, pady=2)
@@ -152,14 +102,31 @@ class PyShotTk:
         self._pending_scroll_mode = None
         self._busy = False
 
-        self.tray = wintk.TrayIcon(self.root, self._on_tray, "PyShot 截图工具")
-        self.tray.show()
-        self.hotkey = HotkeyManager(self.root, self.start_capture)
-        self.hk = self.hotkey.register()
+        self.tray = wintk.Win32Pump("PyShot 截图工具")
+        self.tray.start(wintk.DEFAULT_HOTKEYS)
+        self.hk = self.tray.hotkey
         self.tray.set_tooltip(
             f"PyShot 截图工具（{self.hk or '无热键'} 或双击图标截图）")
+        self._poll_pump()
         self._notify("PyShot 已启动",
                      f"按 {self.hk or '双击托盘图标'} 开始截图，右键托盘图标看菜单")
+
+    # ---------- Win32 消息泵（独立线程）→ Tk 事件 ----------
+    def _poll_pump(self):
+        """Tk 主线程轮询泵队列（跨线程只传数据，不碰 Tk 对象）。"""
+        for kind, payload in self.tray.poll():
+            if kind == "double":
+                self.start_capture()
+            elif kind == "menu":
+                self._show_menu()
+            elif kind == "hotkey":
+                self.start_capture()
+            elif kind == "error":
+                self._notify("PyShot 启动异常", str(payload))
+        try:
+            self.root.after(60, self._poll_pump)
+        except tk.TclError:
+            pass
 
     # ---------- 通知 ----------
     def _notify(self, title, msg):
@@ -169,13 +136,10 @@ class PyShotTk:
             pass
 
     # ---------- 托盘 ----------
-    def _on_tray(self, event):
-        if event == "double":
-            self.start_capture()
-        elif event == "menu":
-            self._show_menu()
-
     def _show_menu(self):
+        if getattr(self, "_menu_open", False):
+            return                      # 菜单已弹出（模态），不重复弹
+        self._menu_open = True
         m = tk.Menu(self.root, tearoff=0, bg=wintk.SURFACE_2, fg=wintk.TEXT,
                     activebackground=wintk.ACCENT, activeforeground="#ffffff",
                     bd=0, font=wintk.FONT_UI)
@@ -200,6 +164,7 @@ class PyShotTk:
             m.tk_popup(self.root.winfo_pointerx(), self.root.winfo_pointery())
         finally:
             m.grab_release()
+            self._menu_open = False
 
     # ---------- 截图准备 ----------
     def _prepare_capture(self):
@@ -276,42 +241,32 @@ class PyShotTk:
         dpr = wi.primary_dpi()
         region = (int(l * dpr), int(t * dpr), int((r - l) * dpr),
                   int((b - t) * dpr))
-        anchor = None
-        if mode == "drag":
-            anchor = self._pick_scrollbar(region)
-            if anchor is None:
-                return
+        if mode != "drag":
+            self._start_scroll_capture(region, mode, None)
+            return
+        # 拖拽模式：再让用户点一下滚动条滑块，然后开始。
+        # 用回调串起来 —— 不在回调里跑 while+update 的重入事件循环。
+        self._busy = True
+
+        def picked(pt):
+            self._busy = False
+            self.snipper = None
+            if pt:
+                self._start_scroll_capture(region, mode, pt)
+
+        def cancelled():
+            self._busy = False
+            self.snipper = None
+
+        self.snipper = winsnipper.Snipper(self.root, "point", picked, cancelled)
+
+    def _start_scroll_capture(self, region, mode, anchor):
         sc = winscroller.ScrollCaptureTk(
             self.root, region, mode=mode, anchor=anchor,
             on_done=self._on_scroll_done, on_error=self._on_scroll_error,
             manual=(mode == "manual"))
         self.scroller = sc
         sc.start()
-
-    def _pick_scrollbar(self, region):
-        """让用户点一下滚动条滑块，返回屏幕物理像素坐标。"""
-        picked = []
-        ev = __import__("threading").Event()
-
-        def ok(pt):
-            picked.append(pt)
-            ev.set()
-
-        def cancel():
-            ev.set()
-
-        self.snipper = winsnipper.Snipper(self.root, "point", ok, cancel)
-        # 等待用户点击（Tk 子循环）
-        while not picked and self.snipper is not None:
-            try:
-                self.root.update()
-            except tk.TclError:
-                break
-            import time
-            time.sleep(0.02)
-            if not self.snipper or not self.snipper.win.winfo_exists():
-                break
-        return picked[0] if picked else None
 
     def _on_scroll_done(self, image, note):
         self.scroller = None
@@ -380,8 +335,7 @@ class PyShotTk:
     # ---------- 退出 ----------
     def quit(self):
         try:
-            self.hotkey.unregister()
-            self.tray.destroy()
+            self.tray.stop()
         except Exception:  # noqa: BLE001
             pass
         self.root.quit()

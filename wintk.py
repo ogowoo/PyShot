@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
-"""wintk.py —— Tkinter 界面框架（主题、图标、托盘、全屏覆盖层基类）。"""
+"""wintk.py —— Tkinter 界面框架（主题、图标、托盘、Win32 消息泵）。"""
 import ctypes
 import ctypes.wintypes as wt
+import os
+import queue
+import threading
 import tkinter as tk
 from tkinter import ttk
 
@@ -150,8 +153,15 @@ def make_icon_image(name: str, color=(230, 57, 53), size: int = 22) -> wi.Image:
     return img
 
 
-def make_icon_photo(name: str, color=(230, 57, 53), size: int = 22):
-    return tk.PhotoImage(data=make_icon_image(name, color, size).photo_bytes())
+def make_icon_photo(name: str, color=(230, 57, 53), size: int = 22,
+                    master=None):
+    """生成图标 PhotoImage。
+
+    必须传 master（通常是它所属的窗口）：tk.PhotoImage 默认绑到**默认
+    解释器**上，多 Tk 窗口时会报 image doesn't exist。
+    """
+    return tk.PhotoImage(data=make_icon_image(name, color, size).photo_bytes(),
+                         master=master)
 
 
 # 由 winshapes / wineditor 注册图标；这里先内置几个基础图标
@@ -267,6 +277,12 @@ TPM_BOTTOMALIGN, TPM_LEFTALIGN = 0x0020, 0x0
 TPM_LEFTBUTTON, TPM_RIGHTBUTTON = 0x0, 0x2
 IDM_EXIT = 9999
 
+# 热键修饰键与默认组合
+MOD_ALT, MOD_CONTROL, MOD_SHIFT, MOD_WIN = 0x1, 0x2, 0x4, 0x8
+WM_HOTKEY = 0x0312
+DEFAULT_HOTKEYS = ["ctrl+alt+x", "ctrl+shift+x", "ctrl+alt+f9",
+                   "ctrl+shift+f9"]
+
 
 class NOTIFYICONDATAW(ctypes.Structure):
     _fields_ = [("cbSize", wt.DWORD), ("hWnd", wt.HWND), ("uID", wt.UINT),
@@ -286,109 +302,222 @@ class WNDCLASSW(ctypes.Structure):
                 ("lpszMenuName", wt.LPCWSTR), ("lpszClassName", wt.LPCWSTR)]
 
 
-class TrayIcon:
-    """系统托盘图标（纯 ctypes Shell_NotifyIcon + 隐藏消息窗口）。
+class Win32Pump:
+    """在**独立线程**里跑 Win32 消息循环，承载托盘图标与全局热键。
 
-    回调事件通过 on_event(event) 派发：'double' 双击, 'menu' 右键。
-    需要在创建后调用 show()，结束时调用 destroy()。
+    为什么不能放在 Tk 主线程
+    ------------------------
+    Tk 的 mainloop 泵消息时会释放 GIL。此时 Windows 把消息派发给我们用
+    ctypes 建的窗口过程，ctypes 要恢复 Python 线程状态，而主线程的状态已被
+    分离 —— 直接触发致命错误：
+
+        Fatal Python error: PyEval_RestoreThread: the function must be called
+        with the GIL held, ... but the GIL is released
+        (the current Python thread state is NULL)
+
+    所以把消息窗口、托盘图标、热键都放进自己的线程：它有正常线程状态，
+    回调里只做"入队"这一件事；Tk 主线程用 after() 轮询队列取事件
+    （跨线程只传数据，绝不碰 Tk 对象）。
     """
 
-    _next_id = 0x5001
-    WNDPROC = ctypes.WINFUNCTYPE(wt.LPARAM, wt.HWND, wt.UINT,
-                                 wt.WPARAM, wt.LPARAM)
+    WM_TRAY = WM_USER + 512
+    WM_PUMP_QUIT = 0x8000 + 1
+    WNDPROC = ctypes.WINFUNCTYPE(ctypes.c_ssize_t, wt.HWND, wt.UINT,
+                                 ctypes.c_ssize_t, ctypes.c_ssize_t)
 
-    def __init__(self, tk_root: tk.Tk, on_event, tooltip: str = "PyShot"):
-        self.on_event = on_event
-        self.tk_root = tk_root
-        self.id = TrayIcon._next_id
-        TrayIcon._next_id += 1
-        self.hwnd = self._create_message_window()
-        self.nid = NOTIFYICONDATAW()
-        self.nid.cbSize = ctypes.sizeof(NOTIFYICONDATAW)
-        self.nid.hWnd = self.hwnd
-        self.nid.uID = self.id
-        self.nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP
-        self.nid.uCallbackMessage = WM_TRAY
-        self.nid.hIcon = self._make_icon()
-        self.nid.szTip = tooltip
+    def __init__(self, tooltip: str = "PyShot"):
+        self.events = queue.Queue()
+        self.hwnd = None
+        self.hotkey = None
+        self._tooltip = tooltip
+        self._thread = None
+        self._thread_id = 0
+        self._ready = threading.Event()
+        self._nid = None
+        self._hicon = None
+        self._wndproc = None
+        self._cls = None
 
-    def _make_icon(self):
-        # 相机图标（蓝底白圈）→ HBITMAP → HICON
-        img = wi.Image(32, 32)
-        r = img.renderer()
-        r.rect(0, 0, 32, 32, (76, 154, 255), 0, fill=True, round_=10)
-        r.rect(6, 11, 20, 13, (255, 255, 255), 1.5, fill=True)
-        r.rect(12, 7, 8, 5, (255, 255, 255), 1.5, fill=True)
-        r.ellipse(12, 13, 8, 8, (76, 154, 255), 1.5, fill=True)
-        r.ellipse(14.5, 15.5, 3, 3, (255, 255, 255), 1.5, fill=True)
-        r.close()
+    # ---------- 生命周期 ----------
+    def start(self, hotkey_specs=None, timeout: float = 8.0):
+        """启动线程：建消息窗口 → 加托盘图标 → 注册热键 → 跑消息循环。"""
+        self._thread = threading.Thread(target=self._run, args=(hotkey_specs,),
+                                        name="pyshot-win32", daemon=True)
+        self._thread.start()
+        self._ready.wait(timeout)
+        return self
 
-        hdc = u32.GetDC(0)
-        memdc = wi.g32.CreateCompatibleDC(hdc)
-        color_bmp = wi.g32.CreateCompatibleBitmap(hdc, 32, 32)
-        wi.g32.SelectObject(memdc, color_bmp)
-        tmp = ctypes.create_string_buffer(bytes(img.data), len(img.data))
-        info = wi._bmi(32, 32)
-        wi.g32.SetDIBits(memdc, color_bmp, 0, 32, tmp, ctypes.byref(info), 0)
-        wi.g32.DeleteDC(memdc)
-        u32.ReleaseDC(0, hdc)
-        # 掩码位图（全不透明）
-        mask_bmp = wi.g32.CreateBitmap(32, 32, 1, 1, None)
+    def stop(self, timeout: float = 3.0):
+        """请求线程收尾（清理必须在它自己的线程里做）。"""
+        if self.hwnd:
+            u32.PostMessageW(self.hwnd, self.WM_PUMP_QUIT, 0, 0)
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout)
 
-        class ICONINFO(ctypes.Structure):
-            _fields_ = [("fIcon", wt.BOOL), ("xHotspot", wt.DWORD),
-                        ("yHotspot", wt.DWORD), ("hbmMask", wt.HANDLE),
-                        ("hbmColor", wt.HANDLE)]
-        info2 = ICONINFO(True, 0, 0, mask_bmp, color_bmp)
-        hicon = u32.CreateIconIndirect(ctypes.byref(info2))
-        return hicon
+    def poll(self, max_items: int = 32):
+        """Tk 主线程调用：取出待处理事件 [(kind, payload), ...]。"""
+        out = []
+        for _ in range(max_items):
+            try:
+                out.append(self.events.get_nowait())
+            except queue.Empty:
+                break
+        return out
 
-    def _create_message_window(self):
-        wndproc = TrayIcon.WNDPROC(self._wndproc)
-        self._wndproc_ref = wndproc            # 保住引用，避免被 GC
-        clsname = f"PyShotTray_{self.id}"
-        hinstance = k32.GetModuleHandleW(0)
+    # ---------- 线程内部 ----------
+    def _run(self, hotkey_specs):
+        try:
+            self._create_window()
+            self._add_tray()
+            self._register_hotkeys(hotkey_specs)
+        except Exception as ex:  # noqa: BLE001
+            self.events.put(("error", f"{type(ex).__name__}: {ex}"))
+        finally:
+            self._ready.set()
+        if not self.hwnd:
+            return
+        msg = wt.MSG()
+        while u32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
+            if msg.message == self.WM_PUMP_QUIT:
+                break
+            u32.TranslateMessage(ctypes.byref(msg))
+            u32.DispatchMessageW(ctypes.byref(msg))
+        self._cleanup()
+
+    def _create_window(self):
+        self._thread_id = k32.GetCurrentThreadId()
+        self._wndproc = Win32Pump.WNDPROC(self._proc)
+        self._cls = f"PyShotPump_{self._thread_id}"
+        hinst = k32.GetModuleHandleW(None)
         wc = WNDCLASSW()
-        wc.lpfnWndProc = ctypes.cast(wndproc, ctypes.c_void_p)
-        wc.hInstance = hinstance
-        wc.lpszClassName = clsname
+        wc.lpfnWndProc = ctypes.cast(self._wndproc, ctypes.c_void_p)
+        wc.hInstance = hinst
+        wc.lpszClassName = self._cls
         u32.RegisterClassW(ctypes.byref(wc))
-        hwnd = u32.CreateWindowExW(0, clsname, clsname, 0,
-                                   0, 0, 0, 0, -3, 0, hinstance, 0)  # -3 = HWND_MESSAGE
-        return hwnd
+        self.hwnd = u32.CreateWindowExW(0, self._cls, self._cls, 0, 0, 0, 0, 0,
+                                        -3, None, hinst, None)   # HWND_MESSAGE
 
-    def _wndproc(self, hwnd, msg, wparam, lparam):
-        if msg == WM_TRAY:
+    def _proc(self, hwnd, msg, wparam, lparam):
+        if msg == self.WM_TRAY:
             if lparam == WM_LBUTTONDBLCLK:
-                self.tk_root.after_idle(lambda: self.on_event("double"))
+                self.events.put(("double", None))
             elif lparam == WM_RBUTTONUP:
-                self.tk_root.after_idle(lambda: self.on_event("menu"))
+                self.events.put(("menu", None))
+        elif msg == WM_HOTKEY:
+            self.events.put(("hotkey", int(wparam)))
+        elif msg == self.WM_PUMP_QUIT:
+            u32.PostQuitMessage(0)
+            return 0
         return u32.DefWindowProcW(hwnd, msg, wparam, lparam)
 
-    def show(self):
-        self.nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP
-        shell.Shell_NotifyIconW(NIM_ADD, ctypes.byref(self.nid))
-        self.nid.uVersion = NOTIFYICON_VERSION
-        shell.Shell_NotifyIconW(NIM_MODIFY, ctypes.byref(self.nid))
+    # ---------- 托盘 ----------
+    def _add_tray(self):
+        self._hicon = _make_tray_hicon()
+        nid = NOTIFYICONDATAW()
+        nid.cbSize = ctypes.sizeof(NOTIFYICONDATAW)
+        nid.hWnd = self.hwnd
+        nid.uID = 1
+        nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP
+        nid.uCallbackMessage = self.WM_TRAY
+        nid.hIcon = self._hicon
+        nid.szTip = self._tooltip
+        self._nid = nid
+        shell.Shell_NotifyIconW(NIM_ADD, ctypes.byref(nid))
+        nid.uVersion = NOTIFYICON_VERSION
+        shell.Shell_NotifyIconW(NIM_MODIFY, ctypes.byref(nid))
 
     def show_message(self, title: str, msg: str):
-        self.nid.uFlags = NIF_INFO
-        self.nid.szInfo = msg
-        self.nid.szInfoTitle = title
-        self.nid.dwInfoFlags = 1               # NIIF_INFO
-        shell.Shell_NotifyIconW(NIM_MODIFY, ctypes.byref(self.nid))
+        if self._nid is None:
+            return
+        self._nid.uFlags = NIF_INFO
+        self._nid.szInfo = msg[:250]
+        self._nid.szInfoTitle = title[:60]
+        self._nid.dwInfoFlags = 1
+        shell.Shell_NotifyIconW(NIM_MODIFY, ctypes.byref(self._nid))
 
     def set_tooltip(self, text: str):
-        self.nid.uFlags = NIF_TIP
-        self.nid.szTip = text
-        shell.Shell_NotifyIconW(NIM_MODIFY, ctypes.byref(self.nid))
+        if self._nid is None:
+            return
+        self._nid.uFlags = NIF_TIP
+        self._nid.szTip = text[:120]
+        shell.Shell_NotifyIconW(NIM_MODIFY, ctypes.byref(self._nid))
 
-    def destroy(self):
-        shell.Shell_NotifyIconW(NIM_DELETE, ctypes.byref(self.nid))
-        if self.nid.hIcon:
-            u32.DestroyIcon(self.nid.hIcon)
-        if self.hwnd:
-            u32.DestroyWindow(self.hwnd)
+    # ---------- 热键 ----------
+    def _register_hotkeys(self, specs):
+        specs = list(specs or DEFAULT_HOTKEYS)
+        env = os.environ.get("PYSHOT_HOTKEY")
+        if env:
+            specs = [env] + specs
+        for i, spec in enumerate(specs):
+            mods, vk = parse_hotkey(spec)
+            if not vk:
+                continue
+            if u32.RegisterHotKey(self.hwnd, 0xB000 + i, mods, vk):
+                self.hotkey = spec
+                return
+
+    def _cleanup(self):
+        try:
+            if self._nid is not None:
+                shell.Shell_NotifyIconW(NIM_DELETE, ctypes.byref(self._nid))
+            if self._hicon:
+                u32.DestroyIcon(self._hicon)
+            if self.hwnd:
+                u32.DestroyWindow(self.hwnd)
+        except Exception:  # noqa: BLE001
+            pass
+        self.hwnd = None
+
+
+def _make_tray_hicon():
+    """画出托盘图标并转成 HICON。"""
+    img = wi.Image(32, 32)
+    r = img.renderer()
+    r.rect(0, 0, 32, 32, (76, 154, 255), 0, fill=True, round_=10)
+    r.rect(6, 11, 20, 13, (255, 255, 255), 1.5, fill=True)
+    r.rect(12, 7, 8, 5, (255, 255, 255), 1.5, fill=True)
+    r.ellipse(12, 13, 8, 8, (76, 154, 255), 1.5, fill=True)
+    r.ellipse(14.5, 15.5, 3, 3, (255, 255, 255), 1.5, fill=True)
+    r.close()
+    hdc = u32.GetDC(None)
+    memdc = wi.g32.CreateCompatibleDC(hdc)
+    color_bmp = wi.g32.CreateCompatibleBitmap(hdc, 32, 32)
+    wi.g32.SelectObject(memdc, color_bmp)
+    buf = ctypes.create_string_buffer(bytes(img.data), len(img.data))
+    wi.g32.SetDIBits(memdc, color_bmp, 0, 32, buf,
+                     ctypes.byref(wi._bmi(32, 32)), 0)
+    wi.g32.DeleteDC(memdc)
+    u32.ReleaseDC(None, hdc)
+    mask_bmp = wi.g32.CreateBitmap(32, 32, 1, 1, None)
+
+    class ICONINFO(ctypes.Structure):
+        _fields_ = [("fIcon", wt.BOOL), ("xHotspot", wt.DWORD),
+                    ("yHotspot", wt.DWORD), ("hbmMask", wt.HANDLE),
+                    ("hbmColor", wt.HANDLE)]
+
+    info = ICONINFO(True, 0, 0, mask_bmp, color_bmp)
+    return u32.CreateIconIndirect(ctypes.byref(info))
+
+
+def parse_hotkey(spec: str):
+    """'ctrl+alt+x' → (mods, vk)。"""
+    parts = [p.strip().lower() for p in spec.split("+")]
+    mods = 0
+    vk = 0
+    for p in parts:
+        if p in ("ctrl", "control"):
+            mods |= MOD_CONTROL
+        elif p == "alt":
+            mods |= MOD_ALT
+        elif p == "shift":
+            mods |= MOD_SHIFT
+        elif p == "win":
+            mods |= MOD_WIN
+        elif len(p) == 1:
+            vk = ord(p.upper())
+        elif p.startswith("f") and p[1:].isdigit():
+            vk = 0x70 + int(p[1:]) - 1
+    return mods, vk
 
 
 # ---------------------------------------------------------------- 通用窗口
