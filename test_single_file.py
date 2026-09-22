@@ -69,6 +69,44 @@ win = mod.EditorWindow(mod.QPixmap(200, 150))
 win.add_canvas(mod.QPixmap(300, 200))
 check("单文件编辑器标签可用", win.tabs.count() == 2 and win.canvas is not None)
 
+# --- 水印：必须走**合并后**的模块（各模块共用一个命名空间）---
+# 这里的价值在于：模块间顶层重名会让名字互相覆盖，多文件版察觉不到，
+# 单文件版却会崩（曾出过：style.py 的 _draw_text 覆盖 watermark.py 的同名函数，
+# 一点水印就 TypeError）。所以必须在合并件上真跑一遍水印链路。
+base = mod.QPixmap(400, 300)
+base.fill(mod.QColor("#204060"))
+before = mod.pixmap_to_array(base).copy()
+p = mod.QPainter(base)
+mod.draw_watermark(p, mod.DEFAULT_SETTINGS, mod.QSize(400, 300))
+p.end()
+after = mod.pixmap_to_array(base)
+check("单文件：水印能画上去", np.abs(after.astype(int)
+                                - before.astype(int)).max() > 40)
+check("单文件：水印尺寸可算",
+      mod.watermark_size(mod.DEFAULT_SETTINGS, mod.QSize(400, 300)).width() > 10)
+
+# 对话框：构造 + 预览渲染 + 取设置（最接近用户点「水印」按钮的那条路径）
+dlg = mod.WatermarkDialog(None, mod.DEFAULT_SETTINGS, mod.QSize(400, 300))
+check("单文件：水印对话框能构造", dlg is not None)
+check("单文件：预览已渲染", not dlg.preview.pixmap().isNull())
+s_dlg = dlg.settings()
+check("单文件：对话框能取出设置",
+      s_dlg["use_text"] is True and "text_alpha" in s_dlg)
+# 平铺分支（走 placements）
+tiled = dict(mod.DEFAULT_SETTINGS)
+tiled.update({"tile": True, "spacing": 30})
+check("单文件：平铺水印能算出多处位置",
+      len(mod.placements(tiled, mod.QSize(400, 300),
+                         mod.watermark_size(tiled, mod.QSize(400, 300)))) > 3)
+dlg.deleteLater()
+
+# --- 构建期就该拦住的重名 ---
+from build_single import MODULES, find_collisions
+_collisions = find_collisions(MODULES)
+if _collisions:
+    print("   冲突明细:", _collisions)
+check("当前源码没有会互相覆盖的跨模块重名", _collisions == [])
+
 # --- 单文件不应残留本地 import ---
 src = open(TARGET, encoding="utf-8").read()
 check("无残留本地 import",

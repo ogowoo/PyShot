@@ -93,7 +93,73 @@ def strip_module(path: str) -> str:
     return src
 
 
+def top_level_defs(src: str) -> dict:
+    """收集模块顶层定义：{名字: (种类, 行号, 源码片段)}。
+
+    合并后所有模块共用一个命名空间，重名会**静默覆盖**——曾经因此出过 bug：
+    style.py 的图标函数 _draw_text(p, c) 覆盖了 watermark.py 里同名的
+    _draw_text(painter, settings, box)，于是单文件版一点水印就崩，而多文件版
+    （各自独立命名空间）完全正常。所以这里必须在构建期拦下来。
+    """
+    out = {}
+    for node in ast.parse(src).body:
+        kind = ""
+        text = ""
+        name = ""
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            kind, name = "def", node.name
+            text = ast.unparse(node.args)
+        elif isinstance(node, ast.ClassDef):
+            kind, name = "class", node.name
+            text = ",".join(ast.unparse(b) for b in node.bases)
+        elif isinstance(node, ast.Assign) and len(node.targets) == 1 \
+                and isinstance(node.targets[0], ast.Name):
+            kind, name = "assign", node.targets[0].id
+            text = ast.unparse(node.value)
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            kind, name = "assign", node.target.id
+            text = ast.unparse(node.value) if node.value else ""
+        if name:
+            out[name] = (kind, node.lineno, text)
+    return out
+
+
+def find_collisions(modules) -> list:
+    """返回 [(名字, [(模块, 行号, 片段), ...]), ...]（只列真正会出问题的）。"""
+    seen = {}
+    dups = {}
+    for name in modules:
+        path = os.path.join(HERE, name)
+        if not os.path.exists(path):
+            continue
+        for ident, (kind, line, text) in top_level_defs(
+                strip_module(path)).items():
+            if ident in seen:
+                dups.setdefault(ident, [seen[ident]]).append((name, line, kind,
+                                                              text))
+            else:
+                seen[ident] = (name, line, kind, text)
+    problems = []
+    for ident, where in sorted(dups.items()):
+        kinds = {w[2] for w in where}
+        texts = {w[3] for w in where}
+        # 同名常量/循环变量且赋值完全相同（例如各模块都写
+        # user32 = ctypes.windll.user32）是无害的；其余都会互相覆盖。
+        if kinds == {"assign"} and len(texts) == 1:
+            continue
+        problems.append((ident, [(w[0], w[1]) for w in where]))
+    return problems
+
+
 def build(out_path: str) -> str:
+    problems = find_collisions(MODULES)
+    if problems:
+        lines = ["合并后这些顶层名字会互相覆盖（后加载的模块赢，前面那个静默失效）："]
+        for ident, where in problems:
+            lines.append(f"  {ident}: " + " / ".join(f"{m}:{l}" for m, l in where))
+        lines.append("请给它们改成模块内唯一的名字（例如加 _wm_ 前缀）。")
+        raise SystemExit("\n".join(lines))
+
     parts = [HEADER]
     for name in MODULES:
         path = os.path.join(HERE, name)

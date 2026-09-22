@@ -448,7 +448,7 @@ def placements(settings: dict, canvas_size: QSize, size: QSizeF) -> list:
 
 # ---------------------------------------------------------------- 绘制
 
-def _draw_text(painter: QPainter, settings: dict, box: QRectF):
+def _wm_draw_text(painter: QPainter, settings: dict, box: QRectF):
     color = QColor(settings.get("color", "#ffffff"))
     color.setAlpha(int(settings.get("text_alpha", 90)))
     if color.alpha() <= 0:
@@ -469,7 +469,7 @@ def _draw_text(painter: QPainter, settings: dict, box: QRectF):
         painter.drawText(QPointF(box.left(), y), line)
 
 
-def _draw_image(painter: QPainter, settings: dict, box: QRectF):
+def _wm_draw_image(painter: QPainter, settings: dict, box: QRectF):
     pix = load_image(settings)
     if pix is None:
         return
@@ -507,12 +507,12 @@ def draw_watermark(painter: QPainter, settings: dict, canvas_size: QSize,
             painter.rotate(rotation)
         top = -size.height() / 2
         if iw.height() > 0:
-            _draw_image(painter, s, QRectF(-iw.width() / 2, top,
+            _wm_draw_image(painter, s, QRectF(-iw.width() / 2, top,
                                             iw.width(), iw.height()))
             top += iw.height() + (GAP if tw.height() > 0 else 0)
         if tw.height() > 0:
-            _draw_text(painter, s,
-                       QRectF(-tw.width() / 2, top, tw.width(), tw.height()))
+            _wm_draw_text(painter, s,
+                          QRectF(-tw.width() / 2, top, tw.width(), tw.height()))
         painter.restore()
     painter.restore()
 
