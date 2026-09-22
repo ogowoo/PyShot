@@ -23,6 +23,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 MODULES = [
     "bootstrap.py",
     "watermark.py",
+    "border.py",
     "shapes.py",
     "style.py",
     "capture_utils.py",
@@ -33,7 +34,7 @@ MODULES = [
     "main.py",
 ]
 
-LOCAL_MODULES = ("bootstrap", "watermark", "shapes", "style", "capture_utils",
+LOCAL_MODULES = ("bootstrap", "watermark", "border", "shapes", "style", "capture_utils",
                  "pinboard", "snipper", "scroller", "editor", "main")
 
 # 匹配模块间的本地导入（含函数内延迟导入与多行括号写法），不碰 PySide6 等第三方导入

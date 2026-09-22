@@ -508,6 +508,30 @@ class Canvas(QWidget):
         self._crop_rect = None
         self.update()
 
+    # ---------- 加边框（FSCapture 的「特效 → 边缘」）----------
+    def apply_border(self, settings: dict, push_undo: bool = True) -> bool:
+        """在图片四周加边框：底图变大，已有标注整体平移。
+
+        和水印不同，边框是在**图片外面**加一圈（输出图更大），所以改的是
+        base_pixmap；走撤销栈，加错了 Ctrl+Z 就能回去。
+        """
+        from border import border_padding, render_border
+        left, top, _right, _bottom = border_padding(settings)
+        if left + top == 0:
+            return False
+        if push_undo:
+            self.push_undo()
+        self.base_pixmap = render_border(self.base_pixmap, settings)
+        self.base_pixmap.setDevicePixelRatio(self.dpr)
+        for shape in self.shapes:
+            shape.translate(left, top)
+        self._crop_rect = None
+        self._selected = None
+        self._apply_size()
+        self.update()
+        self.shapes_changed.emit()
+        return True
+
     # ---------- 序号大小 ----------
     def selected_step(self):
         """当前选中的序号图形（没有则返回 None）。"""
@@ -764,12 +788,19 @@ class EditorWindow(QMainWindow):
 
         self.tabs.setCurrentIndex(idx)
         self._fit_canvas(canvas, scroll)
-        # 设为默认的水印：新截图自动加上（可 Ctrl+Z 撤销）
+        # 设为默认的水印 / 边框：新截图自动加上（可 Ctrl+Z 撤销）
         defaults = load_default()
         if defaults.get("auto"):
             canvas.push_undo()
             canvas.shapes.append(WatermarkShape(defaults,
                                                 canvas.base_pixmap.size()))
+        try:
+            from border import load_border_default
+            bcfg = load_border_default()
+            if bcfg.get("auto"):
+                canvas.apply_border(bcfg)      # 内部会 push_undo，可撤销
+        except Exception:                      # noqa: BLE001
+            pass
         return canvas
 
     def close_tab(self, idx: int):
@@ -1006,6 +1037,12 @@ class EditorWindow(QMainWindow):
             "九宫格位置或平铺、各自调不透明度、可旋转与设边距\n"
             "还能「应用并设为默认」，之后新截图自动加")
         act_wm.triggered.connect(self.add_watermark)
+        act_border = QAction("边框", self)
+        act_border.setToolTip(
+            "加边框（对应 FSCapture 的「特效 → 边缘」）\n"
+            "单线/双线/虚线/圆角/投影阴影/立体浮雕/边缘渐隐/拍立得白边\n"
+            "边框加在图片外面，图会变大；可 Ctrl+Z 撤销")
+        act_border.triggered.connect(self.add_border)
         act_save = QAction("保存", self)
         act_save.setToolTip("保存为文件 (Ctrl+S)")
         act_save.triggered.connect(self.save_as)
@@ -1021,7 +1058,8 @@ class EditorWindow(QMainWindow):
         r2.addWidget(self._group(undo_btn, redo_btn))
         r2.addWidget(self._action_button(self.act_crop_ok))
         r2.addWidget(self._top_sep())
-        for act in (act_copy, act_pin, act_wm, act_save, act_close):
+        for act in (act_copy, act_pin, act_wm, act_border, act_save,
+                    act_close):
             r2.addWidget(self._action_button(act))
 
         self._build_statusbar_zoom()
@@ -1282,6 +1320,38 @@ class EditorWindow(QMainWindow):
         canvas.shapes.append(WatermarkShape(settings, canvas.base_pixmap.size()))
         canvas.update()
         canvas.shapes_changed.emit()
+
+    # ---------- 边框（FSCapture 的「特效 → 边缘」）----------
+    def add_border(self):
+        """打开边框对话框，给当前标签加边框（图会变大，可撤销）。"""
+        canvas = self.canvas
+        if canvas is None:
+            return
+        from border import BorderDialog, load_border_default as border_load
+        from border import save_border_default as border_save
+        dlg = BorderDialog(self, border_load(), canvas.base_pixmap.size())
+        if dlg.exec() != QDialog.Accepted:
+            return
+        settings = dlg.settings()
+        if dlg.save_as_default():
+            settings["auto"] = True
+            saved = border_save(settings)
+            self.statusBar().showMessage(
+                "已设为默认边框，之后每次新截图会自动加"
+                if saved else "已设为默认边框（本次运行有效，配置写入失败）",
+                4000)
+        if not self.apply_border(canvas, settings):
+            self.statusBar().showMessage("边框宽度为 0，未做改动", 3000)
+        else:
+            self._fit_canvas(canvas, self.tabs.currentWidget())
+
+    def apply_border(self, canvas: Canvas, settings: dict) -> bool:
+        ok = canvas.apply_border(settings)
+        if ok:
+            self.statusBar().showMessage(
+                f"已加边框：{canvas.base_pixmap.width()}×"
+                f"{canvas.base_pixmap.height()} px", 4000)
+        return ok
 
     def save_as(self):
         canvas = self.canvas
