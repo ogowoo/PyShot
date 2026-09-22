@@ -1954,6 +1954,28 @@ def grab_logical_region(region: QRect) -> QPixmap:
     return out
 
 
+def grab_screen(screen) -> QPixmap:
+    """抓取一整块显示器；常规抓屏是空白/纯色时回退 PrintWindow。
+
+    用于「全屏截图」与托盘里的「截取指定显示器」。
+    """
+    geo = screen.geometry()
+    pix = grab_logical_region(geo)
+
+    if not pixmap_is_blank(pix):
+        return pix
+    # 硬件加速 / 内容保护窗口（Citrix、远程桌面常见）：退到 PrintWindow。
+    # 需要"桌面物理像素"坐标，所以要按该屏 dpr 换算。
+    dpr = float(screen.devicePixelRatio() or 1.0)
+    physical = QRect(int(round(geo.x() * dpr)), int(round(geo.y() * dpr)),
+                     int(round(geo.width() * dpr)),
+                     int(round(geo.height() * dpr)))
+    alt = grab_region_printwindow(physical, dpr)
+    if alt is not None and not pixmap_is_blank(alt):
+        return alt
+    return pix
+
+
 def grab_virtual_desktop() -> tuple[QPixmap, QRect]:
     """抓取所有屏幕拼成一张图，返回 (pixmap, 虚拟桌面逻辑矩形)。
 
@@ -2760,8 +2782,9 @@ def make_default_grab(region: QRect):
     """
 
 
-    from PySide6.QtGui import QGuiApplication
 
+    # 注意：用模块级已导入的 QGuiApplication（不要再局部 import），
+    # 否则会绕过测试对 QGuiApplication 的打桩。
     def grab() -> QPixmap:
         out = grab_logical_region(region)
         if pixmap_is_blank(out):
@@ -3195,7 +3218,7 @@ class ScrollCapture(QObject):
                 if self.driver is not None and self.driver.recovery_after_jump():
                     self._prev = fr           # 画面确实动了，以新帧为基准继续
                     self._frames += 1
-                    self.bar.set_progress(self._frames,
+                    self._bar_call("set_progress", self._frames,
                                           int(self._acc.h / self._dpr))
                     self._do_scroll()
                     return
@@ -3203,7 +3226,7 @@ class ScrollCapture(QObject):
                 if self.manual and self._frames < self.max_frames:
                     self._prev = fr
                     self._frames += 1
-                    self.bar.set_progress(self._frames,
+                    self._bar_call("set_progress", self._frames,
                                           int(self._acc.h / self._dpr))
                     return
                 # 已经拼出明显长图后的个别不可匹配帧（典型是滚到底时滑块抖动），
@@ -3213,7 +3236,7 @@ class ScrollCapture(QObject):
                     self._no_progress += 1
                     self._prev = fr
                     self._frames += 1
-                    self.bar.set_progress(self._frames,
+                    self._bar_call("set_progress", self._frames,
                                           int(self._acc.h / self._dpr))
                     if self._no_progress >= 2:
                         self._finish()
@@ -3263,7 +3286,7 @@ class ScrollCapture(QObject):
                     self.driver.observe(s)      # 用实测位移校准步长
         self._prev = fr
         self._frames += 1
-        self.bar.set_progress(self._frames,
+        self._bar_call("set_progress", self._frames,
                               int(self._acc.h / self._dpr),
                               s if s > 0 else None)
         # 拖拽没生效会先自动降级到滚轮重试（见下方 no_progress 分支）；
@@ -3278,8 +3301,8 @@ class ScrollCapture(QObject):
                 d.mode = "wheel"
                 d.px_per_unit = _UNIT_DEFAULTS["wheel"]
                 self._no_progress = 0
-                self.bar.set_title("拖拽没生效，改用滚轮重试")
-                self.bar.set_progress(self._frames,
+                self._bar_call("set_title", "拖拽没生效，改用滚轮重试")
+                self._bar_call("set_progress", self._frames,
                                       int(self._acc.h / self._dpr))
                 self._do_scroll()
                 return
@@ -3303,8 +3326,34 @@ class ScrollCapture(QObject):
 
     def _cleanup(self):
         self._timer.stop()
-        self.bar.hide()
-        self.bar.deleteLater()
+        if self.bar is not None:
+            # 控制条可能已经被 Qt 回收（例如父窗口先销毁）——
+            # 直接调方法会抛 "Internal C++ object already deleted"，这里显式判活。
+            try:
+                import shiboken6
+                alive = shiboken6.isValid(self.bar)
+            except Exception:      # noqa: BLE001
+                alive = True
+            if alive:
+                self.bar.hide()
+                self.bar.deleteLater()
+            self.bar = None       # 之后所有 set_progress/set_title 都会跳过
+
+    def _bar_call(self, method: str, *args):
+        """安全地调用控制条方法（对象已销毁时静默跳过）。"""
+        bar = self.bar
+        if bar is None:
+            return
+        try:
+            import shiboken6
+            if not shiboken6.isValid(bar):
+                return
+        except Exception:          # noqa: BLE001
+            pass
+        try:
+            getattr(bar, method)(*args)
+        except RuntimeError:       # 对象已删除
+            self.bar = None
 
 
 # ========================================================================
@@ -3499,6 +3548,15 @@ class Canvas(QWidget):
         """控件坐标 → 图像物理像素坐标。"""
         return QPointF(widget_pos.x() * self.dpr / self.zoom,
                        widget_pos.y() * self.dpr / self.zoom)
+
+    def to_widget(self, image_pos) -> QPointF:
+        """图像物理像素坐标 → 控件坐标（paintEvent 里变换的逆）。
+
+        这两个函数必须严格互逆 —— 否则鼠标位置和图形落点会错开，
+        系统缩放不是 100% 时表现为"画图不跟手"。
+        """
+        return QPointF(image_pos.x() * self.zoom / self.dpr,
+                       image_pos.y() * self.zoom / self.dpr)
 
     def clamp(self, p: QPointF) -> QPointF:
         r = QRectF(self.base_pixmap.rect())
@@ -3864,6 +3922,14 @@ class Canvas(QWidget):
         painter.setRenderHint(QPainter.SmoothPixmapTransform, self.zoom < 1.0)
         painter.drawPixmap(0, 0, self.base_pixmap)
         painter.setRenderHint(QPainter.SmoothPixmapTransform, False)
+        # ---- 图形用图像物理像素坐标，而底图是 dpr 感知绘制的
+        #      （QPixmap 带 devicePixelRatio 时 Qt 按逻辑尺寸画，即 P/dpr）。
+        #      所以图形这里要再缩 1/dpr 才能与底图对齐；否则 dpr≠1（系统缩放
+        #      非 100%）时图形会偏 dpr 倍，表现为画图不跟手。
+        #      画笔宽度写成 /zoom 表示屏幕像素，在这个坐标系里恰好等于
+        #      设备像素，所以无需改动。
+        painter.save()
+        painter.scale(1.0 / self.dpr, 1.0 / self.dpr)
         for shape in self.shapes:
             shape.draw(painter, self)
         if self._current is not None:
@@ -3879,8 +3945,11 @@ class Canvas(QWidget):
             painter.setBrush(QColor("#ffffff"))
             for hp in self._selected.handles():
                 painter.drawRect(QRectF(hp.x() - hs / 2, hp.y() - hs / 2, hs, hs))
+        painter.restore()
         # 裁剪遮罩
         if self.tool == "crop" and self._crop_rect is not None:
+            painter.save()
+            painter.scale(1.0 / self.dpr, 1.0 / self.dpr)
             rect = self._crop_rect.normalized()
             full = QRectF(self.base_pixmap.rect())
             path = QPainterPath()
@@ -3890,10 +3959,12 @@ class Canvas(QWidget):
             painter.setPen(QPen(QColor(255, 255, 255), 1.5 / self.zoom, Qt.DashLine))
             painter.setBrush(Qt.NoBrush)
             painter.drawRect(rect)
-            # 尺寸提示
+            painter.restore()
+            # 尺寸提示：画在屏幕坐标里，字号不随缩放变形
             painter.setPen(QPen(QColor(255, 255, 255)))
-            painter.drawText(rect.bottomRight() + QPointF(-70, -6),
-                             f"{int(rect.width())} × {int(rect.height())}")
+            painter.drawText(
+                self.to_widget(rect.bottomRight()) + QPointF(-70, -6),
+                f"{int(rect.width())} × {int(rect.height())}")
         painter.restore()
         # 取色工具的像素放大镜（窗口坐标，不随画布缩放）
         if self.tool == "pick" and self._hover_pos is not None:
@@ -4663,6 +4734,10 @@ HOTKEY_ID_BASE = 0x5053          # "PS"
 #   Ctrl+Alt+A / Ctrl+Shift+A / Alt+A → QQ、微信的截图
 DEFAULT_HOTKEYS = ["ctrl+alt+x", "ctrl+shift+x", "ctrl+alt+f9", "ctrl+shift+f9"]
 
+# 全屏截图热键（截"鼠标所在的那块显示器"），与区域截图分开注册、互不干扰
+FULLSCREEN_HOTKEYS = ["ctrl+alt+f", "ctrl+shift+f", "ctrl+alt+f10",
+                      "ctrl+shift+f10"]
+
 _VK_NAMES = {
     "printscreen": 0x2C, "prtsc": 0x2C, "insert": 0x2D, "delete": 0x2E,
     "home": 0x24, "end": 0x23, "pageup": 0x21, "pagedown": 0x22,
@@ -4711,10 +4786,11 @@ def parse_hotkey(spec: str):
     return mods | MOD_NOREPEAT, vk, "+".join(labels)
 
 
-def register_global_hotkeys(candidates) -> dict:
+def register_global_hotkeys(candidates, id_offset: int = 0) -> dict:
     """依次尝试注册，返回 {热键 id: 显示名}（只注册第一个成功的）。
 
     candidates 为空表示不注册。注册失败（被其他程序占用）会自动尝试下一个。
+    id_offset 把多组热键的 id 错开（同进程内 id 不能重复）。
     """
     user32 = ctypes.windll.user32
     for i, spec in enumerate(candidates):
@@ -4722,7 +4798,7 @@ def register_global_hotkeys(candidates) -> dict:
         if parsed is None:
             continue
         mods, vk, name = parsed
-        hid = HOTKEY_ID_BASE + i
+        hid = HOTKEY_ID_BASE + id_offset + i
         if user32.RegisterHotKey(None, hid, mods, vk):
             return {hid: name}
     return {}
@@ -4749,7 +4825,10 @@ def make_tray_icon() -> QIcon:
 
 
 class HotkeyFilter(QAbstractNativeEventFilter):
-    """监听已注册的全局热键（Windows WM_HOTKEY）。"""
+    """监听已注册的全局热键（Windows WM_HOTKEY）。
+
+    回调带上热键 id，便于区分"区域截图"和"全屏截图"。
+    """
 
     def __init__(self, ids, callback):
         super().__init__()
@@ -4760,7 +4839,7 @@ class HotkeyFilter(QAbstractNativeEventFilter):
         if eventType == b"windows_generic_MSG":
             msg = ctypes.wintypes.MSG.from_address(int(message))
             if msg.message == WM_HOTKEY and msg.wParam in self.ids:
-                self.callback()
+                self.callback(msg.wParam)
         return False, 0
 
 
@@ -4791,18 +4870,32 @@ class PyShotApp(QObject):
 
     # ---------- 全局热键 ----------
     def _init_hotkey(self):
-        """注册全局热键：按候选列表挑第一个没被占用的组合。"""
+        """注册两组全局热键：区域截图 + 全屏截图（各自挑第一个没被占用的组合）。"""
         env_spec = os.environ.get("PYSHOT_HOTKEY")
-        candidates = [env_spec] if env_spec else DEFAULT_HOTKEYS
-        self._hotkeys = register_global_hotkeys(candidates)
+        region_cands = [env_spec] if env_spec else DEFAULT_HOTKEYS
+        self._region_hotkeys = register_global_hotkeys(region_cands, 0)
+        self._full_hotkeys = register_global_hotkeys(FULLSCREEN_HOTKEYS, 100)
+        self._hotkeys = {**self._region_hotkeys, **self._full_hotkeys}
         self._hotkey_ok = bool(self._hotkeys)
-        self.hotkey_text = next(iter(self._hotkeys.values()), "")
+        self.hotkey_text = next(iter(self._region_hotkeys.values()), "")
+        self.full_hotkey_text = next(iter(self._full_hotkeys.values()), "")
+        # id → 动作，供 nativeEventFilter 分发
+        self._hotkey_actions = {}
+        for hid in self._region_hotkeys:
+            self._hotkey_actions[hid] = "region"
+        for hid in self._full_hotkeys:
+            self._hotkey_actions[hid] = "fullscreen"
         if self._hotkey_ok:
             self._filter = HotkeyFilter(self._hotkeys.keys(), self._on_hotkey)
             self.app.installNativeEventFilter(self._filter)
-            print(f"[PyShot] 全局热键已注册：{self.hotkey_text}")
+            parts = []
+            if self.hotkey_text:
+                parts.append(f"区域 {self.hotkey_text}")
+            if self.full_hotkey_text:
+                parts.append(f"全屏 {self.full_hotkey_text}")
+            print("[PyShot] 全局热键已注册：" + "、".join(parts))
         else:
-            print("[PyShot] 热键注册失败，已尝试：" + "、".join(candidates))
+            print("[PyShot] 热键注册失败，已尝试：" + "、".join(region_cands))
 
     # ---------- 托盘 ----------
     def _init_tray(self):
@@ -4841,9 +4934,18 @@ class PyShotApp(QObject):
         act_scroll_manual.triggered.connect(
             lambda: self._deferred(lambda: self.capture_scrolling(manual=True)))
         menu.addAction(act_scroll_manual)
-        act_full = QAction("全屏截图", self.app)
+        act_full = QAction("全屏截图（当前显示器）", self.app)
+        act_full.setToolTip("截取鼠标所在的那块显示器；可用全屏热键触发")
         act_full.triggered.connect(lambda: self._deferred(self.capture_fullscreen))
         menu.addAction(act_full)
+        # 指定显示器：内容在弹出菜单时按当前屏幕列表重建
+        self.menu_screens = QMenu("截取指定显示器", menu)
+        self.menu_screens.aboutToShow.connect(self._rebuild_screen_menu)
+        menu.addMenu(self.menu_screens)
+        act_full_all = QAction("全屏截图（所有显示器拼成一张）", self.app)
+        act_full_all.triggered.connect(
+            lambda: self._deferred(self.capture_all_screens))
+        menu.addAction(act_full_all)
         menu.addSeparator()
         act_color = QAction("屏幕取色", self.app)
         act_color.setToolTip("单击屏幕任意位置，复制色值到剪贴板")
@@ -4864,11 +4966,17 @@ class PyShotApp(QObject):
         act_quit.triggered.connect(self.app.quit)
         menu.addAction(act_quit)
         self.tray.setContextMenu(menu)
-        if self._hotkey_ok:
+        hints = []
+        if self.hotkey_text:
+            hints.append(f"{self.hotkey_text} 区域截图")
+        if self.full_hotkey_text:
+            hints.append(f"{self.full_hotkey_text} 全屏截图")
+        if hints:
             act_region.setText(f"区域截图 ({self.hotkey_text})")
+            if self.full_hotkey_text:
+                act_full.setText(f"全屏截图（当前显示器）({self.full_hotkey_text})")
             self.tray.setToolTip(
-                f"PyShot 截图工具\n{self.hotkey_text} 框选截图 · "
-                "双击图标截图 · 右键退出")
+                "PyShot 截图工具\n" + " · ".join(hints) + " · 双击图标截图")
         else:
             self.tray.setToolTip("PyShot 截图工具\n双击图标截图 · 右键退出")
         self.tray.activated.connect(self._on_tray_activated)
@@ -4876,9 +4984,13 @@ class PyShotApp(QObject):
         # 注意：启动提示不在这里弹 —— 由 notify_ready() 统一负责，
         # 否则构造托盘和 main() 会各弹一次，用户看到两个气泡。
 
-    def _on_hotkey(self):
-        # 来自原生消息回调（WM_HOTKEY），延后一拍再开覆盖层
-        self._deferred(self.capture_region, delay=30)
+    def _on_hotkey(self, hotkey_id=None):
+        """来自原生消息回调（WM_HOTKEY）——按热键 id 分发，延后一拍再动作。"""
+        action = self._hotkey_actions.get(hotkey_id, "region")
+        if action == "fullscreen":
+            self._deferred(self.capture_fullscreen, delay=30)
+        else:
+            self._deferred(self.capture_region, delay=30)
 
     def shutdown(self):
         if getattr(self, "_hotkeys", None):
@@ -4913,6 +5025,26 @@ class PyShotApp(QObject):
         延后一拍即可稳定显示；延迟保持很小，避免拖慢首帧。
         """
         QTimer.singleShot(delay, fn)
+
+    def _rebuild_screen_menu(self):
+        """按当前显示器列表重建"截取指定显示器"子菜单（插拔显示器后自动更新）。"""
+        self.menu_screens.clear()
+        primary = QGuiApplication.primaryScreen()
+        for i, scr in enumerate(QGuiApplication.screens()):
+            geo = scr.geometry()
+            dpr = float(scr.devicePixelRatio() or 1.0)
+            tag = "主屏" if scr is primary else f"显示器 {i + 1}"
+            scale = f" @{int(round(dpr * 100))}%" if abs(dpr - 1.0) > 1e-6 else ""
+            act = QAction(
+                f"{tag}：{geo.width()}×{geo.height()}{scale}  ({scr.name()})",
+                self.menu_screens)
+            act.triggered.connect(
+                lambda checked=False, s=scr: self._deferred(
+                    lambda: self.capture_fullscreen(s)))
+            self.menu_screens.addAction(act)
+        if not self.menu_screens.actions():
+            self.menu_screens.addAction(QAction("（未检测到显示器）",
+                                                self.menu_screens))
 
     def _on_tray_activated(self, reason):
         if reason == QSystemTrayIcon.DoubleClick:
@@ -5024,13 +5156,42 @@ class PyShotApp(QObject):
 
         QTimer.singleShot(120, _open)
 
-    def capture_fullscreen(self):
+    def capture_fullscreen(self, screen=None):
+        """全屏截图。
+
+        screen 为 None 时截"鼠标所在的那块显示器"（多屏下最符合直觉）；
+        也可以显式指定某块屏（托盘菜单"截取指定显示器"）。
+        另外保留"所有显示器拼成一张"的旧行为，见 capture_all_screens。
+        """
+        if screen is None:
+            screen = QGuiApplication.screenAt(QCursor.pos()) \
+                or QGuiApplication.primaryScreen()
         self._prepare_capture()
+
+        def _grab():
+            try:
+                pix = grab_screen(screen)
+            except Exception as ex:  # noqa: BLE001
+                self._notify("全屏截图失败", f"{type(ex).__name__}: {ex}")
+                self._finish_capture_session()
+                return
+            label = f"{screen.name()} {pix.width()}×{pix.height()}"
+            self.open_editor(pix)
+            self._notify("全屏截图完成", label)
+            self._finish_capture_session()
+
         # 等最小化动画结束再抓，否则窗口残影会进图
+        QTimer.singleShot(280, _grab)
+
+    def capture_all_screens(self):
+        """把所有显示器拼成一张长图（旧的全屏行为）。"""
+        self._prepare_capture()
+
         def _grab():
             pix, _ = grab_virtual_desktop()
             self.open_editor(pix)
             self._finish_capture_session()
+
         QTimer.singleShot(280, _grab)
 
     # ---------- 滚动长截图 ----------

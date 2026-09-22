@@ -190,6 +190,15 @@ class Canvas(QWidget):
         return QPointF(widget_pos.x() * self.dpr / self.zoom,
                        widget_pos.y() * self.dpr / self.zoom)
 
+    def to_widget(self, image_pos) -> QPointF:
+        """图像物理像素坐标 → 控件坐标（paintEvent 里变换的逆）。
+
+        这两个函数必须严格互逆 —— 否则鼠标位置和图形落点会错开，
+        系统缩放不是 100% 时表现为"画图不跟手"。
+        """
+        return QPointF(image_pos.x() * self.zoom / self.dpr,
+                       image_pos.y() * self.zoom / self.dpr)
+
     def clamp(self, p: QPointF) -> QPointF:
         r = QRectF(self.base_pixmap.rect())
         return QPointF(min(max(p.x(), r.left()), r.right()),
@@ -554,6 +563,14 @@ class Canvas(QWidget):
         painter.setRenderHint(QPainter.SmoothPixmapTransform, self.zoom < 1.0)
         painter.drawPixmap(0, 0, self.base_pixmap)
         painter.setRenderHint(QPainter.SmoothPixmapTransform, False)
+        # ---- 图形用图像物理像素坐标，而底图是 dpr 感知绘制的
+        #      （QPixmap 带 devicePixelRatio 时 Qt 按逻辑尺寸画，即 P/dpr）。
+        #      所以图形这里要再缩 1/dpr 才能与底图对齐；否则 dpr≠1（系统缩放
+        #      非 100%）时图形会偏 dpr 倍，表现为画图不跟手。
+        #      画笔宽度写成 /zoom 表示屏幕像素，在这个坐标系里恰好等于
+        #      设备像素，所以无需改动。
+        painter.save()
+        painter.scale(1.0 / self.dpr, 1.0 / self.dpr)
         for shape in self.shapes:
             shape.draw(painter, self)
         if self._current is not None:
@@ -569,8 +586,11 @@ class Canvas(QWidget):
             painter.setBrush(QColor("#ffffff"))
             for hp in self._selected.handles():
                 painter.drawRect(QRectF(hp.x() - hs / 2, hp.y() - hs / 2, hs, hs))
+        painter.restore()
         # 裁剪遮罩
         if self.tool == "crop" and self._crop_rect is not None:
+            painter.save()
+            painter.scale(1.0 / self.dpr, 1.0 / self.dpr)
             rect = self._crop_rect.normalized()
             full = QRectF(self.base_pixmap.rect())
             path = QPainterPath()
@@ -580,10 +600,12 @@ class Canvas(QWidget):
             painter.setPen(QPen(QColor(255, 255, 255), 1.5 / self.zoom, Qt.DashLine))
             painter.setBrush(Qt.NoBrush)
             painter.drawRect(rect)
-            # 尺寸提示
+            painter.restore()
+            # 尺寸提示：画在屏幕坐标里，字号不随缩放变形
             painter.setPen(QPen(QColor(255, 255, 255)))
-            painter.drawText(rect.bottomRight() + QPointF(-70, -6),
-                             f"{int(rect.width())} × {int(rect.height())}")
+            painter.drawText(
+                self.to_widget(rect.bottomRight()) + QPointF(-70, -6),
+                f"{int(rect.width())} × {int(rect.height())}")
         painter.restore()
         # 取色工具的像素放大镜（窗口坐标，不随画布缩放）
         if self.tool == "pick" and self._hover_pos is not None:

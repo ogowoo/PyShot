@@ -749,7 +749,7 @@ class ScrollCapture(QObject):
                 if self.driver is not None and self.driver.recovery_after_jump():
                     self._prev = fr           # 画面确实动了，以新帧为基准继续
                     self._frames += 1
-                    self.bar.set_progress(self._frames,
+                    self._bar_call("set_progress", self._frames,
                                           int(self._acc.h / self._dpr))
                     self._do_scroll()
                     return
@@ -757,7 +757,7 @@ class ScrollCapture(QObject):
                 if self.manual and self._frames < self.max_frames:
                     self._prev = fr
                     self._frames += 1
-                    self.bar.set_progress(self._frames,
+                    self._bar_call("set_progress", self._frames,
                                           int(self._acc.h / self._dpr))
                     return
                 # 已经拼出明显长图后的个别不可匹配帧（典型是滚到底时滑块抖动），
@@ -767,7 +767,7 @@ class ScrollCapture(QObject):
                     self._no_progress += 1
                     self._prev = fr
                     self._frames += 1
-                    self.bar.set_progress(self._frames,
+                    self._bar_call("set_progress", self._frames,
                                           int(self._acc.h / self._dpr))
                     if self._no_progress >= 2:
                         self._finish()
@@ -817,7 +817,7 @@ class ScrollCapture(QObject):
                     self.driver.observe(s)      # 用实测位移校准步长
         self._prev = fr
         self._frames += 1
-        self.bar.set_progress(self._frames,
+        self._bar_call("set_progress", self._frames,
                               int(self._acc.h / self._dpr),
                               s if s > 0 else None)
         # 拖拽没生效会先自动降级到滚轮重试（见下方 no_progress 分支）；
@@ -832,8 +832,8 @@ class ScrollCapture(QObject):
                 d.mode = "wheel"
                 d.px_per_unit = _UNIT_DEFAULTS["wheel"]
                 self._no_progress = 0
-                self.bar.set_title("拖拽没生效，改用滚轮重试")
-                self.bar.set_progress(self._frames,
+                self._bar_call("set_title", "拖拽没生效，改用滚轮重试")
+                self._bar_call("set_progress", self._frames,
                                       int(self._acc.h / self._dpr))
                 self._do_scroll()
                 return
@@ -857,5 +857,31 @@ class ScrollCapture(QObject):
 
     def _cleanup(self):
         self._timer.stop()
-        self.bar.hide()
-        self.bar.deleteLater()
+        if self.bar is not None:
+            # 控制条可能已经被 Qt 回收（例如父窗口先销毁）——
+            # 直接调方法会抛 "Internal C++ object already deleted"，这里显式判活。
+            try:
+                import shiboken6
+                alive = shiboken6.isValid(self.bar)
+            except Exception:      # noqa: BLE001
+                alive = True
+            if alive:
+                self.bar.hide()
+                self.bar.deleteLater()
+            self.bar = None       # 之后所有 set_progress/set_title 都会跳过
+
+    def _bar_call(self, method: str, *args):
+        """安全地调用控制条方法（对象已销毁时静默跳过）。"""
+        bar = self.bar
+        if bar is None:
+            return
+        try:
+            import shiboken6
+            if not shiboken6.isValid(bar):
+                return
+        except Exception:          # noqa: BLE001
+            pass
+        try:
+            getattr(bar, method)(*args)
+        except RuntimeError:       # 对象已删除
+            self.bar = None

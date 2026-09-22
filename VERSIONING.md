@@ -28,10 +28,12 @@ f3aaec7 feat(snipper): 全屏截图覆盖层
 取回旧版代码：
 
 ```powershell
-git worktree add ../pyshot-qt v1.0-qt     # 另开一个目录检出旧版
-# 或
-git show v1.0-qt:legacy_qt/main.py        # 只看某个文件
-```
+git worktree add ../pyshot-tk v2.0.3-tk    # 检出 Tkinter 版（另开目录，避免互相影响）
+# 或直接在仓库里看：tk_version/
+`
+
+主线（根目录）是 PySide6 版；	k_version/ 是零依赖 Tkinter 版，两者独立、
+互不干扰（模块名不冲突：主线的 main.py/editor.py vs Tk 版的 winmain.py/wineditor.py）。``
 
 ## 仓库约定
 

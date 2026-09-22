@@ -70,6 +70,28 @@ def grab_logical_region(region: QRect) -> QPixmap:
     return out
 
 
+def grab_screen(screen) -> QPixmap:
+    """抓取一整块显示器；常规抓屏是空白/纯色时回退 PrintWindow。
+
+    用于「全屏截图」与托盘里的「截取指定显示器」。
+    """
+    geo = screen.geometry()
+    pix = grab_logical_region(geo)
+    from capture_utils import grab_region_printwindow, pixmap_is_blank
+    if not pixmap_is_blank(pix):
+        return pix
+    # 硬件加速 / 内容保护窗口（Citrix、远程桌面常见）：退到 PrintWindow。
+    # 需要"桌面物理像素"坐标，所以要按该屏 dpr 换算。
+    dpr = float(screen.devicePixelRatio() or 1.0)
+    physical = QRect(int(round(geo.x() * dpr)), int(round(geo.y() * dpr)),
+                     int(round(geo.width() * dpr)),
+                     int(round(geo.height() * dpr)))
+    alt = grab_region_printwindow(physical, dpr)
+    if alt is not None and not pixmap_is_blank(alt):
+        return alt
+    return pix
+
+
 def grab_virtual_desktop() -> tuple[QPixmap, QRect]:
     """抓取所有屏幕拼成一张图，返回 (pixmap, 虚拟桌面逻辑矩形)。
 
