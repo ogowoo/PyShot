@@ -1,0 +1,14 @@
+# 统一换行，避免 Windows/Linux 协作时整文件 diff
+* text=auto eol=lf
+
+# Windows 批处理必须是 CRLF，否则某些情况下不执行
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 二进制
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.bmp binary
+*.ico binary
+*.zip binary

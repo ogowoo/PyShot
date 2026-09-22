@@ -1,0 +1,29 @@
+# ---- 构建产物（可用 build_portable.py 重新生成，不入库）----
+dist/
+.cache/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# ---- 测试/调试产物 ----
+_t*.jpg
+_t*.png
+_winimg_test.*
+_snip_test.png
+_editor_ui.png
+_shapes_test.png
+_tabs_ui.png
+_test_*.png
+_test_*.jpg
+scroll_debug/
+
+# ---- 编辑器/系统 ----
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
