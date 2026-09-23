@@ -481,11 +481,19 @@ class BorderDialog(QDialog):
         self.note.setStyleSheet("color:#9aa0ab;")
         root.addWidget(self.note)
 
-        buttons = QDialogButtonBox()
+        # 注意 QDialogButtonBox 一定要给 parent（self）：
+        # Qt 只在 box 的父对象是 QDialog 时，才把它的 accepted()/rejected()
+        # 自动接到对话框的 accept()/reject()。没有 parent 时"取消"点了没反应
+        # （应用能用只是因为下面显式连了）—— 踩过这个坑，所以这里 parent 和
+        # 显式连接都给上，不依赖隐式行为。
+        buttons = QDialogButtonBox(self)
         self.btn_apply = buttons.addButton(tr("应用"), QDialogButtonBox.AcceptRole)
         self.btn_default = buttons.addButton(tr("应用并设为默认"),
                                              QDialogButtonBox.AcceptRole)
-        buttons.addButton(tr("取消"), QDialogButtonBox.RejectRole)
+        self.btn_cancel = buttons.addButton(tr("取消"),
+                                            QDialogButtonBox.RejectRole)
+        self.btn_cancel.clicked.connect(self.reject)
+        buttons.rejected.connect(self.reject)
         self.btn_apply.clicked.connect(self._accept_apply)
         self.btn_default.clicked.connect(self._accept_default)
         root.addWidget(buttons)
