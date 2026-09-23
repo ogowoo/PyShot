@@ -4790,9 +4790,73 @@ def _overlap_diff(prev: Frame, cur: Frame, s: int,
     return total / max(1, n) if n else 0.0
 
 
+# ---------------------------------------------------------------- 抗噪匹配
+# 背景：Citrix HDX / 远程桌面 / 硬件解码送过来的是**有损**画面 —— 同一行每帧
+# 都被重新编码，字节不可能完全一样。原来的匹配是"整行字节哈希投票"，
+# 于是有损源一行都对不上、连候选都提不出来，只能报"画面内容变化过快"。
+# 下面这组用**分块均值 + 粗量化**做行的签名：编码噪声（±10 量级）落在同一个
+# 量化台阶里，签名不变，而真正不同的内容仍会区分开。
+def _row_key(rows: bytes, blocks: int = 12, quant: int = 24) -> tuple:
+    """一行的抗噪签名：按列分块取绿色通道均值，再粗量化。"""
+    n = len(rows)
+    if n <= 0:
+        return ()
+    step = max(1, n // blocks)
+    out = []
+    for b in range(0, n, step):
+        chunk = rows[b:b + step]
+        cnt = 0
+        total = 0
+        for i in range(1, len(chunk), 3):          # 绿色通道足够、还省 2/3 计算
+            total += chunk[i]
+            cnt += 1
+        out.append(int((total / cnt if cnt else 0) // quant))
+    return tuple(out)
+
+
+def _frame_keys(frame: Frame, blocks: int = 12, quant: int = 24) -> list:
+    """整帧每行的签名（每帧只算一次，供多个候选复用）。"""
+    return [_row_key(frame.rows[r], blocks, quant) for r in range(frame.h)]
+
+
+def _vote_by_keys(pk: list, ck: list, min_overlap: int,
+                  top_candidates: int = 6) -> dict:
+    """按签名投票找候选位移（结构同精确哈希投票，但容忍编码噪声）。"""
+    idx = {}
+    for r, k in enumerate(ck):
+        idx.setdefault(k, []).append(r)
+    votes = {}
+    H = len(pk)
+    for r, k in enumerate(pk):
+        for rc in idx.get(k, ())[:6]:
+            d = r - rc
+            if 0 <= d <= H - min_overlap:
+                votes[d] = votes.get(d, 0) + 1
+    return votes
+
+
+def _same_ratio_keys(pk: list, ck: list, s: int, rows: int = 140) -> float:
+    """重叠区域里"签名相同"的行占比（抗噪版的置信度）。"""
+    span = len(pk) - s
+    if span <= 0:
+        return 0.0
+    step = max(1, span // rows)
+    same = total = 0
+    for y in range(0, span, step):
+        total += 1
+        if pk[s + y] == ck[y]:
+            same += 1
+    return same / max(1, total)
+
+
 def _best_offset_and_ratio(prev: Frame, cur: Frame, min_overlap: int,
                            top_candidates: int = 6) -> tuple:
-    """行哈希投票 + 精修，返回 (最佳候选位移, 相同行占比)。位移 -1 表示没候选。"""
+    """行哈希投票 + 精修 + **抗噪签名兜底**。
+
+    返回 (最佳位移, 相同行占比, 抗噪签名占比)；位移 -1 表示没候选。
+    第三个值用于有损画面（Citrix/远程桌面）：那里精确占比上不去，
+    但签名占比能到 0.6 以上，可据此判定匹配成功。
+    """
     H = prev.h
     sig_cur = {}
     for r in range(H):
@@ -4804,7 +4868,7 @@ def _best_offset_and_ratio(prev: Frame, cur: Frame, min_overlap: int,
             if 0 <= s <= H - min_overlap:
                 votes[s] = votes.get(s, 0) + 1
     if not votes:
-        return -1, 0.0
+        votes = {}
     candidates = [s for s, _ in
                   sorted(votes.items(), key=lambda kv: -kv[1])[:top_candidates]]
     if 0 not in candidates:
@@ -4819,14 +4883,43 @@ def _best_offset_and_ratio(prev: Frame, cur: Frame, min_overlap: int,
             return min(scored, key=lambda kv: kv[1])[0], top
         return tied[0], top
 
-    best_s, best_same = best_of(candidates)
-    if best_s > 0:             # 精修 ±4，消除"行内容重复"带来的偏差
-        cands = list(range(max(1, best_s - 4),
-                           min(H - min_overlap, best_s + 4) + 1))
-        s2, same2 = best_of(cands)
-        if same2 > best_same + 1e-9:
-            best_s, best_same = s2, same2
-    return best_s, best_same
+    if not candidates:                     # 精确哈希一个候选都没有
+        best_s, best_same = -1, 0.0
+    else:
+        best_s, best_same = best_of(candidates)
+        if best_s > 0:         # 精修 ±4，消除"行内容重复"带来的偏差
+            cands = list(range(max(1, best_s - 4),
+                               min(H - min_overlap, best_s + 4) + 1))
+            s2, same2 = best_of(cands)
+            if same2 > best_same + 1e-9:
+                best_s, best_same = s2, same2
+
+    # 精确匹配不够好（有损画面/编码噪声）→ 走抗噪签名再找一次
+    key_ratio = 0.0
+    if best_s < 0 or best_same < 0.5:
+        pk, ck = _frame_keys(prev), _frame_keys(cur)
+        kvotes = _vote_by_keys(pk, ck, min_overlap)
+        if kvotes:
+            kcands = [s for s, _ in sorted(kvotes.items(),
+                                           key=lambda kv: -kv[1])[:top_candidates]]
+            if 0 not in kcands:
+                kcands.append(0)
+
+            def best_of_keys(cands_):
+                ratios = [(d, _same_ratio_keys(pk, ck, d)) for d in cands_]
+                top = max(r for _, r in ratios)
+                tied = [d for d, r in ratios if r >= top - 1e-9]
+                return (tied[0], top)
+
+            kb, key_ratio = best_of_keys(kcands)
+            if kb > 0:
+                kr = list(range(max(1, kb - 4), min(H - min_overlap, kb + 4) + 1))
+                kb2, kr2 = best_of_keys(kr)
+                if kr2 > key_ratio:
+                    kb, key_ratio = kb2, kr2
+            if key_ratio > best_same:
+                best_s, best_same = kb, key_ratio
+    return best_s, best_same, key_ratio
 
 
 def best_candidate_offset(prev, cur, min_overlap: int = 60) -> int:
@@ -4856,16 +4949,23 @@ def find_scroll(prev, cur, min_overlap: int = 60, thresh: float = 3.0,
     if prev.rows == cur.rows:            # 整帧相同 → 没滚动
         return 0, 0.0
 
-    best_s, best_same = _best_offset_and_ratio(prev, cur, min_overlap,
-                                               top_candidates)
+    best_s, best_same, key_ratio = _best_offset_and_ratio(prev, cur, min_overlap,
+                                                          top_candidates)
     if best_s < 0:
         return -1, float("inf")
     if best_s == 0:
         diff = _overlap_diff(prev, cur, 0)
-        return (0, diff) if diff < thresh else (-1, diff)
+        # 有损画面下"没滚动"的像素差也会偏大，用签名占比兜一下
+        if diff < thresh or key_ratio >= 0.75:
+            return 0, diff
+        return -1, diff
     if best_same >= min_same_ratio:
         return best_s, 0.0
     diff = _overlap_diff(prev, cur, best_s)
+    # 抗噪验收：有损源（Citrix HDX / 远程桌面）像素差天然偏大，
+    # 但"签名相同的行占比"仍能到 0.6+ —— 用它判定命中，比死阈值可靠
+    if key_ratio >= 0.6:
+        return best_s, diff
     if diff < loose_thresh:
         return best_s, diff
     return -1, diff
