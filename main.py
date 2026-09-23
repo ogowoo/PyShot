@@ -400,6 +400,10 @@ class PyShotApp(QObject):
         self.snipper = overlays[0]           # 代表整个会话（哪个屏先按就用哪个屏）
         for ov in overlays:
             ov.start(mode)
+            try:
+                self._cap_log("遮罩已显示；", ov.bg_report())
+            except Exception:                      # noqa: BLE001
+                pass
             if mode == "point" and point_region is not None:
                 # 选区挖空后可穿透点击（能真的点到应用里的滚动条）
                 ov.set_point_hole(point_region)

@@ -87,6 +87,27 @@ if first is None or first > 900:
 if second is None or second > 700:
     failures.append(f"二次遮罩过慢: {second}")
 
+# ---------- 关键回归：抓到的底图不能是纯色（曾把自己的遮罩拍进图里）----------
+from snipper import SnipperOverlay as _SO
+
+
+def _sample_colors(pix, step=24):
+    img = pix.toImage()
+    out = set()
+    for y in range(0, img.height(), max(1, img.height() // step)):
+        for x in range(0, img.width(), max(1, img.width() // step)):
+            out.add(img.pixelColor(x, y).name())
+    return out
+
+
+_ov = _SO("region")
+_ov.start("region")
+_cols = _sample_colors(_ov._bg)
+print(f"抓屏自检: {_ov.bg_report()}")
+if len(_cols) <= 2:
+    failures.append(f"底图疑似纯色（可能拍到了自己的遮罩）: {sorted(_cols)[:4]}")
+_ov.finish()
+
 core.shutdown()
 print()
 if failures:
