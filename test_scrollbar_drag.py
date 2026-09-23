@@ -117,8 +117,11 @@ app.exec()
 check("驱动模式能拼出结果", bool(out) and isinstance(out[0], QPixmap),
       type(out[0]).__name__ if out else "无")
 check("确实按目标步长驱动", len(state["drives"]) >= 2, f"{state['drives']}")
-check("驱动步长为半屏量级", all(100 <= s <= 400 for s in state["drives"]),
+check("驱动步长为半屏量级", all(100 <= s <= 400 for s in state["drives"][1:]),
       f"{[round(s) for s in state['drives']]}")
+check("首次滚动先用小步试探（还没量出会滚的条带高）",
+      state["drives"] and state["drives"][0] <= 80,
+      f"首步 {round(state['drives'][0]) if state['drives'] else '无'}")
 check("实测后校准了单位换算", drv.observations >= 1, f"校准 {drv.observations} 次")
 
 # --- 拖拽没生效（画面不动）应先自动降级到滚轮再试，而不是立刻报错 ---

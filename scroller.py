@@ -66,6 +66,12 @@ def _as_frame(x) -> Frame:
     raise TypeError(f"需要 Frame 或数组，收到 {type(x).__name__}")
 
 
+def _crop_rows(fr: Frame, top: int, bpad: int) -> Frame:
+    """裁掉上下各若干行（用于丢掉不随内容滚动的工具栏/列头/固定面板）。"""
+    rows = fr.rows[top:fr.h - bpad] if bpad else fr.rows[top:]
+    return Frame(rows, fr.w, len(rows), fr.dpr)
+
+
 def pixmap_to_frame(pix: QPixmap) -> Frame:
     """QPixmap → Frame（只做一次拷贝）。"""
     img = pix.toImage().convertToFormat(QImage.Format_RGB888)
@@ -426,7 +432,7 @@ def find_scroll(prev, cur, min_overlap: int = 60, thresh: float = 3.0,
                 min_same_ratio: float = 0.9) -> tuple[int, float]:
     """在 cur 中找 prev 向下滚动的像素数 s：prev[s:] 应与 cur[:H-s] 一致。
 
-    算法：**行哈希投票定候选 + 行级精确比较定胜负**。
+    算法：**先裁掉行方向静止边缘，再"行哈希投票定候选 + 行级精确比较定胜负"**。
     - 相同行占比最高者为胜（静态界面截图能到 1.0），比逐像素差值更准
     - 再在胜者 ±4 内精修，消除"行内容重复"带来的偏差
     - 成本与图幅无关（固定抽样行数），比逐像素扫描快一个量级
@@ -439,6 +445,16 @@ def find_scroll(prev, cur, min_overlap: int = 60, thresh: float = 3.0,
         return -1, float("inf")
     if prev.rows == cur.rows:            # 整帧相同 → 没滚动
         return 0, 0.0
+
+    # 行方向也会混进静止外壳（工具栏/列头/固定明细面板）。实测 Citrix 选区
+    # 660x380 里有 171 行是静止的 ribbon + 列头，占 39%：它们在 d>0 时必然不匹配，
+    # 把真位移的命中率从 0.74 稀释到 0.29，反而让"没滚动"（d=0）拿到假高分。
+    # 先裁掉上下静止边缘，只在真正会滚的那条带里对齐。
+    top, bpad = static_strips(prev, cur)
+    if top or bpad:
+        if H - top - bpad >= max(min_overlap + 40, H // 3):
+            prev, cur = _crop_rows(prev, top, bpad), _crop_rows(cur, top, bpad)
+            H = prev.h
 
     # 先看竖条带：如果存在**完全静止的条带**，说明选区里混进了窗口外壳
     # （标题栏/工具栏/侧边栏/滚动条），此时全局匹配会被它们锚在错误的偏移上
@@ -486,6 +502,16 @@ def find_scroll(prev, cur, min_overlap: int = 60, thresh: float = 3.0,
     if key_ratio >= 0.6:
         return best_s, diff
     if diff < loose_thresh:
+        return best_s, diff
+    # "明显胜过'没滚动'这个竞争假设"也算命中：有损画面（Citrix HDX / 远程桌面）
+    # 里精确占比上不了 0.9，滚动后每行还有半像素错位导致的编码噪声，
+    # 逐像素差也超 12。此时只要真位移的占比**明显高于 d=0**，就是它了。
+    # （实测 Citrix：真位移 0.87 vs d=0 的 0.47，而 diff=19.7 把死阈值顶掉了。）
+    r_best = _same_ratio(prev, cur, best_s)
+    r0 = _same_ratio(prev, cur, 0)
+    if r_best >= 0.6 and r_best >= r0 + 0.15:
+        _dlog("滚动·占优判定", f"d={best_s} 占比 {r_best:.2f} 明显高于 d=0 的 {r0:.2f}"
+                              f"（逐像素差 {diff:.1f} 偏大，按占优判为命中）")
         return best_s, diff
     return -1, diff
 
@@ -884,6 +910,7 @@ class ScrollCapture(QObject):
         self._dpr = 1.0
         self._frames = 0
         self._no_progress = 0
+        self._band_h = 0.0               # 实测"真正会滚"的内容高度（逻辑像素），0=未知
         self._stop_requested = False
         self._busy = False               # 抓帧内含嵌套事件循环，防重入
 
@@ -910,11 +937,21 @@ class ScrollCapture(QObject):
         self._stop_requested = True
 
     def _do_scroll(self):
-        """执行一次滚动：希望滚动约半屏内容（保证足够重叠，拼接才稳）。"""
+        """执行一次滚动：希望滚动约半屏内容（保证足够重叠，拼接才稳）。
+
+        步长按**真正会滚的那条带**算，而不是整个选区：选区里常常混着
+        工具栏/列头（实测 Citrix 380 高的选区只有 208 在滚），按选区高度
+        算会一次滚过头 —— 重叠不足就再也对不上。
+        第一条带还没量出来（第一次滚动）时先用小步，量到之后按带高走。
+        """
         frame_h = 0
         if self._prev is not None:
             frame_h = self._prev.h / max(0.01, self._dpr)
         step = max(60.0, frame_h * 0.45)
+        if self._band_h > 0:
+            step = min(step, max(48.0, self._band_h * 0.55))
+        else:
+            step = min(step, 60.0)       # 首次：1 格滚轮，稳妥起步
         if self.driver is not None:
             self.driver(step)
         elif self.scroll_fn is not None:
@@ -1106,6 +1143,8 @@ class ScrollCapture(QObject):
                 H = fr.h
                 top, bpad = static_strips(self._prev, fr)
                 bottom = H - bpad
+                # 记下"真正会滚"的内容高度，步长按它算（见 _do_scroll）
+                self._band_h = max(0, bottom - top) / max(0.01, self._dpr)
                 # 多块独立滚动区域（上方列表 + 下方明细面板）拼不出来，早点说清楚
                 problem = self._check_multi_pane(fr, s, top, bottom)
                 if problem:
