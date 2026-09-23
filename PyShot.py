@@ -6812,13 +6812,13 @@ class EditorWindow(QMainWindow):
         sb.addPermanentWidget(zoom_group)
 
     def _build_shortcuts(self):
+        # 注意：Ctrl+Z / Ctrl+Y / Ctrl+S / Ctrl+C / Ctrl+W / Ctrl+O 这些
+        # **已经由菜单栏的 QAction 提供**，这里不能再注册一遍 ——
+        # 同一个窗口里两个动作用同一个按键序列会被 Qt 判为"歧义"，
+        # 结果是**两个都不触发**（Ctrl+Z 失效就是这么来的）。
+        # 这里只放菜单里没有的：重做备选键、切标签、以及单字母工具键。
         for seq, fn in [
-            ("Ctrl+Z", lambda: self.canvas and self.canvas.undo()),
-            ("Ctrl+Y", lambda: self.canvas and self.canvas.redo()),
             ("Ctrl+Shift+Z", lambda: self.canvas and self.canvas.redo()),
-            ("Ctrl+S", self.save_as),
-            ("Ctrl+C", self.copy_to_clipboard),
-            ("Ctrl+W", lambda: self.close_tab(self.tabs.currentIndex())),
             ("Ctrl+Tab", lambda: self.tabs.setCurrentIndex(
                 (self.tabs.currentIndex() + 1) % max(1, self.tabs.count()))),
         ]:
