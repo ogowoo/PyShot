@@ -519,6 +519,26 @@ EN = {
         "The captured frames are blank/solid, so they cannot be stitched.\nThe target window (e.g. an app inside Citrix) may use hardware acceleration or content protection that blocks screen capture.\nTry: (1) disable hardware acceleration in Citrix, (2) use Manual scrolling capture from the tray menu, (3) maximize or resize the window and retry.",
     "拖拽和滚轮都没能让页面滚动。\n可能原因：点击位置不在滚动区域，或该窗口不响应注入的输入。\n建议改用「滚动长截图（PageDown 自动滚动）」或「手动滚动」。":
         "Neither dragging nor the wheel scrolled the page.\nThe click may be outside the scrollable area, or the window ignores injected input.\nTry Page Down mode or Manual scroll instead.",
+    # ---- 编辑器菜单栏 / 空状态 ----
+    "文件": "File", "编辑": "Edit", "视图": "View", "特效": "Effects",
+    "选项": "Options", "帮助": "Help",
+    "打开图片…": "Open Image…", "打开剪贴板图片": "Open Clipboard Image",
+    "关闭当前标签": "Close Tab", "退出": "Exit",
+    "复制到剪贴板": "Copy to Clipboard", "贴图到屏幕": "Pin to Screen",
+    "放大": "Zoom In", "缩小": "Zoom Out", "适应窗口": "Fit to Window",
+    "水印…": "Watermark…", "边框…": "Border…",
+    "编辑默认水印…": "Edit Default Watermark…",
+    "编辑默认边框…": "Edit Default Border…",
+    "关于 PyShot": "About PyShot",
+    "还没有图片": "No image yet",
+    "从「文件」菜单打开图片，或直接截图 / 从剪贴板粘贴":
+        "Open an image from the File menu, capture the screen, or paste from the clipboard",
+    "PyShot —— 仿 FastStone Capture 的截图与标注工具\\n托盘右键可截图 / 滚动长截图 / 取色 / 贴图":
+        "PyShot — a FastStone Capture style screenshot and annotation tool\\n"
+        "Right-click the tray icon to capture, scroll-capture, pick colors or pin",
+    "直接打开编辑器窗口（空白也能用，从它的「文件」菜单打开图片）":
+        "Open the editor window directly (works even when empty; use its File menu to open an image)",
+    "显示编辑器": "Show Editor",
 }
 
 

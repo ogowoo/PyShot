@@ -118,7 +118,7 @@ check("滚动长截图是子菜单",
 check("工具项成组（取色/贴图相邻）",
       names.index("屏幕取色") + 1 == names.index("贴出剪贴板图片"), str(names))
 check("窗口项成组（打开图片/打开编辑器相邻）",
-      names.index("打开图片编辑…") + 1 == names.index("打开编辑器"))
+      names.index("打开图片编辑…") + 1 == names.index("显示编辑器"))
 check("退出在最后", names[-1] == "退出 PyShot", str(names[-1]))
 
 # 分组分隔线：5 条（截图|滚动、滚动|工具、工具|语言、语言|退出 …）

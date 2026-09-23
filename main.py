@@ -302,9 +302,9 @@ class PyShotApp(QObject):
         act_open.triggered.connect(self.open_image)
         menu.addAction(act_open)
 
-        act_editor = QAction(make_menu_icon("window"), tr("打开编辑器"), self.app)
+        act_editor = QAction(make_menu_icon("window"), tr("显示编辑器"), self.app)
         act_editor.setToolTip(
-            tr("把编辑器窗口恢复到前台（取消截图后找不到编辑器时点这里）"))
+            tr("直接打开编辑器窗口（空白也能用，从它的「文件」菜单打开图片）"))
         act_editor.triggered.connect(self.show_editor)
         menu.addAction(act_editor)
 
@@ -725,28 +725,41 @@ class PyShotApp(QObject):
         self.open_editor(pix)
 
     def show_editor(self):
-        """把编辑器恢复到前台；没有就开图片选择对话框。"""
-        if self.editors:
-            ed = self.editors[-1]
-            ed.show()
-            ed.setWindowState(ed.windowState() & ~Qt.WindowMinimized)
-            ed.raise_()
-            ed.activateWindow()
-        else:
-            self.open_image()
+        """显示编辑器：已有窗口就提到前台，没有就**直接开一个空白的**。
+
+        以前这里没有编辑器时会弹"打开图片"对话框，用户只是想看看编辑器却先被
+        要求选文件；现在直接给一个空白编辑器（里面有文件菜单可打开图片、
+        空状态页也有提示）。
+        """
+        if not self.editors:
+            self._create_editor()
+        if not self.editors:                # 无托盘等极端情况
+            return
+        ed = self.editors[-1]
+        ed.show()
+        ed.setWindowState(ed.windowState() & ~Qt.WindowMinimized)
+        ed.raise_()
+        ed.activateWindow()
+
+    def _create_editor(self):
+        """建一个编辑器窗口并接好信号（内容可以为空）。"""
+        editor = EditorWindow()
+        editor.setWindowIcon(make_tray_icon())
+        editor.setAttribute(Qt.WA_DeleteOnClose)
+        editor.destroyed.connect(
+            lambda: self.editors.remove(editor) if editor in self.editors
+            else None)
+        editor.pin_requested.connect(
+            lambda pix: self.pin_pixmap(pix, QCursor.pos()))
+        editor.capture_requested.connect(self.capture_region)
+        if hasattr(editor, "set_hotkey_hint"):
+            editor.set_hotkey_hint(self.hotkey_text)
+        self.editors.append(editor)
+        return editor
 
     def open_editor(self, pixmap: QPixmap):
         """把截图送进编辑器：已有编辑器就新增标签页，否则新建窗口。"""
-        editor = self.editors[-1] if self.editors else None
-        if editor is None:
-            editor = EditorWindow()
-            editor.setWindowIcon(make_tray_icon())
-            editor.setAttribute(Qt.WA_DeleteOnClose)
-            editor.destroyed.connect(
-                lambda: self.editors.remove(editor) if editor in self.editors else None)
-            editor.pin_requested.connect(lambda pix: self.pin_pixmap(pix, QCursor.pos()))
-            editor.capture_requested.connect(self.capture_region)
-            self.editors.append(editor)
+        editor = self.editors[-1] if self.editors else self._create_editor()
         editor.add_canvas(pixmap)
         editor.set_hotkey_hint(self.hotkey_text)
         editor.show()

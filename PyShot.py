@@ -23,6 +23,7 @@
 
 # key: 简体原文 -> (繁體, English)
 TABLE = {
+    "[PyShot] 收到 Ctrl+C，正在退出…": ("[PyShot] 收到 Ctrl+C，正在結束…", ""),
     "区域截图": ("區域截圖", "Capture Region"),
     "框选一块区域截图": ("框選一塊區域截圖", "Drag to capture a region"),
     "全屏截图": ("全螢幕截圖", "Capture Full Screen"),
@@ -43,8 +44,8 @@ TABLE = {
     "把剪贴板里的图片钉在屏幕最上层": ("把剪貼簿裡的圖片钉在螢幕最上層", "Pin the clipboard image on top of the screen"),
     "打开图片编辑…": ("開啟圖片編輯…", "Open Image for Editing…"),
     "打开一张已有图片进行标注": ("開啟一張已有圖片進行標注", "Open an existing image to annotate"),
-    "打开编辑器": ("開啟編輯器", "Show Editor"),
-    "把编辑器窗口恢复到前台（取消截图后找不到编辑器时点这里）": ("把編輯器窗口恢複到前台（取消截圖後找不到編輯器時點這裡）", "Bring the editor back to the front (use this if you lost it)"),
+    "显示编辑器": ("顯示編輯器", "Show Editor"),
+    "直接打开编辑器窗口（空白也能用，从它的「文件」菜单打开图片）": ("直接開啟編輯器窗口（空白也能用，从它的「檔案」菜單開啟圖片）", "Open the editor window directly (works even when empty; use its File menu to open an image)"),
     "语言": ("語言", "Language"),
     "退出 PyShot": ("結束 PyShot", "Exit PyShot"),
     "按系统语言自动选择": ("按系統語言自動選擇", "Choose automatically from the system language"),
@@ -118,6 +119,33 @@ TABLE = {
     "选择颜色": ("選擇顏色", "Choose a color"),
     "输入文字，Enter 确认 / Esc 取消": ("輸入文字，Enter 確認 / Esc 取消", "Type text, Enter to confirm / Esc to cancel"),
     "PyShot 编辑器": ("PyShot 編輯器", "PyShot Editor"),
+    "还没有图片": ("還沒有圖片", "No image yet"),
+    "从「文件」菜单打开图片，或直接截图 / 从剪贴板粘贴": ("从「檔案」菜單開啟圖片，或直接截圖 / 从剪貼簿貼上", "Open an image from the File menu, capture the screen, or paste from the clipboard"),
+    "文件": ("檔案", "File"),
+    "打开图片…": ("開啟圖片…", "Open Image…"),
+    "打开剪贴板图片": ("開啟剪貼簿圖片", "Open Clipboard Image"),
+    "保存": ("儲存", "Save"),
+    "关闭当前标签": ("關閉當前標籤", "Close Tab"),
+    "退出": ("結束", "Exit"),
+    "编辑": ("編輯", "Edit"),
+    "撤销": ("復原", "Undo"),
+    "重做": ("重做", "Redo"),
+    "复制到剪贴板": ("複製到剪貼簿", "Copy to Clipboard"),
+    "贴图到屏幕": ("釘圖到螢幕", "Pin to Screen"),
+    "视图": ("視圖", "View"),
+    "放大": ("放大", "Zoom In"),
+    "缩小": ("縮小", "Zoom Out"),
+    "实际像素 (1:1)": ("實際像素 (1:1)", "Actual pixels (1:1)"),
+    "适应窗口": ("符合窗口", "Fit to Window"),
+    "特效": ("特效", "Effects"),
+    "水印…": ("水印…", "Watermark…"),
+    "边框…": ("邊框…", "Border…"),
+    "选项": ("選項", "Options"),
+    "编辑默认水印…": ("編輯預設水印…", "Edit Default Watermark…"),
+    "编辑默认边框…": ("編輯預設邊框…", "Edit Default Border…"),
+    "帮助": ("幫助", "Help"),
+    "关于 PyShot": ("關於 PyShot", "About PyShot"),
+    "PyShot —— 仿 FastStone Capture 的截图与标注工具\n托盘右键可截图 / 滚动长截图 / 取色 / 贴图": ("PyShot —— 仿 FastStone Capture 的截圖與標注工具\n托盤右鍵可截圖 / 捲動長截圖 / 取色 / 釘圖", ""),
     " px\n滚轮/Ctrl+滚轮 缩放 · 中键拖动滚动": (" px\n滾輪/Ctrl+滾輪 縮放 · 中鍵拖動捲動", "px\nWheel / Ctrl+wheel to zoom · middle-drag to scroll"),
     "关闭此标签 (Ctrl+W)": ("關閉此標籤 (Ctrl+W)", "Close this tab (Ctrl+W)"),
     "截图": ("截圖", "Capture"),
@@ -125,9 +153,7 @@ TABLE = {
     "颜色": ("顏色", "Color"),
     "自定义颜色": ("自定義顏色", "Custom color…"),
     "序号圆的大小\n选中已有序号时可直接调整它的大小": ("序號圓的大小\n選中已有序號時可直接調整它的大小", "Step-circle size\nAdjusts the selected step number directly"),
-    "撤销": ("復原", "Undo"),
     "撤销 (Ctrl+Z)": ("復原 (Ctrl+Z)", "Undo (Ctrl+Z)"),
-    "重做": ("重做", "Redo"),
     "重做 (Ctrl+Y)": ("重做 (Ctrl+Y)", "Redo (Ctrl+Y)"),
     "应用裁剪": ("套用裁剪", "Apply Crop"),
     "应用裁剪框 (Enter)": ("套用裁剪框 (Enter)", "Apply the crop (Enter)"),
@@ -138,7 +164,6 @@ TABLE = {
     "水印：文字与图片可各自开关（也可同时用）\n九宫格位置或平铺、各自调不透明度、可旋转与设边距\n还能「应用并设为默认」，之后新截图自动加": ("水印：文字與圖片可各自開關（也可同時用）\n九宮格位置或平鋪、各自調不透明度、可旋轉與設邊距\n還能「套用并設為預設」，之後新截圖自動加", "Watermark: text and image can be used together\n9-grid position or tiling, separate opacity, rotation and margin\nApply and set as default to add it to new captures"),
     "边框": ("邊框", "Border"),
     "加边框（对应 FSCapture 的「特效 → 边缘」）\n单线/双线/虚线/圆角/投影阴影/立体浮雕/边缘渐隐/拍立得白边\n边框加在图片外面，图会变大；可 Ctrl+Z 撤销": ("加邊框（對應 FSCapture 的「特效 → 邊缘」）\n單線/雙線/虛線/圓角/投影陰影/立體浮雕/邊缘漸隱/拍立得白邊\n邊框加在圖片外面，圖會變大；可 Ctrl+Z 復原", "Border (FSCapture's Effects -> Edge)\nSolid / double / dashed / rounded / drop shadow / bevel / fade / polaroid / torn paper\nThe border goes outside the image, so the result gets bigger; Ctrl+Z to undo"),
-    "保存": ("儲存", "Save"),
     "保存为文件 (Ctrl+S)": ("儲存為檔案 (Ctrl+S)", "Save to a file (Ctrl+S)"),
     "关闭": ("關閉", "Close"),
     "关闭编辑器 (Esc)": ("關閉編輯器 (Esc)", "Close the editor (Esc)"),
@@ -151,14 +176,13 @@ TABLE = {
     "已设为默认水印（本次运行有效，配置写入失败）": ("已設為預設水印（本次運行有效，配置寫入失敗）", "Saved as the default watermark for this session (config write failed)"),
     "保存截图": ("儲存截圖", "Save Capture"),
     "PNG 图片 (*.png);;JPEG 图片 (*.jpg);;BMP 图片 (*.bmp)": ("PNG 圖片 (*.png);;JPEG 圖片 (*.jpg);;BMP 圖片 (*.bmp)", "PNG image (*.png);;JPEG image (*.jpg);;BMP image (*.bmp)"),
+    "已设为默认边框，之后每次新截图会自动加": ("已設為預設邊框，之後每次新截圖會自動加", "Saved as the default border; it will be added automatically"),
     "线宽": ("線寬", "Width"),
     "字号": ("字號", "Size"),
-    "实际像素 (1:1)": ("實際像素 (1:1)", "Actual pixels (1:1)"),
     "适应": ("符合", "Fit"),
     "缩放以适应窗口": ("縮放以符合窗口", "Scale to fit the window"),
     "工具：": ("工具：", "Tool: "),
     " 工具": (" 工具", " Tool"),
-    "已设为默认边框，之后每次新截图会自动加": ("已設為預設邊框，之後每次新截圖會自動加", "Saved as the default border; it will be added automatically"),
     "已设为默认边框（本次运行有效，配置写入失败）": ("已設為預設邊框（本次運行有效，配置寫入失敗）", "Saved as the default border for this session (config write failed)"),
     "边框宽度为 0，未做改动": ("邊框寬度為 0，未做改動", "Border width is 0 — nothing changed"),
     "已保存：": ("已儲存：", "Saved: "),
@@ -4847,12 +4871,13 @@ class ScrollCapture(QObject):
 # -*- coding: utf-8 -*-
 """编辑器窗口：左侧工具栏 + 顶部属性栏 + 可缩放画布。"""
 import math
+from pathlib import Path
 
 from PySide6.QtCore import (QPoint, QPointF, QRect, QRectF, QSize, Qt,
                             Signal)
 from PySide6.QtGui import (QAction, QColor, QGuiApplication, QIcon, QKeySequence,
                            QPainter, QPainterPath, QPen, QPixmap)
-from PySide6.QtWidgets import (QApplication, QColorDialog, QDialog, QFileDialog,
+from PySide6.QtWidgets import (QMenu, QStackedWidget, QApplication, QColorDialog, QDialog, QFileDialog,
                                QFrame, QHBoxLayout, QLabel, QLayout, QLineEdit,
                                QMainWindow, QMessageBox, QPushButton,
                                QScrollArea, QSizePolicy, QSpinBox, QTabBar,
@@ -5571,11 +5596,18 @@ class EditorWindow(QMainWindow):
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(0)
         row.addWidget(self._build_toolbar())
-        row.addWidget(self.tabs, 1)
+        # 空状态：没有标签页时显示提示页，而不是一片空白
+        self.empty_page = self._build_empty_page()
+        self.stack = QStackedWidget()
+        self.stack.addWidget(self.empty_page)
+        self.stack.addWidget(self.tabs)
+        row.addWidget(self.stack, 1)
         root.addLayout(row, 1)
         self.setCentralWidget(central)
 
+        self._build_menubar()
         self._build_shortcuts()
+        self._update_empty_state()
 
         if pixmap is not None:
             self.add_canvas(pixmap)
@@ -5597,6 +5629,242 @@ class EditorWindow(QMainWindow):
     def scroll(self) -> "QScrollArea | None":
         page = self.tabs.currentWidget()
         return page if isinstance(page, QScrollArea) else None
+
+    # ---------- 空状态 ----------
+    def _build_empty_page(self) -> QWidget:
+        """没有图片时的提示页（编辑器可以直接打开，不必先选文件）。"""
+        page = QWidget()
+        lay = QVBoxLayout(page)
+        lay.setAlignment(Qt.AlignCenter)
+        title = QLabel(tr("还没有图片"))
+        title.setObjectName("emptytitle")
+        title.setAlignment(Qt.AlignCenter)
+        hint = QLabel(tr("从「文件」菜单打开图片，或直接截图 / 从剪贴板粘贴"))
+        hint.setObjectName("emptyhint")
+        hint.setAlignment(Qt.AlignCenter)
+        self.empty_hint = hint
+        lay.addWidget(title)
+        lay.addWidget(hint)
+        return page
+
+    def _update_empty_state(self):
+        """按有没有标签页切换空状态；并把依赖图片的菜单项置灰。"""
+        has = self.tabs.count() > 0
+        try:
+            self.stack.setCurrentWidget(self.tabs if has else self.empty_page)
+        except Exception:                          # noqa: BLE001
+            pass
+        for act in getattr(self, "_needs_canvas", []):
+            act.setEnabled(has)
+
+    def _build_menubar(self):
+        """菜单栏：文件 / 编辑 / 视图 / 特效 / 选项 / 帮助。"""
+        bar = self.menuBar()
+        bar.setObjectName("editorMenuBar")
+
+        # ---------- 文件 ----------
+        m_file = bar.addMenu(tr("文件"))
+        self.menus = {"file": m_file}
+        self.act_open_img = QAction(tr("打开图片…"), self)
+        self.act_open_img.setShortcut("Ctrl+O")
+        self.act_open_img.triggered.connect(self.open_image)
+        m_file.addAction(self.act_open_img)
+        act_clip = QAction(tr("打开剪贴板图片"), self)
+        act_clip.setShortcut("Ctrl+Shift+V")
+        act_clip.triggered.connect(self.open_from_clipboard)
+        m_file.addAction(act_clip)
+        m_file.addSeparator()
+        self.act_save = QAction(tr("保存"), self)
+        self.act_save.setShortcut("Ctrl+S")
+        self.act_save.triggered.connect(self.save_as)
+        m_file.addAction(self.act_save)
+        m_file.addSeparator()
+        self.act_close_tab = QAction(tr("关闭当前标签"), self)
+        self.act_close_tab.setShortcut("Ctrl+W")
+        self.act_close_tab.triggered.connect(
+            lambda: self.close_tab(self.tabs.currentIndex()))
+        m_file.addAction(self.act_close_tab)
+        act_quit = QAction(tr("退出"), self)
+        act_quit.setShortcut("Ctrl+Q")
+        act_quit.triggered.connect(self.close)
+        m_file.addAction(act_quit)
+
+        # ---------- 编辑 ----------
+        m_edit = bar.addMenu(tr("编辑"))
+        self.menus["edit"] = m_edit
+        self.act_m_undo = QAction(tr("撤销"), self)
+        self.act_m_undo.setShortcut("Ctrl+Z")
+        self.act_m_undo.triggered.connect(lambda: self.canvas and self.canvas.undo())
+        m_edit.addAction(self.act_m_undo)
+        self.act_m_redo = QAction(tr("重做"), self)
+        self.act_m_redo.setShortcut("Ctrl+Y")
+        self.act_m_redo.triggered.connect(lambda: self.canvas and self.canvas.redo())
+        m_edit.addAction(self.act_m_redo)
+        m_edit.addSeparator()
+        self.act_m_copy = QAction(tr("复制到剪贴板"), self)
+        self.act_m_copy.setShortcut("Ctrl+C")
+        self.act_m_copy.triggered.connect(self.copy_to_clipboard)
+        m_edit.addAction(self.act_m_copy)
+        self.act_m_pin = QAction(tr("贴图到屏幕"), self)
+        self.act_m_pin.triggered.connect(self.pin_to_screen)
+        m_edit.addAction(self.act_m_pin)
+
+        # ---------- 视图 ----------
+        m_view = bar.addMenu(tr("视图"))
+        self.menus["view"] = m_view
+        self.act_zoom_in = QAction(tr("放大"), self)
+        self.act_zoom_in.setShortcut("Ctrl+=")
+        self.act_zoom_in.triggered.connect(lambda: self._zoom_step(1.25))
+        m_view.addAction(self.act_zoom_in)
+        self.act_zoom_out = QAction(tr("缩小"), self)
+        self.act_zoom_out.setShortcut("Ctrl+-")
+        self.act_zoom_out.triggered.connect(lambda: self._zoom_step(1 / 1.25))
+        m_view.addAction(self.act_zoom_out)
+        self.act_zoom_100 = QAction(tr("实际像素 (1:1)"), self)
+        self.act_zoom_100.setShortcut("Ctrl+0")
+        self.act_zoom_100.triggered.connect(lambda: self._set_zoom(1.0))
+        m_view.addAction(self.act_zoom_100)
+        self.act_zoom_fit = QAction(tr("适应窗口"), self)
+        self.act_zoom_fit.triggered.connect(self.fit_to_window)
+        m_view.addAction(self.act_zoom_fit)
+
+        # ---------- 特效（和 FSCapture 一致，水印/边框都收在这里）----------
+        m_fx = bar.addMenu(tr("特效"))
+        self.menus["fx"] = m_fx
+        self.act_m_wm = QAction(tr("水印…"), self)
+        self.act_m_wm.triggered.connect(self.add_watermark)
+        m_fx.addAction(self.act_m_wm)
+        self.act_m_border = QAction(tr("边框…"), self)
+        self.act_m_border.triggered.connect(self.add_border)
+        m_fx.addAction(self.act_m_border)
+
+        # ---------- 选项 ----------
+        m_opt = bar.addMenu(tr("选项"))
+        self.menus["options"] = m_opt
+        self.menu_lang = QMenu(tr("语言"), m_opt)
+        self.menu_lang.aboutToShow.connect(self._rebuild_language_menu)
+        m_opt.addMenu(self.menu_lang)
+        m_opt.addSeparator()
+        self.act_default_wm = QAction(tr("编辑默认水印…"), self)
+        self.act_default_wm.triggered.connect(self.edit_default_watermark)
+        m_opt.addAction(self.act_default_wm)
+        self.act_default_border = QAction(tr("编辑默认边框…"), self)
+        self.act_default_border.triggered.connect(self.edit_default_border)
+        m_opt.addAction(self.act_default_border)
+
+        # ---------- 帮助 ----------
+        m_help = bar.addMenu(tr("帮助"))
+        self.menus["help"] = m_help
+        act_about = QAction(tr("关于 PyShot"), self)
+        act_about.triggered.connect(self.show_about)
+        m_help.addAction(act_about)
+
+        # 依赖图片的菜单项：空状态时置灰
+        self._needs_canvas = [self.act_save, self.act_close_tab, self.act_m_undo,
+                              self.act_m_redo, self.act_m_copy, self.act_m_pin,
+                              self.act_zoom_in, self.act_zoom_out,
+                              self.act_zoom_100, self.act_zoom_fit,
+                              self.act_m_wm, self.act_m_border]
+        return bar
+
+    def _rebuild_language_menu(self):
+        """选项 → 语言（三种语言 + 跟随系统）。"""
+
+        self.menu_lang.clear()
+        cur = saved_language()
+        for code, name in LANGUAGES:
+            act = QAction(name, self.menu_lang)
+            act.setCheckable(True)
+            act.setChecked(cur == code)
+            act.triggered.connect(
+                lambda checked=False, c=code: self._switch_language(c))
+            self.menu_lang.addAction(act)
+        self.menu_lang.addSeparator()
+        act_auto = QAction(
+            tr("跟随系统") + f"（{language_name(system_language())}）",
+            self.menu_lang)
+        act_auto.setCheckable(True)
+        act_auto.setChecked(cur == AUTO)
+        act_auto.triggered.connect(lambda: self._switch_language(AUTO))
+        self.menu_lang.addAction(act_auto)
+
+    def _switch_language(self, code: str):
+
+        lang = set_language(code)
+        self.retranslate()
+        self.statusBar().showMessage(
+            tr("界面语言已切换") + f"：{language_name(lang)}", 4000)
+
+    # ---------- 文件 ----------
+    def open_image(self):
+        """从「文件 → 打开图片」载入图片（在编辑器内直接开）。"""
+        path, _ = QFileDialog.getOpenFileName(
+            self, tr("打开图片"), str(Path.home()),
+            tr("图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)"))
+        if not path:
+            return
+        pix = QPixmap(path)
+        if not pix.isNull():
+            self.add_canvas(pix)
+
+    def open_from_clipboard(self):
+        """把剪贴板里的图片作为新标签打开。"""
+        img = QApplication.clipboard().image()
+        if img is None or img.isNull():
+            self.statusBar().showMessage(tr("剪贴板里没有图片"), 3000)
+            return
+        self.add_canvas(QPixmap.fromImage(img))
+
+    def show_about(self):
+        QMessageBox.information(
+            self, tr("关于 PyShot"),
+            tr("PyShot —— 仿 FastStone Capture 的截图与标注工具\n"
+               "托盘右键可截图 / 滚动长截图 / 取色 / 贴图"))
+
+    def edit_default_watermark(self):
+        """编辑"新截图自动加的水印"（不作用于当前标签）。"""
+
+
+        canvas = self.canvas
+        size = canvas.base_pixmap.size() if canvas else QSize(640, 400)
+        dlg = WatermarkDialog(self, load_default(), size)
+        if dlg.exec() == QDialog.Accepted:
+            settings = dlg.settings()
+            settings["auto"] = True
+            wm_save(settings)
+            self.statusBar().showMessage(
+                tr("已设为默认水印，之后每次新截图会自动添加"), 4000)
+
+    def edit_default_border(self):
+        """编辑"新截图自动加的边框"（不作用于当前标签）。"""
+
+
+        canvas = self.canvas
+        size = canvas.base_pixmap.size() if canvas else QSize(640, 400)
+        dlg = BorderDialog(self, load_border_default(), size)
+        if dlg.exec() == QDialog.Accepted:
+            settings = dlg.settings()
+            settings["auto"] = True
+            bd_save(settings)
+            self.statusBar().showMessage(
+                tr("已设为默认边框，之后每次新截图会自动加"), 4000)
+
+    def _zoom_step(self, factor: float):
+        canvas = self.canvas
+        if canvas is None:
+            return
+        canvas.set_zoom(canvas.zoom * factor)
+
+    def _set_zoom(self, zoom: float):
+        canvas = self.canvas
+        if canvas is not None:
+            canvas.set_zoom(zoom)
+
+    def fit_to_window(self):
+        scroll = self.scroll
+        canvas = self.canvas
+        if canvas is not None and scroll is not None:
+            _fit_canvas(self, canvas, scroll)
 
     def add_canvas(self, pixmap: QPixmap, title: str | None = None) -> Canvas:
         """新增一个截图标签页并切换过去。"""
@@ -5646,6 +5914,7 @@ class EditorWindow(QMainWindow):
                 canvas.apply_border(bcfg)      # 内部会 push_undo，可撤销
         except Exception:                      # noqa: BLE001
             pass
+        self._update_empty_state()             # 有标签了：收起空状态、放开菜单
         return canvas
 
     def retranslate(self):
@@ -5689,6 +5958,7 @@ class EditorWindow(QMainWindow):
         if idx < 0:
             return
         self.tabs.removeTab(idx)
+        self._update_empty_state()
         page.setParent(None)
         page.deleteLater()
         if self.tabs.count() == 0:
@@ -6582,9 +6852,9 @@ class PyShotApp(QObject):
         act_open.triggered.connect(self.open_image)
         menu.addAction(act_open)
 
-        act_editor = QAction(make_menu_icon("window"), tr("打开编辑器"), self.app)
+        act_editor = QAction(make_menu_icon("window"), tr("显示编辑器"), self.app)
         act_editor.setToolTip(
-            tr("把编辑器窗口恢复到前台（取消截图后找不到编辑器时点这里）"))
+            tr("直接打开编辑器窗口（空白也能用，从它的「文件」菜单打开图片）"))
         act_editor.triggered.connect(self.show_editor)
         menu.addAction(act_editor)
 
@@ -7005,28 +7275,41 @@ class PyShotApp(QObject):
         self.open_editor(pix)
 
     def show_editor(self):
-        """把编辑器恢复到前台；没有就开图片选择对话框。"""
-        if self.editors:
-            ed = self.editors[-1]
-            ed.show()
-            ed.setWindowState(ed.windowState() & ~Qt.WindowMinimized)
-            ed.raise_()
-            ed.activateWindow()
-        else:
-            self.open_image()
+        """显示编辑器：已有窗口就提到前台，没有就**直接开一个空白的**。
+
+        以前这里没有编辑器时会弹"打开图片"对话框，用户只是想看看编辑器却先被
+        要求选文件；现在直接给一个空白编辑器（里面有文件菜单可打开图片、
+        空状态页也有提示）。
+        """
+        if not self.editors:
+            self._create_editor()
+        if not self.editors:                # 无托盘等极端情况
+            return
+        ed = self.editors[-1]
+        ed.show()
+        ed.setWindowState(ed.windowState() & ~Qt.WindowMinimized)
+        ed.raise_()
+        ed.activateWindow()
+
+    def _create_editor(self):
+        """建一个编辑器窗口并接好信号（内容可以为空）。"""
+        editor = EditorWindow()
+        editor.setWindowIcon(make_tray_icon())
+        editor.setAttribute(Qt.WA_DeleteOnClose)
+        editor.destroyed.connect(
+            lambda: self.editors.remove(editor) if editor in self.editors
+            else None)
+        editor.pin_requested.connect(
+            lambda pix: self.pin_pixmap(pix, QCursor.pos()))
+        editor.capture_requested.connect(self.capture_region)
+        if hasattr(editor, "set_hotkey_hint"):
+            editor.set_hotkey_hint(self.hotkey_text)
+        self.editors.append(editor)
+        return editor
 
     def open_editor(self, pixmap: QPixmap):
         """把截图送进编辑器：已有编辑器就新增标签页，否则新建窗口。"""
-        editor = self.editors[-1] if self.editors else None
-        if editor is None:
-            editor = EditorWindow()
-            editor.setWindowIcon(make_tray_icon())
-            editor.setAttribute(Qt.WA_DeleteOnClose)
-            editor.destroyed.connect(
-                lambda: self.editors.remove(editor) if editor in self.editors else None)
-            editor.pin_requested.connect(lambda pix: self.pin_pixmap(pix, QCursor.pos()))
-            editor.capture_requested.connect(self.capture_region)
-            self.editors.append(editor)
+        editor = self.editors[-1] if self.editors else self._create_editor()
         editor.add_canvas(pixmap)
         editor.set_hotkey_hint(self.hotkey_text)
         editor.show()
