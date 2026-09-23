@@ -322,8 +322,14 @@ def find_scroll(prev, cur, min_overlap: int = 60, thresh: float = 3.0,
         return -1, float("inf")
     if best_s == 0:
         diff = _overlap_diff(prev, cur, 0)
-        # 有损画面下"没滚动"的像素差也会偏大，用签名占比兜一下
-        if diff < thresh or key_ratio >= 0.75:
+        # "最佳对齐就是 0" = 画面没滚动。此时哪怕区域里有一小块在变
+        # （时钟、光标、动画、Citrix 编码噪声），也不该判成"滚太多/对不上" ——
+        # 那会让驱动以为跳太远而反复减半重试，最后报一个看不出真相的错。
+        # 判据：多数行仍对齐（精确或抗噪签名任一到 0.5）就算"没滚动"。
+        same0 = _same_ratio(prev, cur, 0)
+        key0 = key_ratio if key_ratio > 0 else _same_ratio_keys(
+            _frame_keys(prev), _frame_keys(cur), 0)
+        if diff < thresh or same0 >= 0.5 or key0 >= 0.5:
             return 0, diff
         return -1, diff
     if best_same >= min_same_ratio:
@@ -863,10 +869,14 @@ class ScrollCapture(QObject):
                 self._cleanup()
                 return
             s, diff = find_scroll(self._prev, fr)
+            _dlog("滚动·位移", f"#{self._frames} s={s} diff={diff:.1f} "
+                              f"累计={int(self._acc.h / (self._dpr or 1))}")
             if s < 0:
                 # 一次滚太多（超出可拼接范围）：小步试探阶段可以自动减半重试，
                 # 已经校准过就不折腾了，直接如实报错。
                 if self.driver is not None and self.driver.recovery_after_jump():
+                    _dlog("滚动·自动减半重试", f"#{self._frames} 对不上，"
+                                            f"减小步长后重试")
                     self._prev = fr           # 画面确实动了，以新帧为基准继续
                     self._frames += 1
                     self._bar_call("set_progress", self._frames,
