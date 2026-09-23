@@ -72,6 +72,13 @@ def _crop_rows(fr: Frame, top: int, bpad: int) -> Frame:
     return Frame(rows, fr.w, len(rows), fr.dpr)
 
 
+def _crop_cols(fr: Frame, left: int, right: int) -> Frame:
+    """只保留 [left, right) 这些列（用于丢掉不随内容滚动的侧栏）。"""
+    b0, b1 = left * 3, right * 3
+    rows = [r[b0:b1] for r in fr.rows]
+    return Frame(rows, max(0, right - left), fr.h, fr.dpr)
+
+
 def pixmap_to_frame(pix: QPixmap) -> Frame:
     """QPixmap → Frame（只做一次拷贝）。"""
     img = pix.toImage().convertToFormat(QImage.Format_RGB888)
@@ -566,6 +573,45 @@ def static_strips(prev, cur, thresh: float = 3.0,
     return top, bottom
 
 
+def static_columns(prev, cur, thresh: float = 3.0, max_ratio: float = 0.5,
+                   row_step: int = 7) -> tuple[int, int]:
+    """检测两帧间静止的左/右边缘列数，返回 (左边静止列数, 右边静止列数)。
+
+    和 static_strips（行方向）是一对：选区里混进**不随内容滚动的一列**时
+    （Citrix 远程桌面左侧的导航树、网页的固定侧边栏、详情面板），
+    每帧都会把它当新内容拼一次，长截图里就会出现重复的侧栏。
+    逐列比较（抽样若干行），只有整列都没变过才算静止。
+    """
+    prev, cur = _as_frame(prev), _as_frame(cur)
+    W, H = prev.w, prev.h
+    if cur.w != W or cur.h != H:
+        return 0, 0
+    limit = max(1, int(W * max_ratio))
+    rows = list(range(0, H, max(1, row_step)))
+    if rows[-1] != H - 1:
+        rows.append(H - 1)          # 保证最后一行的变化也能被发现
+
+    def same(x: int) -> bool:
+        b = x * 3
+        for y in rows:
+            a, c = prev.rows[y], cur.rows[y]
+            if a[b] == c[b] and a[b + 1] == c[b + 1] and a[b + 2] == c[b + 2]:
+                continue
+            total = abs(a[b] - c[b]) + abs(a[b + 1] - c[b + 1]) \
+                + abs(a[b + 2] - c[b + 2])
+            if total / 3 >= thresh:
+                return False
+        return True
+
+    left = 0
+    while left < limit and same(left):
+        left += 1
+    right = 0
+    while right < limit and same(W - 1 - right):
+        right += 1
+    return left, right
+
+
 def content_band_residuals(prev, cur, s: int,
                            top: int, bottom: int, bands: int = 3) -> list:
     """在"已检测到的位移 s"下，检查内容区分成几带后是否都对得上。
@@ -911,6 +957,7 @@ class ScrollCapture(QObject):
         self._frames = 0
         self._no_progress = 0
         self._band_h = 0.0               # 实测"真正会滚"的内容高度（逻辑像素），0=未知
+        self._col_span = None            # 实测"真正会滚"的列范围 [lo, hi)，None=未知
         self._stop_requested = False
         self._busy = False               # 抓帧内含嵌套事件循环，防重入
 
@@ -1145,6 +1192,17 @@ class ScrollCapture(QObject):
                 bottom = H - bpad
                 # 记下"真正会滚"的内容高度，步长按它算（见 _do_scroll）
                 self._band_h = max(0, bottom - top) / max(0.01, self._dpr)
+                # 再看列方向：左右有没有"整列都没动过"的静止侧栏
+                # （Citrix 左侧导航树 / 网页固定侧边栏）。有的画最后要裁掉，
+                # 否则长图里每接一次就重复一条侧栏。
+                cleft, cright = static_columns(self._prev, fr)
+                lo, hi = cleft, fr.w - cright
+                if hi - lo >= max(60, fr.w // 5):
+                    if self._col_span is None:
+                        self._col_span = (lo, hi)
+                    else:
+                        self._col_span = (max(self._col_span[0], lo),
+                                          min(self._col_span[1], hi))
                 # 多块独立滚动区域（上方列表 + 下方明细面板）拼不出来，早点说清楚
                 problem = self._check_multi_pane(fr, s, top, bottom)
                 if problem:
@@ -1202,7 +1260,19 @@ class ScrollCapture(QObject):
         if self._acc is None:
             self._fail(tr("没有抓到任何内容"))
             return
-        self.finished_ok.emit(frame_to_pixmap(self._acc, self._dpr))
+        acc = self._acc
+        # 全程都没动过的左右侧栏（导航树/固定侧边栏）裁掉：留着的话
+        # 每接一帧就重复一条，长图看起来像是坏了。
+        span = getattr(self, "_col_span", None)
+        if span is not None:
+            lo, hi = span
+            # 只有裁完还剩足够宽度（≥20%）才裁：多帧求交集后万一缩得太窄，
+            # 那是检测出了岔子，宁可原样输出也不要交出一张细条。
+            if (lo > 0 or hi < acc.w) and hi - lo >= max(60, acc.w // 5):
+                _dlog("滚动·裁侧栏", f"整幅 {acc.w} 列 → 保留 [{lo},{hi})"
+                                    f"（左右共裁掉 {acc.w - (hi - lo)} 列）")
+                acc = _crop_cols(acc, lo, hi)
+        self.finished_ok.emit(frame_to_pixmap(acc, self._dpr))
 
     def _cleanup(self):
         self._timer.stop()

@@ -161,7 +161,8 @@ else:
     print("NOTE 没有真机 Citrix 帧（~/.pyshot/scroll_debug），跳过回放")
 
 # ---------- (g) 步长按"会滚的条带高"算，而不是整个选区 ----------
-from PySide6.QtCore import QRect
+import numpy as np
+from PySide6.QtCore import QRect, QTimer
 
 from scroller import ScrollCapture
 
@@ -196,6 +197,75 @@ cap._band_h = 4000.0                     # 整屏都在滚
 cap._do_scroll()
 third = stub.steps[-1]
 check("条带很高时不超过选区高度的 45%", third <= 380 * 0.45 + 1, f"得到 {third}")
+
+# ---------- (h) 静止侧栏：左右整列没动过 → 成图里要裁掉 ----------
+# 真机 Citrix：选区最左 170 列是远程桌面的导航树，每帧一模一样；
+# 不裁的话长图里每接一帧就重复一条侧栏。真机帧上量出来 170~176 列。
+from scroller import ScrollDriver, array_to_pixmap, static_columns
+
+W2, VIEW, SIDE = 400, 300, 120
+DOC_H = 3000
+_rng = np.random.default_rng(7)
+_doc = _rng.integers(0, 255, (DOC_H, W2, 3), dtype=np.uint8)
+_side = _rng.integers(0, 255, (VIEW, SIDE, 3), dtype=np.uint8)
+_state = {"pos": 0}
+
+
+def _grab():
+    band = _doc[_state["pos"]:_state["pos"] + VIEW].copy()
+    band[:, :SIDE] = _side                 # 左侧 SIDE 列永远不变
+    return array_to_pixmap(band)
+
+
+class _DocDriver(ScrollDriver):
+    """按"1 格 ≈ 60px"模拟滚轮，滚动量记在 _state 里。"""
+
+    def __call__(self, step):
+        notches = max(1, int(round(step / 60.0)))
+        self.last_units = float(notches)
+        _state["pos"] = min(_state["pos"] + 60 * notches, DOC_H - VIEW)
+
+
+# --- 单元：列方向静止检测 ---
+_pa = Frame([_side[y].tobytes() + _doc[500 + y][SIDE:].tobytes()
+             for y in range(VIEW)], W2, VIEW, 1.0)
+_pb = Frame([_side[y].tobytes() + _doc[700 + y][SIDE:].tobytes()
+             for y in range(VIEW)], W2, VIEW, 1.0)
+_l, _r = static_columns(_pa, _pb)
+check(f"左侧静止 {SIDE} 列能量出来", _l == SIDE, f"得到 {_l}")
+check("右侧没静止列时判 0", _r == 0, f"得到 {_r}")
+
+_side_r = _rng.integers(0, 255, (VIEW, 80, 3), dtype=np.uint8)
+_pc = Frame([_doc[900 + y][:W2 - 80].tobytes() + _side_r[y].tobytes()
+             for y in range(VIEW)], W2, VIEW, 1.0)
+_pd = Frame([_doc[1100 + y][:W2 - 80].tobytes() + _side_r[y].tobytes()
+             for y in range(VIEW)], W2, VIEW, 1.0)
+_l2, _r2 = static_columns(_pc, _pd)
+check("两侧都有静止列时都能量出来", _l2 == 0 and _r2 == 80,
+      f"得到 左={_l2} 右={_r2}")
+
+# --- 集成：成图宽度应减去侧栏，高度应增长 ---
+_drv = _DocDriver("wheel", QRect(0, 0, W2, VIEW))
+_cap = ScrollCapture(QRect(0, 0, W2, VIEW), grab_fn=_grab, driver=_drv,
+                     interval_ms=1, max_frames=8)
+_res = []
+_cap.finished_ok.connect(lambda p: _res.append(p))
+_cap.failed.connect(lambda m: _res.append(m))
+QTimer.singleShot(8000, app.quit)
+_cap.finished_ok.connect(app.quit)
+_cap.failed.connect(lambda m: app.quit())
+_cap.start()
+app.exec()
+
+if _res and isinstance(_res[0], QPixmap):
+    _out = _res[0]
+    check("拼出了更长的图", _out.height() > VIEW,
+          f"{_out.width()}x{_out.height()}（视口 {W2}x{VIEW}）")
+    check(f"成图宽度裁掉了静止侧栏（应为 {W2 - SIDE} 上下）",
+          W2 - SIDE - 4 <= _out.width() <= W2 - SIDE + 1,
+          f"得到宽 {_out.width()}")
+else:
+    check("拼出了更长的图", False, f"结果={_res[:1]}")
 
 print()
 if failures:
