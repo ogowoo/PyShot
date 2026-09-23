@@ -802,6 +802,7 @@ class EditorWindow(QMainWindow):
     """FSCapture 风格编辑器主窗口。"""
 
     pin_requested = Signal(QPixmap)
+    session_dirty = Signal()      # 内容变了，提示主程序缓存会话
     capture_requested = Signal()   # 点顶栏"截图"按钮：去截下一张（会自动最小化编辑器）
 
     def __init__(self, pixmap: QPixmap | None = None, parent=None):
@@ -978,6 +979,22 @@ class EditorWindow(QMainWindow):
         self.menu_lang.aboutToShow.connect(self._rebuild_language_menu)
         m_opt.addMenu(self.menu_lang)
         m_opt.addSeparator()
+        self.act_restore = QAction(tr("启动时恢复上次的截图"), self)
+        self.act_restore.setCheckable(True)
+        try:
+            from session import session_enabled
+            self.act_restore.setChecked(session_enabled())
+        except Exception:                          # noqa: BLE001
+            self.act_restore.setChecked(True)
+        self.act_restore.setToolTip(
+            tr("重启后自动把上次编辑的截图放回来（存在缓存里，不需要你保存）"))
+        self.act_restore.toggled.connect(self._toggle_restore_session)
+        m_opt.addAction(self.act_restore)
+        m_opt.addSeparator()
+        self.act_clear_session = QAction(tr("清除上次的截图缓存"), self)
+        self.act_clear_session.triggered.connect(self._clear_session_cache)
+        m_opt.addAction(self.act_clear_session)
+        m_opt.addSeparator()
         self.act_default_wm = QAction(tr("编辑默认水印…"), self)
         self.act_default_wm.triggered.connect(self.edit_default_watermark)
         m_opt.addAction(self.act_default_wm)
@@ -1059,6 +1076,24 @@ class EditorWindow(QMainWindow):
                "编辑器：多标签标注 · 水印 · 加边框（含手撕纸）· 三语界面",
                APP_VERSION))
 
+    def _toggle_restore_session(self, on: bool):
+        try:
+            from session import clear_session, set_session_enabled
+            set_session_enabled(bool(on))
+            if not on:
+                clear_session()
+        except Exception:                          # noqa: BLE001
+            pass
+
+    def _clear_session_cache(self):
+        """手动清掉上次的截图缓存（不影响当前打开的标签）。"""
+        try:
+            from session import clear_session
+            clear_session()
+            self.statusBar().showMessage(tr("已清除上次的截图缓存"), 3000)
+        except Exception:                          # noqa: BLE001
+            pass
+
     def edit_default_watermark(self):
         """编辑"新截图自动加的水印"（不作用于当前标签）。"""
         from watermark import WatermarkDialog, load_default
@@ -1103,6 +1138,38 @@ class EditorWindow(QMainWindow):
         canvas = self.canvas
         if canvas is not None and scroll is not None:
             _fit_canvas(self, canvas, scroll)
+
+    # ---------- 会话（记住上次的截图）----------
+    def session_tabs(self) -> list:
+        """导出本窗口所有标签（底图 + 标注 + 缩放 + 标题）。"""
+        out = []
+        for i in range(self.tabs.count()):
+            scroll = self.tabs.widget(i)
+            canvas = scroll.widget() if isinstance(scroll, QScrollArea) else None
+            if not isinstance(canvas, Canvas):
+                continue
+            out.append({"title": self.tabs.tabText(i),
+                        "zoom": float(canvas.zoom),
+                        "pixmap": canvas.base_pixmap,
+                        "shapes": list(canvas.shapes)})
+        return out
+
+    def restore_session(self, tabs: list):
+        """把上次的标签放回来（含标注）。"""
+        for tab in tabs:
+            canvas = self.add_canvas(tab["pixmap"], tab.get("title"))
+            for sh in tab.get("shapes", []):
+                canvas.shapes.append(sh)
+            try:
+                canvas.set_zoom(float(tab.get("zoom", 1.0) or 1.0))
+            except Exception:                      # noqa: BLE001
+                pass
+            canvas.update()
+            canvas.shapes_changed.emit()
+
+    def notify_session_saved(self):
+        """让主程序知道"内容变了，该更新会话缓存了"。"""
+        self.session_dirty.emit()
 
     def add_canvas(self, pixmap: QPixmap, title: str | None = None) -> Canvas:
         """新增一个截图标签页并切换过去。"""
@@ -1154,6 +1221,7 @@ class EditorWindow(QMainWindow):
         except Exception:                      # noqa: BLE001
             pass
         self._update_empty_state()             # 有标签了：收起空状态、放开菜单
+        self.session_dirty.emit()
         return canvas
 
     def retranslate(self):

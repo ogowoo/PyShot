@@ -547,6 +547,13 @@ EN = {
         "Drag to move the view (look around once zoomed in); middle-drag or hold Space works with any tool",
     "px\n滚轮/Ctrl+滚轮 缩放 · 中键或空格拖动查看":
         "px\nWheel / Ctrl+wheel to zoom · middle-drag or Space to pan",
+    "启动时恢复上次的截图": "Restore last captures on startup",
+    "重启后自动把上次编辑的截图放回来（存在缓存里，不需要你保存）":
+        "Bring back your last captures automatically after a restart (kept in a cache — no need to save)",
+    "清除上次的截图缓存": "Clear last-capture cache",
+    "已清除上次的截图缓存": "Last-capture cache cleared",
+    "PyShot 已启动（恢复了 {} 张上次的截图）":
+        "PyShot started (restored {} capture(s))",
 }
 
 

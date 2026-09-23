@@ -350,6 +350,11 @@ class PyShotApp(QObject):
             self._deferred(self.capture_region, delay=30)
 
     def shutdown(self):
+        # 退出前把编辑器里的截图存进会话缓存（用户不需要手动保存）
+        try:
+            self.save_session_now()
+        except Exception:                          # noqa: BLE001
+            pass
         if getattr(self, "_hotkeys", None):
             user32 = ctypes.windll.user32
             for hid in self._hotkeys:
@@ -694,10 +699,11 @@ class PyShotApp(QObject):
         else:
             print(f"[{title}] {msg}")
 
-    def notify_ready(self):
+    def notify_ready(self, restored: int = 0):
         """启动就绪提示（整个启动过程只弹这一条）。
 
         把热键、托盘用法、退出方式一次说清，避免"启动"和"就绪"两条气泡。
+        恢复了上次的截图时，在标题上提一句。
         """
         if not self._hotkey_ok:
             tried = "、".join(DEFAULT_HOTKEYS)
@@ -707,8 +713,10 @@ class PyShotApp(QObject):
                 tr("可用环境变量 PYSHOT_HOTKEY 指定其他组合，"
                    "例如 PYSHOT_HOTKEY=ctrl+alt+j"))
             return
+        title = (tr("PyShot 已启动（恢复了 {} 张上次的截图）").format(restored)
+                 if restored else tr("PyShot 已启动"))
         self._notify(
-            tr("PyShot 已启动"),
+            title,
             tr("按 {} 框选截图，或双击托盘图标。\n", self.hotkey_text) +
             tr("右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n"
                "找不到图标时点任务栏右侧的 ∧ 展开。"))
@@ -723,6 +731,65 @@ class PyShotApp(QObject):
         if pix.isNull():
             return
         self.open_editor(pix)
+
+    # ---------- 会话（记住上次的截图，重启后还在）----------
+    def _hook_session(self, editor):
+        """编辑器内容变化时（防抖）把会话写到磁盘。"""
+        editor.session_dirty.connect(self._schedule_session_save)
+        for i in range(editor.tabs.count()):
+            scroll = editor.tabs.widget(i)
+            canvas = scroll.widget() if hasattr(scroll, "widget") else None
+            if canvas is not None and hasattr(canvas, "shapes_changed"):
+                canvas.shapes_changed.connect(self._schedule_session_save)
+
+    def _schedule_session_save(self):
+        """延迟 1.5 秒写盘：连续操作只写一次，也不阻塞界面。"""
+        if getattr(self, "_session_timer", None) is None:
+            self._session_timer = QTimer()
+            self._session_timer.setSingleShot(True)
+            self._session_timer.timeout.connect(self.save_session_now)
+        self._session_timer.start(1500)
+
+    def save_session_now(self):
+        """把所有编辑器的标签写进会话缓存（用户不用手动保存）。"""
+        from session import save_session, session_enabled
+        if not session_enabled():
+            return False
+        tabs = []
+        for ed in list(self.editors):
+            try:
+                tabs.extend(ed.session_tabs())
+            except Exception:                      # noqa: BLE001
+                continue
+        return save_session(tabs)
+
+    def restore_session(self):
+        """启动时恢复上次的截图（有内容才显示编辑器）。"""
+        from session import load_session, session_enabled
+        if not session_enabled():
+            return 0
+        tabs = load_session()
+        if not tabs:
+            return 0
+        editor = self._create_editor()
+        self._hook_session(editor)
+        editor.restore_session(tabs)
+        editor.show()
+        editor.raise_()
+        editor.activateWindow()
+        return len(tabs)
+
+    def toggle_restore_session(self):
+        """选项：启动时是否恢复上次截图。"""
+        from session import (clear_session, session_enabled,
+                             set_session_enabled)
+        on = not session_enabled()
+        set_session_enabled(on)
+        if not on:
+            clear_session()
+        else:
+            self.save_session_now()
+        return on
 
     def show_editor(self):
         """显示编辑器：已有窗口就提到前台，没有就**直接开一个空白的**。
@@ -752,8 +819,9 @@ class PyShotApp(QObject):
         editor.pin_requested.connect(
             lambda pix: self.pin_pixmap(pix, QCursor.pos()))
         editor.capture_requested.connect(self.capture_region)
+        self._hook_session(editor)
         if hasattr(editor, "set_hotkey_hint"):
-            editor.set_hotkey_hint(self.hotkey_text)
+            editor.set_hotkey_hint(getattr(self, "hotkey_text", "") or "")
         self.editors.append(editor)
         return editor
 
@@ -821,7 +889,12 @@ def main():
         core.capture_region()
     else:
         # 正常启动：只驻留托盘，不自动开始截图（避免启动就被全屏覆盖层挡住而以为卡死）
-        core.notify_ready()
+        restored = 0
+        try:
+            restored = core.restore_session()      # 恢复上次的截图（有才显示编辑器）
+        except Exception:                          # noqa: BLE001
+            restored = 0
+        core.notify_ready(restored)
 
     sys.exit(app.exec())
 

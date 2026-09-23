@@ -85,6 +85,7 @@ TABLE = {
     "全屏 ": ("全螢幕 ", ""),
     "热键（{}）都被占用，请双击托盘图标截图。\n": ("快速鍵（{}）都被佔用，請雙擊托盤圖示截圖。\n", "Hotkeys ({}) are all taken — double-click the tray icon to capture.\n"),
     "可用环境变量 PYSHOT_HOTKEY 指定其他组合，例如 PYSHOT_HOTKEY=ctrl+alt+j": ("可用環境變數 PYSHOT_HOTKEY 指定其他組合，例如 PYSHOT_HOTKEY=ctrl+alt+j", "Set PYSHOT_HOTKEY to pick another combination, e.g. PYSHOT_HOTKEY=ctrl+alt+j"),
+    "PyShot 已启动（恢复了 {} 张上次的截图）": ("PyShot 已啟動（恢複了 {} 張上次的截圖）", "PyShot started (restored {} capture(s))"),
     "显示器 {}": ("顯示器 {}", "Monitor {}"),
     "打开编辑器失败": ("開啟編輯器失敗", "Could not open the editor"),
     "全屏截图失败": ("全螢幕截圖失敗", "Full-screen capture failed"),
@@ -143,6 +144,9 @@ TABLE = {
     "水印…": ("水印…", "Watermark…"),
     "边框…": ("邊框…", "Border…"),
     "选项": ("選項", "Options"),
+    "启动时恢复上次的截图": ("啟動時恢複上次的截圖", "Restore last captures on startup"),
+    "重启后自动把上次编辑的截图放回来（存在缓存里，不需要你保存）": ("重啟後自動把上次編輯的截圖放回來（存在緩存裡，不需要你儲存）", "Bring back your last captures automatically after a restart (kept in a cache — no need to save)"),
+    "清除上次的截图缓存": ("清除上次的截圖緩存", "Clear last-capture cache"),
     "编辑默认水印…": ("編輯預設水印…", "Edit Default Watermark…"),
     "编辑默认边框…": ("編輯預設邊框…", "Edit Default Border…"),
     "帮助": ("幫助", "Help"),
@@ -177,6 +181,7 @@ TABLE = {
     "已设为默认水印（本次运行有效，配置写入失败）": ("已設為預設水印（本次運行有效，配置寫入失敗）", "Saved as the default watermark for this session (config write failed)"),
     "保存截图": ("儲存截圖", "Save Capture"),
     "PNG 图片 (*.png);;JPEG 图片 (*.jpg);;BMP 图片 (*.bmp)": ("PNG 圖片 (*.png);;JPEG 圖片 (*.jpg);;BMP 圖片 (*.bmp)", "PNG image (*.png);;JPEG image (*.jpg);;BMP image (*.bmp)"),
+    "已清除上次的截图缓存": ("已清除上次的截圖緩存", "Last-capture cache cleared"),
     "已设为默认边框，之后每次新截图会自动加": ("已設為預設邊框，之後每次新截圖會自動加", "Saved as the default border; it will be added automatically"),
     "滚轮/Ctrl+滚轮 缩放 · 中键或空格拖动查看": ("滾輪/Ctrl+滾輪 縮放 · 中鍵或空格拖動查看", "Wheel / Ctrl+wheel to zoom · middle-drag or Space to pan"),
     "线宽": ("線寬", "Width"),
@@ -516,6 +521,273 @@ def coverage() -> tuple:
     zh_tw = sum(1 for v in TABLE.values() if v[0])
     en = sum(1 for v in TABLE.values() if v[1])
     return total, zh_tw, en
+
+
+# ========================================================================
+# 来自 session.py
+# ========================================================================
+# -*- coding: utf-8 -*-
+"""session.py —— 记住上次的截图（重启后还在，但**不需要你手动保存**）。
+
+设计
+====
+- 关软件/崩溃前，把编辑器里的标签页（底图 + 标注 + 缩放 + 标题）悄悄写到
+  `~/.pyshot/session/`；下次启动自动恢复，不弹"要不要保存"。
+- 它**不是**用户文件：不占用户目录、不生成"另存为"对话框；被恢复的标签仍然是
+  未保存状态，用户想留就自己 Ctrl+S。
+- 只保留**最后一次**会话（每次写入先清空，避免越积越多）；限制标签数与总大小。
+
+存储结构::
+
+    ~/.pyshot/session/session.json     # 会话描述（含每个标签的图形）
+    ~/.pyshot/session/tab0.png         # 每个标签的底图（无损）
+
+为什么连图形一起存：只存拼好的图会把标注"焊死"，恢复后就没法再改了。
+"""
+import json
+import shutil
+from pathlib import Path
+
+from PySide6.QtCore import QPointF, QRectF, QSize
+from PySide6.QtGui import QColor, QPixmap
+
+SESSION_DIR = Path.home() / ".pyshot" / "session"
+SESSION_SETTINGS_PATH = Path.home() / ".pyshot" / "settings.json"
+MAX_TABS = 12                       # 最多恢复这么多标签
+MAX_BYTES = 120 * 1024 * 1024       # 底图总量上限（约 120MB）
+
+
+# ---------------------------------------------------------------- 设置开关
+
+def _load_session_settings() -> dict:
+    try:
+        with open(SESSION_SETTINGS_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:                              # noqa: BLE001
+        return {}
+
+
+def _save_session_settings(data: dict) -> bool:
+    try:
+        SESSION_SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(SESSION_SETTINGS_PATH, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception:                              # noqa: BLE001
+        return False
+
+
+def session_enabled() -> bool:
+    """是否在启动时恢复上次的截图（默认开）。"""
+    return bool(_load_session_settings().get("restore_session", True))
+
+
+def set_session_enabled(on: bool) -> bool:
+    data = _load_session_settings()
+    data["restore_session"] = bool(on)
+    return _save_session_settings(data)
+
+
+# ---------------------------------------------------------------- 图形序列化
+
+def shape_to_dict(shape) -> dict:
+    """把标注图形转成 JSON 可存的结构（按类名分派）。"""
+
+
+    def pt(p):
+        return [round(float(p.x()), 2), round(float(p.y()), 2)]
+
+    base = {"t": type(shape).__name__, "color": shape.color.name(),
+            "w": int(shape.width)}
+    if isinstance(shape, WatermarkShape):
+        base.pop("color", None)
+        base.pop("w", None)
+        base["settings"] = dict(shape.settings)
+        base["size"] = [shape.image_size.width(), shape.image_size.height()]
+        if shape.offset is not None:
+            base["offset"] = pt(shape.offset)
+        return base
+    if isinstance(shape, (EllipseShape, RectShape)):
+        base["rect"] = [shape.rect.x(), shape.rect.y(),
+                        shape.rect.width(), shape.rect.height()]
+        base["ellipse"] = isinstance(shape, EllipseShape)
+        base["fill"] = bool(getattr(shape, "fill", False))
+        return base
+    if isinstance(shape, HighlightShape):
+        base["rect"] = [shape.rect.x(), shape.rect.y(),
+                        shape.rect.width(), shape.rect.height()]
+        return base
+    if isinstance(shape, MosaicShape):
+        base["rect"] = [shape.rect.x(), shape.rect.y(),
+                        shape.rect.width(), shape.rect.height()]
+        return base
+    if isinstance(shape, ArrowShape):
+        base["p1"], base["p2"] = pt(shape.p1), pt(shape.p2)
+        return base
+    if isinstance(shape, LineShape):
+        base["p1"], base["p2"] = pt(shape.p1), pt(shape.p2)
+        return base
+    if isinstance(shape, PenShape):
+        base["points"] = [pt(p) for p in shape.points]
+        return base
+    if isinstance(shape, TextShape):
+        base["pos"] = pt(shape.pos)
+        base["text"] = shape.text
+        base["font_size"] = int(shape.font_size)
+        return base
+    if isinstance(shape, StepShape):
+        base["center"] = pt(shape.center)
+        base["number"] = int(shape.number)
+        base["diameter"] = float(shape.diameter)
+        return base
+    return {}                                      # 认不出来就不存（跳过）
+
+
+def shape_from_dict(d: dict):
+    """反序列化：认不出来返回 None。"""
+
+    t = d.get("t")
+    color = QColor(d.get("color", "#e53935"))
+    w = int(d.get("w", 3))
+
+    def pt(seq):
+        return QPointF(float(seq[0]), float(seq[1]))
+
+    try:
+        if t == "WatermarkShape":
+            size = d.get("size") or [640, 400]
+            off = pt(d["offset"]) if d.get("offset") else None
+            return WatermarkShape(d.get("settings", {}), QSize(int(size[0]),
+                                                              int(size[1])),
+                                  off)
+        if t == "EllipseShape":
+            r = d["rect"]
+            return EllipseShape(color, w, QRectF(*[float(v) for v in r]),
+                                bool(d.get("fill", False)))
+        if t == "RectShape":
+            r = d["rect"]
+            return RectShape(color, w, QRectF(*[float(v) for v in r]),
+                             bool(d.get("fill", False)))
+        if t == "HighlightShape":
+            return HighlightShape(color, w, QRectF(*[float(v) for v in d["rect"]]))
+        if t == "MosaicShape":
+            return MosaicShape(color, w, QRectF(*[float(v) for v in d["rect"]]))
+        if t == "ArrowShape":
+            return ArrowShape(color, w, pt(d["p1"]), pt(d["p2"]))
+        if t == "LineShape":
+            return LineShape(color, w, pt(d["p1"]), pt(d["p2"]))
+        if t == "PenShape":
+            return PenShape(color, w, [pt(p) for p in d.get("points", [])])
+        if t == "TextShape":
+            return TextShape(color, w, pt(d["pos"]), d.get("text", ""),
+                             int(d.get("font_size", 20)))
+        if t == "StepShape":
+            return StepShape(color, w, pt(d["center"]), int(d.get("number", 1)),
+                             0, float(d.get("diameter", 36)))
+    except Exception:                              # noqa: BLE001
+        return None
+    return None
+
+
+# ---------------------------------------------------------------- 保存 / 读取
+
+def _clear_dir():
+    try:
+        if SESSION_DIR.exists():
+            shutil.rmtree(SESSION_DIR, ignore_errors=True)
+    except Exception:                              # noqa: BLE001
+        pass
+
+
+def clear_session():
+    """清掉上次的会话（用户关掉所有标签或主动清除时调用）。"""
+    _clear_dir()
+
+
+def has_session() -> bool:
+    return (SESSION_DIR / "session.json").exists()
+
+
+def save_session(tabs: list) -> bool:
+    """保存会话。tabs: [{title, zoom, pixmap, shapes:[Shape]}, ...]"""
+    tabs = [t for t in tabs if t.get("pixmap") is not None][:MAX_TABS]
+    if not tabs:
+        clear_session()
+        return True
+    try:
+        SESSION_DIR.mkdir(parents=True, exist_ok=True)
+    except Exception:                              # noqa: BLE001
+        return False
+
+    # 先写到临时目录再整体替换，避免写到一半崩掉留下坏会话
+    tmp = SESSION_DIR.with_name("session.tmp")
+    shutil.rmtree(tmp, ignore_errors=True)
+    try:
+        tmp.mkdir(parents=True, exist_ok=True)
+        total = 0
+        items = []
+        for i, tab in enumerate(tabs):
+            pix = tab["pixmap"]
+            name = f"tab{i}.png"
+            path = tmp / name
+            if not pix.save(str(path), "PNG"):
+                continue
+            total += path.stat().st_size
+            if total > MAX_BYTES:
+                path.unlink(missing_ok=True)
+                break
+            shapes = []
+            for sh in tab.get("shapes", []):
+                d = shape_to_dict(sh)
+                if d:
+                    shapes.append(d)
+            items.append({"title": tab.get("title") or f"截图 {i + 1}",
+                          "zoom": float(tab.get("zoom", 1.0)),
+                          "dpr": float(pix.devicePixelRatio() or 1.0),
+                          "file": name,
+                          "shapes": shapes})
+        meta = {"version": 1, "tabs": items}
+        with open(tmp / "session.json", "w", encoding="utf-8") as f:
+            json.dump(meta, f, ensure_ascii=False)
+        # 原子替换
+        _clear_dir()
+        tmp.rename(SESSION_DIR)
+        return True
+    except Exception:                              # noqa: BLE001
+        shutil.rmtree(tmp, ignore_errors=True)
+        return False
+
+
+def load_session() -> list:
+    """读回上次的会话；返回 [{title, zoom, pixmap, shapes}, ...]。"""
+    meta_path = SESSION_DIR / "session.json"
+    if not meta_path.exists():
+        return []
+    try:
+        with open(meta_path, encoding="utf-8") as f:
+            meta = json.load(f)
+    except Exception:                              # noqa: BLE001
+        return []
+    out = []
+    for item in meta.get("tabs", [])[:MAX_TABS]:
+        path = SESSION_DIR / str(item.get("file", ""))
+        if not path.exists():
+            continue
+        pix = QPixmap(str(path))
+        if pix.isNull():
+            continue
+        dpr = float(item.get("dpr") or 1.0)
+        pix.setDevicePixelRatio(dpr)
+        shapes = []
+        for d in item.get("shapes", []):
+            sh = shape_from_dict(d)
+            if sh is not None:
+                shapes.append(sh)
+        out.append({"title": item.get("title") or "截图",
+                    "zoom": float(item.get("zoom", 1.0)),
+                    "pixmap": pix, "shapes": shapes})
+    return out
 
 
 # ========================================================================
@@ -5681,6 +5953,7 @@ class EditorWindow(QMainWindow):
     """FSCapture 风格编辑器主窗口。"""
 
     pin_requested = Signal(QPixmap)
+    session_dirty = Signal()      # 内容变了，提示主程序缓存会话
     capture_requested = Signal()   # 点顶栏"截图"按钮：去截下一张（会自动最小化编辑器）
 
     def __init__(self, pixmap: QPixmap | None = None, parent=None):
@@ -5857,6 +6130,22 @@ class EditorWindow(QMainWindow):
         self.menu_lang.aboutToShow.connect(self._rebuild_language_menu)
         m_opt.addMenu(self.menu_lang)
         m_opt.addSeparator()
+        self.act_restore = QAction(tr("启动时恢复上次的截图"), self)
+        self.act_restore.setCheckable(True)
+        try:
+
+            self.act_restore.setChecked(session_enabled())
+        except Exception:                          # noqa: BLE001
+            self.act_restore.setChecked(True)
+        self.act_restore.setToolTip(
+            tr("重启后自动把上次编辑的截图放回来（存在缓存里，不需要你保存）"))
+        self.act_restore.toggled.connect(self._toggle_restore_session)
+        m_opt.addAction(self.act_restore)
+        m_opt.addSeparator()
+        self.act_clear_session = QAction(tr("清除上次的截图缓存"), self)
+        self.act_clear_session.triggered.connect(self._clear_session_cache)
+        m_opt.addAction(self.act_clear_session)
+        m_opt.addSeparator()
         self.act_default_wm = QAction(tr("编辑默认水印…"), self)
         self.act_default_wm.triggered.connect(self.edit_default_watermark)
         m_opt.addAction(self.act_default_wm)
@@ -5937,6 +6226,24 @@ class EditorWindow(QMainWindow):
                "编辑器：多标签标注 · 水印 · 加边框（含手撕纸）· 三语界面",
                APP_VERSION))
 
+    def _toggle_restore_session(self, on: bool):
+        try:
+
+            set_session_enabled(bool(on))
+            if not on:
+                clear_session()
+        except Exception:                          # noqa: BLE001
+            pass
+
+    def _clear_session_cache(self):
+        """手动清掉上次的截图缓存（不影响当前打开的标签）。"""
+        try:
+
+            clear_session()
+            self.statusBar().showMessage(tr("已清除上次的截图缓存"), 3000)
+        except Exception:                          # noqa: BLE001
+            pass
+
     def edit_default_watermark(self):
         """编辑"新截图自动加的水印"（不作用于当前标签）。"""
 
@@ -5981,6 +6288,38 @@ class EditorWindow(QMainWindow):
         canvas = self.canvas
         if canvas is not None and scroll is not None:
             _fit_canvas(self, canvas, scroll)
+
+    # ---------- 会话（记住上次的截图）----------
+    def session_tabs(self) -> list:
+        """导出本窗口所有标签（底图 + 标注 + 缩放 + 标题）。"""
+        out = []
+        for i in range(self.tabs.count()):
+            scroll = self.tabs.widget(i)
+            canvas = scroll.widget() if isinstance(scroll, QScrollArea) else None
+            if not isinstance(canvas, Canvas):
+                continue
+            out.append({"title": self.tabs.tabText(i),
+                        "zoom": float(canvas.zoom),
+                        "pixmap": canvas.base_pixmap,
+                        "shapes": list(canvas.shapes)})
+        return out
+
+    def restore_session(self, tabs: list):
+        """把上次的标签放回来（含标注）。"""
+        for tab in tabs:
+            canvas = self.add_canvas(tab["pixmap"], tab.get("title"))
+            for sh in tab.get("shapes", []):
+                canvas.shapes.append(sh)
+            try:
+                canvas.set_zoom(float(tab.get("zoom", 1.0) or 1.0))
+            except Exception:                      # noqa: BLE001
+                pass
+            canvas.update()
+            canvas.shapes_changed.emit()
+
+    def notify_session_saved(self):
+        """让主程序知道"内容变了，该更新会话缓存了"。"""
+        self.session_dirty.emit()
 
     def add_canvas(self, pixmap: QPixmap, title: str | None = None) -> Canvas:
         """新增一个截图标签页并切换过去。"""
@@ -6032,6 +6371,7 @@ class EditorWindow(QMainWindow):
         except Exception:                      # noqa: BLE001
             pass
         self._update_empty_state()             # 有标签了：收起空状态、放开菜单
+        self.session_dirty.emit()
         return canvas
 
     def retranslate(self):
@@ -7018,6 +7358,11 @@ class PyShotApp(QObject):
             self._deferred(self.capture_region, delay=30)
 
     def shutdown(self):
+        # 退出前把编辑器里的截图存进会话缓存（用户不需要手动保存）
+        try:
+            self.save_session_now()
+        except Exception:                          # noqa: BLE001
+            pass
         if getattr(self, "_hotkeys", None):
             user32 = ctypes.windll.user32
             for hid in self._hotkeys:
@@ -7362,10 +7707,11 @@ class PyShotApp(QObject):
         else:
             print(f"[{title}] {msg}")
 
-    def notify_ready(self):
+    def notify_ready(self, restored: int = 0):
         """启动就绪提示（整个启动过程只弹这一条）。
 
         把热键、托盘用法、退出方式一次说清，避免"启动"和"就绪"两条气泡。
+        恢复了上次的截图时，在标题上提一句。
         """
         if not self._hotkey_ok:
             tried = "、".join(DEFAULT_HOTKEYS)
@@ -7375,8 +7721,10 @@ class PyShotApp(QObject):
                 tr("可用环境变量 PYSHOT_HOTKEY 指定其他组合，"
                    "例如 PYSHOT_HOTKEY=ctrl+alt+j"))
             return
+        title = (tr("PyShot 已启动（恢复了 {} 张上次的截图）").format(restored)
+                 if restored else tr("PyShot 已启动"))
         self._notify(
-            tr("PyShot 已启动"),
+            title,
             tr("按 {} 框选截图，或双击托盘图标。\n", self.hotkey_text) +
             tr("右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n"
                "找不到图标时点任务栏右侧的 ∧ 展开。"))
@@ -7391,6 +7739,64 @@ class PyShotApp(QObject):
         if pix.isNull():
             return
         self.open_editor(pix)
+
+    # ---------- 会话（记住上次的截图，重启后还在）----------
+    def _hook_session(self, editor):
+        """编辑器内容变化时（防抖）把会话写到磁盘。"""
+        editor.session_dirty.connect(self._schedule_session_save)
+        for i in range(editor.tabs.count()):
+            scroll = editor.tabs.widget(i)
+            canvas = scroll.widget() if hasattr(scroll, "widget") else None
+            if canvas is not None and hasattr(canvas, "shapes_changed"):
+                canvas.shapes_changed.connect(self._schedule_session_save)
+
+    def _schedule_session_save(self):
+        """延迟 1.5 秒写盘：连续操作只写一次，也不阻塞界面。"""
+        if getattr(self, "_session_timer", None) is None:
+            self._session_timer = QTimer()
+            self._session_timer.setSingleShot(True)
+            self._session_timer.timeout.connect(self.save_session_now)
+        self._session_timer.start(1500)
+
+    def save_session_now(self):
+        """把所有编辑器的标签写进会话缓存（用户不用手动保存）。"""
+
+        if not session_enabled():
+            return False
+        tabs = []
+        for ed in list(self.editors):
+            try:
+                tabs.extend(ed.session_tabs())
+            except Exception:                      # noqa: BLE001
+                continue
+        return save_session(tabs)
+
+    def restore_session(self):
+        """启动时恢复上次的截图（有内容才显示编辑器）。"""
+
+        if not session_enabled():
+            return 0
+        tabs = load_session()
+        if not tabs:
+            return 0
+        editor = self._create_editor()
+        self._hook_session(editor)
+        editor.restore_session(tabs)
+        editor.show()
+        editor.raise_()
+        editor.activateWindow()
+        return len(tabs)
+
+    def toggle_restore_session(self):
+        """选项：启动时是否恢复上次截图。"""
+
+        on = not session_enabled()
+        set_session_enabled(on)
+        if not on:
+            clear_session()
+        else:
+            self.save_session_now()
+        return on
 
     def show_editor(self):
         """显示编辑器：已有窗口就提到前台，没有就**直接开一个空白的**。
@@ -7420,8 +7826,9 @@ class PyShotApp(QObject):
         editor.pin_requested.connect(
             lambda pix: self.pin_pixmap(pix, QCursor.pos()))
         editor.capture_requested.connect(self.capture_region)
+        self._hook_session(editor)
         if hasattr(editor, "set_hotkey_hint"):
-            editor.set_hotkey_hint(self.hotkey_text)
+            editor.set_hotkey_hint(getattr(self, "hotkey_text", "") or "")
         self.editors.append(editor)
         return editor
 
@@ -7489,7 +7896,12 @@ def main():
         core.capture_region()
     else:
         # 正常启动：只驻留托盘，不自动开始截图（避免启动就被全屏覆盖层挡住而以为卡死）
-        core.notify_ready()
+        restored = 0
+        try:
+            restored = core.restore_session()      # 恢复上次的截图（有才显示编辑器）
+        except Exception:                          # noqa: BLE001
+            restored = 0
+        core.notify_ready(restored)
 
     sys.exit(app.exec())
 

@@ -93,9 +93,12 @@ check("视图菜单项齐全",
       str(items(ed.menus["view"])))
 check("特效菜单项（和 FSCapture 一致：水印/边框）",
       items(ed.menus["fx"]) == ["水印…", "边框…"], str(items(ed.menus["fx"])))
-check("选项菜单含语言与默认水印/边框",
-      items(ed.menus["options"]) == ["语言", "编辑默认水印…", "编辑默认边框…"],
+check("选项菜单含语言/会话恢复/默认水印边框",
+      items(ed.menus["options"]) == [
+          "语言", "启动时恢复上次的截图", "清除上次的截图缓存",
+          "编辑默认水印…", "编辑默认边框…"],
       str(items(ed.menus["options"])))
+check("会话恢复开关可勾选", ed.act_restore.isCheckable())
 
 # 快捷键
 check("打开图片有 Ctrl+O", ed.act_open_img.shortcut().toString() == "Ctrl+O",
