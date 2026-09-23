@@ -19,6 +19,8 @@ os.environ["PYSHOT_SKIP_DEPS"] = "1"
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
+from PySide6.QtCore import QPointF, Qt
+from PySide6.QtGui import QKeyEvent, QMouseEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
@@ -87,6 +89,69 @@ try:
     check("恢复（enable=False）总是成功", r2 is True)
 except Exception as e:                              # noqa: BLE001
     check("exclude_from_capture 不抛异常", False, f"{type(e).__name__}: {e}")
+
+
+# ---------- 底图还没回来时，交互不能被卡死（遮罩卡住就是这么来的）----------
+ov4 = new_overlay()
+ov4._can_exclude = True
+ov4.start("region")
+check("先显示后抓屏期间底图确实是空的", ov4._bg is None)
+
+# 兜底必须照常干活（以前它因为 _bg 为空直接 return，导致遮罩没铺好）
+geo_before = ov4.geometry()
+ov4._ensure_cover()
+check("底图为空时 _ensure_cover 仍然修几何", ov4.geometry() == ov4._geo
+      or ov4.geometry() == geo_before)
+
+# 右键取消必须永远可用
+pos = QPointF(50, 50)
+ov4._bg = None                      # 人为退回"还没抓到"的状态
+e = QMouseEvent(QMouseEvent.MouseButtonPress, pos, pos, Qt.RightButton,
+                Qt.RightButton, Qt.NoModifier)
+ov4.mousePressEvent(e)
+check("底图没回来时右键也能取消", ov4._active is False)
+
+# 左键按下去会就地补底图，不会把操作吞掉
+ov5 = new_overlay()
+ov5._can_exclude = True
+ov5.start("region")
+ov5._bg = None
+e = QMouseEvent(QMouseEvent.MouseButtonPress, pos, pos, Qt.LeftButton,
+                Qt.LeftButton, Qt.NoModifier)
+ov5.mousePressEvent(e)
+check("底图没回来时左键按下会就地补底图", ov5._bg is not None)
+check("补上的是有效图（抓不到也给兜底图）",
+      ov5._bg is not None and not ov5._bg.isNull())
+ov5.finish()
+
+# 抓屏彻底失败时也要给兜底图，不能留 None
+ov6 = new_overlay()
+ov6._can_exclude = True
+ov6.start("region")
+ov6._bg = None
+ov6._img = None
+saved = ov6.screen
+class _Boom:
+    def grabWindow(self, *a):
+        raise RuntimeError("模拟抓屏失败")
+    def geometry(self):
+        return saved.geometry()
+    def devicePixelRatio(self):
+        return 1.0
+ov6.screen = _Boom()
+ov6._ensure_bg()
+check("抓屏失败时用兜底图，不留 None",
+      ov6._bg is not None and not ov6._bg.isNull())
+ov6.screen = saved
+ov6.finish()
+
+# Esc 一直可用
+ov7 = new_overlay()
+ov7._can_exclude = True
+ov7.start("region")
+ov7._bg = None
+ov7.keyPressEvent(QKeyEvent(QKeyEvent.KeyPress, Qt.Key_Escape, Qt.NoModifier))
+check("底图没回来时 Esc 也能取消", ov7._active is False)
 
 print()
 if failures:

@@ -819,6 +819,16 @@ class PyShotApp(QObject):
         另外：窗口被关掉后再点这里，如果新窗口是空的，就把会话缓存里的截图
         恢复回来 —— 否则用户会觉得"历史不见了"。
         """
+        # 保险：万有残留的截图遮罩（上次截图没正常结束），先收起来。
+        # 遮罩是全屏置顶的，不收掉的话编辑器开了也被它盖住，
+        # 用户看到的就是"点了显示编辑器但历史没出来"。
+        for ov in getattr(self, "_overlays", []):
+            try:
+                if ov.isVisible() or getattr(ov, "_active", False):
+                    ov.finish()
+            except Exception:                      # noqa: BLE001
+                pass
+        self.snipper = None
         if not self.editors:
             self._create_editor()
         if not self.editors:                # 无托盘等极端情况

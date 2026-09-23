@@ -241,16 +241,35 @@ class SnipperOverlay(QWidget):
         for delay in (0, 60, 160):       # 多次兜底：窗口映射完成后确保绘制 + 置顶
             QTimer.singleShot(delay, self._ensure_cover)
 
+    def _ensure_bg(self):
+        """确保底图已经就绪；没有就地抓一次，实在抓不到也要给一张兜底的。
+
+        交互（框选/取色）需要底图；"先显示遮罩、后抓屏"期间底图是空的，
+        这里保证不会因为底图没到就把用户的操作全部忽略（那会表现成遮罩没反应）。
+        """
+        if self._bg is not None and not self._bg.isNull():
+            return self._bg
+        try:
+            self._bg = self.screen.grabWindow(0)
+        except Exception:                          # noqa: BLE001
+            self._bg = None
+        if self._bg is None or self._bg.isNull():
+            # 兜底：纯色图，保证后续交互不会因为 None 崩掉/被忽略
+            pm = QPixmap(self._geo.size() if self._geo.isValid()
+                         else self.size())
+            pm.fill(QColor(24, 26, 32))
+            pm.setDevicePixelRatio(self.devicePixelRatioF() or 1.0)
+            self._bg = pm
+        self._img = self._bg.toImage()
+        self.update()
+        return self._bg
+
     def _grab_background(self):
         """抓本屏底图并回填（配合"先显示遮罩、后抓屏"）。"""
         if not self._active:
             return
         try:
-            self._bg = self.screen.grabWindow(0)
-            self._img = self._bg.toImage() if not self._bg.isNull() else None
-        except Exception:                          # noqa: BLE001
-            self._bg = None
-            self._img = None
+            self._ensure_bg()
         finally:
             # 抓完就恢复：遮罩只在"抓底图"这一瞬隐身，
             # 免得它对录屏工具/测试也一直不可见
@@ -260,7 +279,6 @@ class SnipperOverlay(QWidget):
                     exclude_from_capture(int(self.winId()), enable=False)
                 except Exception:                  # noqa: BLE001
                     pass
-        self.update()
 
     def finish(self):
         """结束本次截图会话：隐藏窗口但保留原生窗口，下次截图更快。"""
@@ -317,8 +335,13 @@ class SnipperOverlay(QWidget):
             self._point_pressed = False
 
     def _ensure_cover(self):
-        """兜底：确保覆盖层真的铺满虚拟桌面并且是画出来的。"""
-        if not self._active or self._bg is None or not self.isVisible():
+        """兜底：确保覆盖层真的铺满并且是画出来的。
+
+        注意：**不能**因为 _bg 还没抓回来就跳过 —— 抓屏是延后做的（先显示遮罩、
+        后抓底图），这里要是等 _bg，头几帧的兜底就全空转了，多屏/缩放下遮罩
+        可能压根没铺好（曾因此表现成"遮罩卡住不动"）。
+        """
+        if not self._active or not self.isVisible():
             return
         if self.geometry() != self._geo:
             self.setGeometry(self._geo)
@@ -346,13 +369,15 @@ class SnipperOverlay(QWidget):
 
     # ---------- 交互 ----------
     def mousePressEvent(self, e):
-        if not self._active or self._bg is None:   # 已结束：忽略残留事件
+        if not self._active:                       # 已结束：忽略残留事件
             return
+        # 右键/取消必须**永远**能用，不能因为底图还没抓回来就失灵
         if e.button() == Qt.RightButton:
             self._cancel()
             return
         if e.button() != Qt.LeftButton:
             return
+        self._ensure_bg()                          # 底图没到就补上，别忽略操作
         if self.mode == "color":
             color = self.color_at(e.position().toPoint())
             if color.isValid():
@@ -369,15 +394,18 @@ class SnipperOverlay(QWidget):
         self.update()
 
     def mouseMoveEvent(self, e):
-        if not self._active or self._bg is None:
+        if not self._active:
             return
+        if self._bg is None:
+            return                                 # 还没按下去，等底图即可
         self._current = e.position().toPoint()
         self.update()
 
     def mouseReleaseEvent(self, e):
-        if (not self._active or self._bg is None
-                or e.button() != Qt.LeftButton or not self._selecting):
+        if (not self._active or e.button() != Qt.LeftButton
+                or not self._selecting):
             return
+        self._ensure_bg()                          # 保证有底图可裁
         self._selecting = False
         rect = QRect(self._origin, self._current).normalized().intersected(self.rect())
         if rect.width() < 6 or rect.height() < 6:
