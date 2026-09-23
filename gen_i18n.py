@@ -179,6 +179,9 @@ EN = {
     "把编辑器窗口恢复到前台（取消截图后找不到编辑器时点这里）":
         "Bring the editor back to the front (use this if you lost it)",
     "退出 PyShot": "Exit PyShot",
+    "取消截图": "Cancel Capture",
+    "收起正在显示的截图遮罩（Esc / 再按一次热键也可以）":
+        "Dismiss the capture overlay (Esc or pressing the hotkey again also works)",
     "所有显示器拼成一张": "All Monitors as One Image",
     "把每块显示器按逻辑位置拼成一张长图":
         "Stitch every monitor into a single image",

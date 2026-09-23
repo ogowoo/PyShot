@@ -51,6 +51,8 @@ TABLE = {
     "显示编辑器": ("顯示編輯器", "Show Editor"),
     "直接打开编辑器窗口（空白也能用，从它的「文件」菜单打开图片）": ("直接開啟編輯器窗口（空白也能用，从它的「檔案」菜單開啟圖片）", "Open the editor window directly (works even when empty; use its File menu to open an image)"),
     "语言": ("語言", "Language"),
+    "取消截图": ("取消截圖", "Cancel Capture"),
+    "收起正在显示的截图遮罩（Esc / 再按一次热键也可以）": ("收起正在顯示的截圖遮罩（Esc / 再按一次快速鍵也可以）", "Dismiss the capture overlay (Esc or pressing the hotkey again also works)"),
     "退出 PyShot": ("結束 PyShot", "Exit PyShot"),
     "清理残留覆盖层后继续": ("清理残留覆蓋層後继續", ""),
     "按系统语言自动选择": ("按系統語言自動選擇", "Choose automatically from the system language"),
@@ -73,6 +75,7 @@ TABLE = {
     "{} 全屏截图": ("{} 全螢幕截圖", "{} Capture Full Screen"),
     "PyShot 截图工具\n{}\n双击图标截图": ("PyShot 截圖工具\n{}\n雙擊圖示截圖", "PyShot Screen Capture\n{}\nDouble-click the icon to capture"),
     "PyShot 截图工具\n双击图标截图 · 右键菜单": ("PyShot 截圖工具\n雙擊圖示截圖 · 右鍵菜單", "PyShot Screen Capture\nDouble-click to capture · right-click for the menu"),
+    "热键按下：取消进行中的截图": ("快速鍵按下：取消進行中的截圖", ""),
     "已有覆盖层在运行，忽略本次触发": ("已有覆蓋層在運行，忽略本次觸发", ""),
     "跟随系统": ("跟隨系統", "Follow system"),
     "主屏": ("主屏", "Primary"),
@@ -3251,6 +3254,12 @@ def _draw_hand(p, c):
     p.drawLine(QPointF(17, 13.5), QPointF(19, 11))
 
 
+def _draw_cancel(p, c):
+    """取消（圆圈加斜杠）。"""
+    p.drawEllipse(QPointF(12, 12), 8.0, 8.0)
+    p.drawLine(QPointF(6.4, 6.4), QPointF(17.6, 17.6))
+
+
 _ICON_DRAWERS = {
     "select": _draw_select, "rect": _draw_rect, "ellipse": _draw_ellipse,
     "line": _draw_line, "arrow": _draw_arrow, "pen": _draw_pen,
@@ -3259,7 +3268,7 @@ _ICON_DRAWERS = {
     "camera": _draw_camera, "undo": _draw_undo, "redo": _draw_redo,
     "monitor": _draw_monitor, "scroll": _draw_scroll, "image": _draw_image,
     "window": _draw_window, "pin": _draw_pin, "exit": _draw_exit,
-    "globe": _draw_globe, "hand": _draw_hand, "pan": _draw_hand,
+    "globe": _draw_globe, "hand": _draw_hand, "pan": _draw_hand, "cancel": _draw_cancel,
 }
 
 
@@ -3593,6 +3602,29 @@ def exclude_from_capture(hwnd: int, enable: bool = True) -> bool:
     except Exception:             # noqa: BLE001
         pass
     return False
+
+def force_foreground(hwnd: int) -> bool:
+    """把窗口抢到最前并争取键盘焦点（Windows 专用兜底）。
+
+    为什么需要：当本进程**没有任何可见窗口**时（例如用户刚把编辑器关掉），
+    新建的全屏置顶窗口有时拿不到前台激活 —— 窗口是画出来了，但收不到键盘
+    事件（Esc 失效），看起来就是"遮罩挡住了、怎么都关不掉"。
+    这里显式 SetWindowPos 置顶 + SetForegroundWindow。
+    """
+    try:
+        user32 = ctypes.windll.user32
+        HWND_TOPMOST = -1
+        SWP_NOMOVE = 0x0002
+        SWP_NOSIZE = 0x0001
+        SWP_SHOWWINDOW = 0x0040
+        user32.SetWindowPos(ctypes.c_void_p(hwnd), ctypes.c_void_p(HWND_TOPMOST),
+                            0, 0, 0, 0,
+                            SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW)
+        user32.SetForegroundWindow(ctypes.c_void_p(hwnd))
+        user32.SetActiveWindow(ctypes.c_void_p(hwnd))
+        return True
+    except Exception:                              # noqa: BLE001
+        return False
 
 
 # ========================================================================
@@ -3965,6 +3997,14 @@ class SnipperOverlay(QWidget):
         self.setGeometry(self._geo)      # show 之后再钉一次，避免首次出现时尺寸不对
         self.raise_()
         self.activateWindow()
+        # 关掉编辑器后本进程没有可见窗口，新建的置顶窗口可能拿不到前台激活，
+        # 于是 Esc/点击全落空（用户看到的就是"遮罩挡住了，怎么都关不掉"）。
+        # 这里用原生 API 再抢一次前台。
+        try:
+
+            force_foreground(int(self.winId()))
+        except Exception:                          # noqa: BLE001
+            pass
         # 注意：这里不能用 repaint() —— 对尚未映射完成的窗口强制同步绘制后，
         # Qt 不会再补一次绘制，窗口就会"在但没画出来"（动一下鼠标才出现）。
         self.update()
@@ -7503,6 +7543,11 @@ class PyShotApp(QObject):
         menu.addMenu(self.menu_lang)
 
         menu.addSeparator()
+        act_cancel = QAction(make_menu_icon("cancel"), tr("取消截图"), self.app)
+        act_cancel.setToolTip(tr("收起正在显示的截图遮罩（Esc / 再按一次热键也可以）"))
+        act_cancel.triggered.connect(lambda: self._deferred(self._cancel_capture))
+        menu.addAction(act_cancel)
+        menu.addSeparator()
         act_quit = QAction(make_menu_icon("exit"), tr("退出 PyShot"), self.app)
         act_quit.triggered.connect(self.app.quit)
         menu.addAction(act_quit)
@@ -7528,8 +7573,20 @@ class PyShotApp(QObject):
         # 否则构造托盘和 main() 会各弹一次，用户看到两个气泡。
 
     def _on_hotkey(self, hotkey_id=None):
-        """来自原生消息回调（WM_HOTKEY）——按热键 id 分发，延后一拍再动作。"""
+        """来自原生消息回调（WM_HOTKEY）——按热键 id 分发，延后一拍再动作。
+
+        逃生口：如果遮罩正开着（用户可能因为窗口没拿到焦点而按不动 Esc），
+        再按一次区域截图热键就**取消**这次截图。全局热键不依赖窗口焦点，
+        所以这是最可靠的退出方式。
+        """
         action = self._hotkey_actions.get(hotkey_id, "region")
+        if action != "fullscreen":
+            live = [ov for ov in getattr(self, "_overlays", [])
+                    if getattr(ov, "_active", False)]
+            if getattr(self, "snipper", None) is not None or live:
+                self._cap_log("热键按下：取消进行中的截图")
+                self._deferred(self._cancel_capture, delay=10)
+                return
         if action == "fullscreen":
             self._deferred(self.capture_fullscreen, delay=30)
         else:
@@ -7759,6 +7816,14 @@ class PyShotApp(QObject):
         self._on_snip_done()
         self._pending_scroll_region = None   # 取消时清掉滚动截图的待选状态
         self._finish_capture_session()
+
+    def _cancel_capture(self):
+        """取消当前截图（热键逃生口 / 托盘菜单都用它）。"""
+        try:
+            self._on_snip_done()
+            self._finish_capture_session()
+        except Exception:                          # noqa: BLE001
+            pass
 
     def _on_snip_done(self, *args):
         # 所有屏幕的覆盖层都要收起（多屏时可能有好几个）

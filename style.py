@@ -468,6 +468,12 @@ def _draw_hand(p, c):
     p.drawLine(QPointF(17, 13.5), QPointF(19, 11))
 
 
+def _draw_cancel(p, c):
+    """取消（圆圈加斜杠）。"""
+    p.drawEllipse(QPointF(12, 12), 8.0, 8.0)
+    p.drawLine(QPointF(6.4, 6.4), QPointF(17.6, 17.6))
+
+
 _ICON_DRAWERS = {
     "select": _draw_select, "rect": _draw_rect, "ellipse": _draw_ellipse,
     "line": _draw_line, "arrow": _draw_arrow, "pen": _draw_pen,
@@ -476,7 +482,7 @@ _ICON_DRAWERS = {
     "camera": _draw_camera, "undo": _draw_undo, "redo": _draw_redo,
     "monitor": _draw_monitor, "scroll": _draw_scroll, "image": _draw_image,
     "window": _draw_window, "pin": _draw_pin, "exit": _draw_exit,
-    "globe": _draw_globe, "hand": _draw_hand, "pan": _draw_hand,
+    "globe": _draw_globe, "hand": _draw_hand, "pan": _draw_hand, "cancel": _draw_cancel,
 }
 
 

@@ -304,3 +304,26 @@ def exclude_from_capture(hwnd: int, enable: bool = True) -> bool:
     except Exception:             # noqa: BLE001
         pass
     return False
+
+def force_foreground(hwnd: int) -> bool:
+    """把窗口抢到最前并争取键盘焦点（Windows 专用兜底）。
+
+    为什么需要：当本进程**没有任何可见窗口**时（例如用户刚把编辑器关掉），
+    新建的全屏置顶窗口有时拿不到前台激活 —— 窗口是画出来了，但收不到键盘
+    事件（Esc 失效），看起来就是"遮罩挡住了、怎么都关不掉"。
+    这里显式 SetWindowPos 置顶 + SetForegroundWindow。
+    """
+    try:
+        user32 = ctypes.windll.user32
+        HWND_TOPMOST = -1
+        SWP_NOMOVE = 0x0002
+        SWP_NOSIZE = 0x0001
+        SWP_SHOWWINDOW = 0x0040
+        user32.SetWindowPos(ctypes.c_void_p(hwnd), ctypes.c_void_p(HWND_TOPMOST),
+                            0, 0, 0, 0,
+                            SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW)
+        user32.SetForegroundWindow(ctypes.c_void_p(hwnd))
+        user32.SetActiveWindow(ctypes.c_void_p(hwnd))
+        return True
+    except Exception:                              # noqa: BLE001
+        return False

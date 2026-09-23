@@ -121,9 +121,9 @@ check("窗口项成组（打开图片/打开编辑器相邻）",
       names.index("打开图片编辑…") + 1 == names.index("显示编辑器"))
 check("退出在最后", names[-1] == "退出 PyShot", str(names[-1]))
 
-# 分组分隔线：5 条（截图|滚动、滚动|工具、工具|语言、语言|退出 …）
+# 分组分隔线：6 条（截图|滚动、滚动|工具、工具|语言、语言|取消、取消|退出）
 sep_count = sum(1 for t in top if t[2])
-check("分隔线数量合理（5 条）", sep_count == 5, f"{sep_count} 条")
+check("分隔线数量合理（6 条）", sep_count == 6, f"{sep_count} 条")
 check("有语言子菜单", "语言" in names, str(names))
 
 # ---------- 图标与快捷键显示 ----------

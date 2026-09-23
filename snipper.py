@@ -256,6 +256,14 @@ class SnipperOverlay(QWidget):
         self.setGeometry(self._geo)      # show 之后再钉一次，避免首次出现时尺寸不对
         self.raise_()
         self.activateWindow()
+        # 关掉编辑器后本进程没有可见窗口，新建的置顶窗口可能拿不到前台激活，
+        # 于是 Esc/点击全落空（用户看到的就是"遮罩挡住了，怎么都关不掉"）。
+        # 这里用原生 API 再抢一次前台。
+        try:
+            from capture_utils import force_foreground
+            force_foreground(int(self.winId()))
+        except Exception:                          # noqa: BLE001
+            pass
         # 注意：这里不能用 repaint() —— 对尚未映射完成的窗口强制同步绘制后，
         # Qt 不会再补一次绘制，窗口就会"在但没画出来"（动一下鼠标才出现）。
         self.update()

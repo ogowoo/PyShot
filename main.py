@@ -317,6 +317,11 @@ class PyShotApp(QObject):
         menu.addMenu(self.menu_lang)
 
         menu.addSeparator()
+        act_cancel = QAction(make_menu_icon("cancel"), tr("取消截图"), self.app)
+        act_cancel.setToolTip(tr("收起正在显示的截图遮罩（Esc / 再按一次热键也可以）"))
+        act_cancel.triggered.connect(lambda: self._deferred(self._cancel_capture))
+        menu.addAction(act_cancel)
+        menu.addSeparator()
         act_quit = QAction(make_menu_icon("exit"), tr("退出 PyShot"), self.app)
         act_quit.triggered.connect(self.app.quit)
         menu.addAction(act_quit)
@@ -342,8 +347,20 @@ class PyShotApp(QObject):
         # 否则构造托盘和 main() 会各弹一次，用户看到两个气泡。
 
     def _on_hotkey(self, hotkey_id=None):
-        """来自原生消息回调（WM_HOTKEY）——按热键 id 分发，延后一拍再动作。"""
+        """来自原生消息回调（WM_HOTKEY）——按热键 id 分发，延后一拍再动作。
+
+        逃生口：如果遮罩正开着（用户可能因为窗口没拿到焦点而按不动 Esc），
+        再按一次区域截图热键就**取消**这次截图。全局热键不依赖窗口焦点，
+        所以这是最可靠的退出方式。
+        """
         action = self._hotkey_actions.get(hotkey_id, "region")
+        if action != "fullscreen":
+            live = [ov for ov in getattr(self, "_overlays", [])
+                    if getattr(ov, "_active", False)]
+            if getattr(self, "snipper", None) is not None or live:
+                self._cap_log("热键按下：取消进行中的截图")
+                self._deferred(self._cancel_capture, delay=10)
+                return
         if action == "fullscreen":
             self._deferred(self.capture_fullscreen, delay=30)
         else:
@@ -573,6 +590,14 @@ class PyShotApp(QObject):
         self._on_snip_done()
         self._pending_scroll_region = None   # 取消时清掉滚动截图的待选状态
         self._finish_capture_session()
+
+    def _cancel_capture(self):
+        """取消当前截图（热键逃生口 / 托盘菜单都用它）。"""
+        try:
+            self._on_snip_done()
+            self._finish_capture_session()
+        except Exception:                          # noqa: BLE001
+            pass
 
     def _on_snip_done(self, *args):
         # 所有屏幕的覆盖层都要收起（多屏时可能有好几个）
