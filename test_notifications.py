@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """通知去重测试：启动过程只应弹一条气泡（曾经"已启动"和"已就绪"各弹一条）。"""
 import os
+
+os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案
 import sys
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")

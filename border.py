@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (QCheckBox, QColorDialog, QComboBox, QDialog,
                                QDialogButtonBox, QFormLayout, QGroupBox,
                                QHBoxLayout, QLabel, QPushButton, QSlider,
                                QSpinBox, QVBoxLayout)
+from i18n import tr
 
 # (值, 显示名, 说明)
 STYLES = [
@@ -394,7 +395,7 @@ class BorderDialog(QDialog):
     def __init__(self, parent=None, settings: dict | None = None,
                  image_size: QSize | None = None):
         super().__init__(parent)
-        self.setWindowTitle("边框 / 边缘效果")
+        self.setWindowTitle(tr("边框 / 边缘效果"))
         self.setMinimumWidth(520)
         self._s = normalize_border(settings or load_border_default())
         self._image_size = image_size if (image_size and image_size.isValid()) \
@@ -405,12 +406,12 @@ class BorderDialog(QDialog):
 
         self.style = QComboBox()
         for key, name, tip in STYLES:
-            self.style.addItem(name, key)
-            self.style.setItemData(self.style.count() - 1, tip, Qt.ToolTipRole)
+            self.style.addItem(tr(name), key)
+            self.style.setItemData(self.style.count() - 1, tr(tip), Qt.ToolTipRole)
         idx = [k for k, _, _ in STYLES].index(self._s["style"])
         self.style.setCurrentIndex(idx)
         self.style.currentIndexChanged.connect(self._on_style)
-        form.addRow("样式", self.style)
+        form.addRow(tr("样式"), self.style)
 
         row = QHBoxLayout()
         self.width = QSpinBox()
@@ -422,10 +423,10 @@ class BorderDialog(QDialog):
         self.color_btn = QPushButton()
         self.color_btn.setFixedSize(52, 26)
         self.color_btn.clicked.connect(self._pick_color)
-        row.addWidget(QLabel("颜色"))
+        row.addWidget(QLabel(tr("颜色")))
         row.addWidget(self.color_btn)
         row.addStretch(1)
-        form.addRow("宽度", row)
+        form.addRow(tr("宽度"), row)
 
         row2 = QHBoxLayout()
         self.radius = QSpinBox()
@@ -433,20 +434,20 @@ class BorderDialog(QDialog):
         self.radius.setSuffix(" px")
         self.radius.setValue(self._s["radius"])
         self.radius.valueChanged.connect(self._on_radius)
-        self.radius_label = QLabel("圆角")
+        self.radius_label = QLabel(tr("圆角"))
         row2.addWidget(self.radius_label)
         row2.addWidget(self.radius)
 
         # 手撕纸专用：撕边幅度 + 换一个撕法
-        self.tear_label = QLabel("撕边")
+        self.tear_label = QLabel(tr("撕边"))
         self.tear = QSpinBox()
         self.tear.setRange(0, 200)
         self.tear.setSuffix(" px")
-        self.tear.setToolTip("撕口的起伏幅度；不能超过纸边宽度")
+        self.tear.setToolTip(tr("撕口的起伏幅度；不能超过纸边宽度"))
         self.tear.setValue(self._s["tear"])
         self.tear.valueChanged.connect(self._on_tear)
-        self.reseed = QPushButton("换一个撕法")
-        self.reseed.setToolTip("重新随机撕口（同一个种子预览和成品一致）")
+        self.reseed = QPushButton(tr("换一个撕法"))
+        self.reseed.setToolTip(tr("重新随机撕口（同一个种子预览和成品一致）"))
         self.reseed.clicked.connect(self._on_reseed)
         row2.addWidget(self.tear_label)
         row2.addWidget(self.tear)
@@ -460,15 +461,15 @@ class BorderDialog(QDialog):
             lambda v: self.alpha_label.setText(f"{v}%"))
         self.alpha_label = QLabel(f"{int(round(self._s['shadow_alpha'] * 100 / 255))}%")
         self.alpha_label.setMinimumWidth(40)
-        self.alpha_text = QLabel("阴影浓度")
+        self.alpha_text = QLabel(tr("阴影浓度"))
         row2.addWidget(self.alpha_text)
         row2.addWidget(self.alpha, 1)
         row2.addWidget(self.alpha_label)
         row2.addStretch(1)
-        form.addRow("细节", row2)
+        form.addRow(tr("细节"), row2)
         root.addLayout(form)
 
-        prev = QGroupBox("预览")
+        prev = QGroupBox(tr("预览"))
         pl = QVBoxLayout(prev)
         self.preview = QLabel()
         self.preview.setFixedSize(self.PREVIEW_MAX)
@@ -481,10 +482,10 @@ class BorderDialog(QDialog):
         root.addWidget(self.note)
 
         buttons = QDialogButtonBox()
-        self.btn_apply = buttons.addButton("应用", QDialogButtonBox.AcceptRole)
-        self.btn_default = buttons.addButton("应用并设为默认",
+        self.btn_apply = buttons.addButton(tr("应用"), QDialogButtonBox.AcceptRole)
+        self.btn_default = buttons.addButton(tr("应用并设为默认"),
                                              QDialogButtonBox.AcceptRole)
-        buttons.addButton("取消", QDialogButtonBox.RejectRole)
+        buttons.addButton(tr("取消"), QDialogButtonBox.RejectRole)
         self.btn_apply.clicked.connect(self._accept_apply)
         self.btn_default.clicked.connect(self._accept_default)
         root.addWidget(buttons)
@@ -510,12 +511,12 @@ class BorderDialog(QDialog):
         self.alpha_label.setVisible(show_alpha)
         self.alpha_text.setVisible(show_alpha)
         if is_torn:
-            self.alpha_text.setText("投影浓度")
+            self.alpha_text.setText(tr("投影浓度"))
             self.tear.setMaximum(max(1, self.width.value()))
         else:
-            self.alpha_text.setText("阴影浓度")
+            self.alpha_text.setText(tr("阴影浓度"))
         tips = {k: t for k, _, t in STYLES}
-        self.note.setText(tips.get(key, ""))
+        self.note.setText(tr(tips.get(key, "")))
         self._refresh_preview()
 
     def _on_width(self, v):

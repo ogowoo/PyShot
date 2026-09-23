@@ -8,6 +8,8 @@
 4. capture_fullscreen(屏) 打开编辑器且尺寸等于该屏物理像素
 """
 import os
+
+os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案
 import sys
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")

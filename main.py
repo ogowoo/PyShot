@@ -38,6 +38,8 @@ from pinboard import PinWindow
 from scroller import ScrollCapture, ScrollDriver
 from snipper import SnipperOverlay, grab_screen, grab_virtual_desktop
 from style import apply_theme, make_menu_icon
+from i18n import (AUTO, LANGUAGES, language_name, saved_language,
+                  set_language, system_language, tr)
 
 WM_HOTKEY = 0x0312
 MOD_ALT, MOD_CONTROL, MOD_SHIFT, MOD_WIN, MOD_NOREPEAT = 0x1, 0x2, 0x4, 0x8, 0x4000
@@ -219,26 +221,30 @@ class PyShotApp(QObject):
             self.app.setQuitOnLastWindowClosed(True)
             return
         self.tray = QSystemTrayIcon(make_tray_icon(), self.app)
+        self._build_tray_menu()
+
+    def _build_tray_menu(self):
+        """构建/重建托盘菜单（切换语言时也会调它）。"""
         menu = QMenu()
         self.menu = menu
 
         # ---------- 截图 ----------
         # 高频动作置顶；快捷键用 "\t" 放到右侧列（只是显示，不注册 Qt 快捷键，
         # 避免与全局热键同时触发一次截图）
-        act_region = QAction(make_menu_icon("crop"), "区域截图", self.app)
-        act_region.setToolTip("框选一块区域截图")
+        act_region = QAction(make_menu_icon("crop"), tr("区域截图"), self.app)
+        act_region.setToolTip(tr("框选一块区域截图"))
         act_region.triggered.connect(lambda: self._deferred(self.capture_region))
         menu.addAction(act_region)
         self.act_region = act_region
 
-        act_full = QAction(make_menu_icon("camera"), "全屏截图", self.app)
-        act_full.setToolTip("截取鼠标所在的那块显示器")
+        act_full = QAction(make_menu_icon("camera"), tr("全屏截图"), self.app)
+        act_full.setToolTip(tr("截取鼠标所在的那块显示器"))
         act_full.triggered.connect(lambda: self._deferred(self.capture_fullscreen))
         menu.addAction(act_full)
         self.act_full = act_full
 
         # 选择显示器（含"所有显示器拼一张"）：弹出时按当前屏幕列表重建
-        self.menu_screens = QMenu("选择显示器截图", menu)
+        self.menu_screens = QMenu(tr("选择显示器截图"), menu)
         self.menu_screens.setIcon(make_menu_icon("monitor"))
         self.menu_screens.aboutToShow.connect(self._rebuild_screen_menu)
         menu.addMenu(self.menu_screens)
@@ -246,7 +252,7 @@ class PyShotApp(QObject):
         menu.addSeparator()
 
         # ---------- 滚动长截图（收进子菜单，避免主菜单过长）----------
-        menu_scroll = QMenu("滚动长截图", menu)
+        menu_scroll = QMenu(tr("滚动长截图"), menu)
         menu_scroll.setIcon(make_menu_icon("scroll"))
         for label, tip, fn in [
                 ("自动滚轮",
@@ -272,52 +278,60 @@ class PyShotApp(QObject):
         menu.addSeparator()
 
         # ---------- 小工具 ----------
-        act_color = QAction(make_menu_icon("pick"), "屏幕取色", self.app)
-        act_color.setToolTip("单击屏幕任意位置，把色值复制到剪贴板")
+        act_color = QAction(make_menu_icon("pick"), tr("屏幕取色"), self.app)
+        act_color.setToolTip(tr("单击屏幕任意位置，把色值复制到剪贴板"))
         act_color.triggered.connect(lambda: self._deferred(self.pick_color))
         menu.addAction(act_color)
 
-        act_pin_clip = QAction(make_menu_icon("pin"), "贴出剪贴板图片", self.app)
-        act_pin_clip.setToolTip("把剪贴板里的图片钉在屏幕最上层")
+        act_pin_clip = QAction(make_menu_icon("pin"), tr("贴出剪贴板图片"), self.app)
+        act_pin_clip.setToolTip(tr("把剪贴板里的图片钉在屏幕最上层"))
         act_pin_clip.triggered.connect(self.pin_clipboard)
         menu.addAction(act_pin_clip)
 
         menu.addSeparator()
 
         # ---------- 窗口 ----------
-        act_open = QAction(make_menu_icon("image"), "打开图片编辑…", self.app)
-        act_open.setToolTip("打开一张已有图片进行标注")
+        act_open = QAction(make_menu_icon("image"), tr("打开图片编辑…"), self.app)
+        act_open.setToolTip(tr("打开一张已有图片进行标注"))
         act_open.triggered.connect(self.open_image)
         menu.addAction(act_open)
 
-        act_editor = QAction(make_menu_icon("window"), "打开编辑器", self.app)
+        act_editor = QAction(make_menu_icon("window"), tr("打开编辑器"), self.app)
         act_editor.setToolTip(
-            "把编辑器窗口恢复到前台（取消截图后找不到编辑器时点这里）")
+            tr("把编辑器窗口恢复到前台（取消截图后找不到编辑器时点这里）"))
         act_editor.triggered.connect(self.show_editor)
         menu.addAction(act_editor)
 
         menu.addSeparator()
-        act_quit = QAction(make_menu_icon("exit"), "退出 PyShot", self.app)
+
+        # ---------- 语言 ----------
+        self.menu_lang = QMenu(tr("语言"), menu)
+        self.menu_lang.setIcon(make_menu_icon("globe"))
+        self.menu_lang.aboutToShow.connect(self._rebuild_language_menu)
+        menu.addMenu(self.menu_lang)
+
+        menu.addSeparator()
+        act_quit = QAction(make_menu_icon("exit"), tr("退出 PyShot"), self.app)
         act_quit.triggered.connect(self.app.quit)
         menu.addAction(act_quit)
 
         self.tray.setContextMenu(menu)
         # 快捷键写进右侧列（\t 之后的部分由 Qt 右对齐显示）
         if self.hotkey_text:
-            act_region.setText(f"区域截图\t{self.hotkey_text}")
+            act_region.setText(tr("区域截图") + "\t" + self.hotkey_text)
         if self.full_hotkey_text:
-            act_full.setText(f"全屏截图\t{self.full_hotkey_text}")
+            act_full.setText(tr("全屏截图") + "\t" + self.full_hotkey_text)
         hints = []
         if self.hotkey_text:
-            hints.append(f"{self.hotkey_text} 区域截图")
+            hints.append(tr("{} 区域截图", self.hotkey_text))
         if self.full_hotkey_text:
-            hints.append(f"{self.full_hotkey_text} 全屏截图")
+            hints.append(tr("{} 全屏截图", self.full_hotkey_text))
         if hints:
             self.tray.setToolTip(
-                "PyShot 截图工具\n" + " · ".join(hints) + "\n双击图标截图")
+                tr("PyShot 截图工具\n{}\n双击图标截图", " · ".join(hints)))
         else:
             self.tray.setToolTip(
-                "PyShot 截图工具\n双击图标截图 · 右键菜单")
+                tr("PyShot 截图工具\n双击图标截图 · 右键菜单"))
         self.tray.activated.connect(self._on_tray_activated)
         self.tray.show()
         # 注意：启动提示不在这里弹 —— 由 notify_ready() 统一负责，
@@ -365,6 +379,50 @@ class PyShotApp(QObject):
         """
         QTimer.singleShot(delay, fn)
 
+    # ---------- 语言 ----------
+    def _rebuild_language_menu(self):
+        """重建语言子菜单（勾选当前语言；含"跟随系统"）。"""
+        self.menu_lang.clear()
+        saved = saved_language()
+        for code, name in LANGUAGES:
+            act = QAction(name, self.menu_lang)
+            act.setCheckable(True)
+            act.setChecked(saved == code)
+            act.triggered.connect(
+                lambda checked=False, c=code: self._switch_language(c))
+            self.menu_lang.addAction(act)
+        self.menu_lang.addSeparator()
+        act_auto = QAction(
+            tr("跟随系统") + f"（{language_name(system_language())}）",
+            self.menu_lang)
+        act_auto.setCheckable(True)
+        act_auto.setChecked(saved == AUTO)
+        act_auto.setToolTip(tr("按系统语言自动选择"))
+        act_auto.triggered.connect(lambda: self._switch_language(AUTO))
+        self.menu_lang.addAction(act_auto)
+
+    def _switch_language(self, code: str):
+        """切换界面语言：重建托盘菜单，并让已打开的编辑器刷新文案。"""
+        lang = set_language(code)
+        self._retranslate()
+        self._notify(tr("界面语言已切换"), language_name(lang))
+
+    def _retranslate(self):
+        """语言变化后刷新界面文案。
+
+        托盘菜单直接重建；已打开的编辑器窗口调用各自的 retranslate()；
+        对话框每次打开都会新建，所以自动生效。
+        """
+        try:
+            self._build_tray_menu()
+        except Exception:                          # noqa: BLE001
+            pass
+        for ed in list(self.editors):
+            try:
+                ed.retranslate()
+            except Exception:                      # noqa: BLE001
+                pass
+
     def _rebuild_screen_menu(self):
         """按当前显示器列表重建子菜单（插拔显示器后自动更新）。
 
@@ -375,7 +433,7 @@ class PyShotApp(QObject):
         for i, scr in enumerate(QGuiApplication.screens()):
             geo = scr.geometry()
             dpr = float(scr.devicePixelRatio() or 1.0)
-            tag = "主屏" if scr is primary else f"显示器 {i + 1}"
+            tag = tr("主屏") if scr is primary else tr("显示器 {}").format(i + 1)
             scale = f" @{int(round(dpr * 100))}%" if abs(dpr - 1.0) > 1e-6 else ""
             act = QAction(
                 f"{tag}：{geo.width()}×{geo.height()}{scale}  ({scr.name()})",
@@ -386,13 +444,13 @@ class PyShotApp(QObject):
                     lambda: self.capture_fullscreen(s)))
             self.menu_screens.addAction(act)
         if not self.menu_screens.actions():
-            act = QAction("（未检测到显示器）", self.menu_screens)
+            act = QAction(tr("（未检测到显示器）"), self.menu_screens)
             act.setEnabled(False)
             self.menu_screens.addAction(act)
         self.menu_screens.addSeparator()
-        act_all = QAction("所有显示器拼成一张", self.menu_screens)
+        act_all = QAction(tr("所有显示器拼成一张"), self.menu_screens)
         act_all.setIcon(make_menu_icon("monitor"))
-        act_all.setToolTip("把每块显示器按逻辑位置拼成一张长图")
+        act_all.setToolTip(tr("把每块显示器按逻辑位置拼成一张长图"))
         act_all.triggered.connect(
             lambda: self._deferred(self.capture_all_screens))
         self.menu_screens.addAction(act_all)
@@ -501,7 +559,7 @@ class PyShotApp(QObject):
             except Exception as ex:  # noqa: BLE001
                 import traceback
                 traceback.print_exc()
-                self._notify("打开编辑器失败", f"{type(ex).__name__}: {ex}")
+                self._notify(tr("打开编辑器失败"), f"{type(ex).__name__}: {ex}")
             finally:
                 self._finish_capture_session()
 
@@ -523,12 +581,12 @@ class PyShotApp(QObject):
             try:
                 pix = grab_screen(screen)
             except Exception as ex:  # noqa: BLE001
-                self._notify("全屏截图失败", f"{type(ex).__name__}: {ex}")
+                self._notify(tr("全屏截图失败"), f"{type(ex).__name__}: {ex}")
                 self._finish_capture_session()
                 return
             label = f"{screen.name()} {pix.width()}×{pix.height()}"
             self.open_editor(pix)
-            self._notify("全屏截图完成", label)
+            self._notify(tr("全屏截图完成"), label)
             self._finish_capture_session()
 
         # 等最小化动画结束再抓，否则窗口残影会进图
@@ -556,7 +614,7 @@ class PyShotApp(QObject):
     def _start_scrolling(self, region, manual: bool = False, mode: str = "wheel"):
         self._on_snip_done()   # 只清引用：滚动期间编辑器保持最小化，否则会被拍进画面
         if region.width() < 50 or region.height() < 120:
-            self._notify("滚动截图", "区域太小，请框选更高的可滚动区域")
+            self._notify(tr("滚动截图"), tr("区域太小，请框选更高的可滚动区域"))
             self._finish_capture_session()
             return
         driver = None
@@ -584,19 +642,19 @@ class PyShotApp(QObject):
         driver = ScrollDriver("drag", region, anchor=point)
         self._launch_scroller(region, manual=False, driver=driver,
                               title="拖拽滚动条自动滚动")
-        self._notify("已记录滚动条位置",
-                     f"滑块锚点 ({point.x()}, {point.y()})，开始自动拖拽滚动。\n"
+        self._notify(tr("已记录滚动条位置"),
+                     tr("滑块锚点 ({}, {})，开始自动拖拽滚动。\n", point.x(), point.y()) +
                      "滚到底会自动结束；想中途停止点控制条上的按钮。")
 
     def _on_scroll_finished(self, pixmap: QPixmap):
         self.scroller = None
-        self._notify("滚动截图完成", f"已拼接 {pixmap.height()} px 长图")
+        self._notify(tr("滚动截图完成"), f"已拼接 {pixmap.height()} px 长图")
         self.open_editor(pixmap)
         self._finish_capture_session()
 
     def _on_scroll_failed(self, msg: str):
         self.scroller = None
-        self._notify("滚动截图失败", msg)
+        self._notify(tr("滚动截图失败"), msg)
         self._finish_capture_session()
 
     # ---------- 屏幕取色 ----------
@@ -607,8 +665,8 @@ class PyShotApp(QObject):
         self._on_snip_done()
         text = color.name().upper()
         QApplication.clipboard().setText(text)
-        self._notify("屏幕取色",
-                     f"{text}  RGB({color.red()}, {color.green()}, {color.blue()}) 已复制")
+        self._notify(tr("屏幕取色"),
+                     f"{text}  RGB({color.red()}, {color.green()}, {color.blue()})" + tr("已复制"))
 
     # ---------- 贴图钉板 ----------
     def pin_pixmap(self, pixmap: QPixmap, pos=None):
@@ -622,7 +680,7 @@ class PyShotApp(QObject):
     def pin_clipboard(self):
         pix = QApplication.clipboard().pixmap()
         if pix.isNull():
-            self._notify("贴图", "剪贴板里没有图片")
+            self._notify(tr("贴图"), tr("剪贴板里没有图片"))
             return
         self.pin_pixmap(pix, QCursor.pos())
 
@@ -640,21 +698,21 @@ class PyShotApp(QObject):
         if not self._hotkey_ok:
             tried = "、".join(DEFAULT_HOTKEYS)
             self._notify(
-                "PyShot 热键不可用",
-                f"热键（{tried}）都被占用，请双击托盘图标截图。\n"
+                tr("PyShot 热键不可用"),
+                tr("热键（{}）都被占用，请双击托盘图标截图。\n", tried) +
                 "可用环境变量 PYSHOT_HOTKEY 指定其他组合，"
                 "例如 PYSHOT_HOTKEY=ctrl+alt+j")
             return
         self._notify(
-            "PyShot 已启动",
-            f"按 {self.hotkey_text} 框选截图，或双击托盘图标。\n"
+            tr("PyShot 已启动"),
+            tr("按 {} 框选截图，或双击托盘图标。\n", self.hotkey_text) +
             "右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n"
             "找不到图标时点任务栏右侧的 ∧ 展开。")
 
     def open_image(self):
         path, _ = QFileDialog.getOpenFileName(
-            None, "打开图片", str(Path.home()),
-            "图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)")
+            None, tr("打开图片"), str(Path.home()),
+            tr("图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)"))
         if not path:
             return
         pix = QPixmap(path)

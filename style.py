@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """现代化深色主题：全局 QSS + 自绘矢量工具图标。"""
 from PySide6.QtCore import QPointF, Qt
+from PySide6.QtCore import QRectF
 from PySide6.QtGui import (QColor, QFont, QIcon, QPainter, QPainterPath,
                            QPalette, QPen, QPixmap)
 
@@ -450,6 +451,14 @@ def _draw_redo(p, c):
     p.drawLine(QPointF(19, 9), QPointF(14, 9))
 
 
+def _draw_globe(p, c):
+    """地球（语言切换菜单用）。"""
+    p.drawEllipse(QPointF(12, 12), 8.5, 8.5)
+    p.drawEllipse(QPointF(12, 12), 3.8, 8.5)          # 经线
+    p.drawLine(QPointF(3.5, 12), QPointF(20.5, 12))   # 赤道
+    p.drawArc(QRectF(3.5, 6.5, 17, 11), 0, 180 * 16)
+
+
 _ICON_DRAWERS = {
     "select": _draw_select, "rect": _draw_rect, "ellipse": _draw_ellipse,
     "line": _draw_line, "arrow": _draw_arrow, "pen": _draw_pen,
@@ -458,6 +467,7 @@ _ICON_DRAWERS = {
     "camera": _draw_camera, "undo": _draw_undo, "redo": _draw_redo,
     "monitor": _draw_monitor, "scroll": _draw_scroll, "image": _draw_image,
     "window": _draw_window, "pin": _draw_pin, "exit": _draw_exit,
+    "globe": _draw_globe,
 }
 
 

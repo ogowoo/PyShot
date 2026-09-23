@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """滚动条拖拽自动滚动：输入驱动、步长自校准、失败降级、选点流程。"""
 import os
+
+os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案
 import sys
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")

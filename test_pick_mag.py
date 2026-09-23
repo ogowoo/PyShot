@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """验证编辑器取色放大镜：缩放显示下红框像素应与色值标签一致。"""
 import os
+
+os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

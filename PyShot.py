@@ -13,6 +13,485 @@
 
 
 # ========================================================================
+# 来自 i18n_data.py
+# ========================================================================
+# -*- coding: utf-8 -*-
+"""i18n 词表（由 _gen_i18n.py 生成，请勿手改本文件）。
+
+键 = 简体原文；值 = (繁體, English)。tr() 查不到时回落原文。
+"""
+
+# key: 简体原文 -> (繁體, English)
+TABLE = {
+    "区域截图": ("區域截圖", "Capture Region"),
+    "框选一块区域截图": ("框選一塊區域截圖", "Drag to capture a region"),
+    "全屏截图": ("全螢幕截圖", "Capture Full Screen"),
+    "截取鼠标所在的那块显示器": ("截取滑鼠所在的那塊顯示器", "Capture the monitor the mouse is on"),
+    "选择显示器截图": ("選擇顯示器截圖", "Capture a Specific Monitor"),
+    "滚动长截图": ("捲動長截圖", "Scrolling Capture"),
+    "自动滚轮": ("自動滾輪", "Auto Wheel"),
+    "框选可滚动区域，程序自己发滚轮逐屏拼接（普通网页/文档）": ("框選可捲動區域，程序自己发滾輪逐屏拼接（普通網頁/文档）", "Select a scrollable area; PyShot sends wheel events and stitches (web pages, documents)"),
+    "拖拽滚动条": ("拖曳捲動條", "Drag Scrollbar"),
+    "框选区域后点一下滚动条滑块，程序按住滑块匀速拖拽。\n远程桌面 / Citrix 里最稳：步长会实测标定": ("框選區域後點一下捲動條滑桿，程序按住滑桿匀速拖曳。\n遠端桌面 / Citrix 裡最稳：步長会實測標定", ""),
+    "按键翻页": ("按鍵翻頁", "Page Down"),
+    "框选区域后程序发送 PageDown 翻页（适合没有滚动条的应用）": ("框選區域後程序发送 PageDown 翻頁（適合沒有捲動條的套用）", "Select an area; PyShot sends Page Down (for apps without a scrollbar)"),
+    "手动滚动": ("手動捲動", "Manual Scroll"),
+    "自己用滚轮滚动，程序只负责逐帧拼接": ("自己用滾輪捲動，程序只負責逐幀拼接", "You scroll; PyShot only stitches the frames"),
+    "屏幕取色": ("螢幕取色", "Screen Color Picker"),
+    "单击屏幕任意位置，把色值复制到剪贴板": ("單擊螢幕任意位置，把色值複製到剪貼簿", "Click anywhere to copy its color to the clipboard"),
+    "贴出剪贴板图片": ("貼出剪貼簿圖片", "Pin Clipboard Image"),
+    "把剪贴板里的图片钉在屏幕最上层": ("把剪貼簿裡的圖片钉在螢幕最上層", "Pin the clipboard image on top of the screen"),
+    "打开图片编辑…": ("開啟圖片編輯…", "Open Image for Editing…"),
+    "打开一张已有图片进行标注": ("開啟一張已有圖片進行標注", "Open an existing image to annotate"),
+    "打开编辑器": ("開啟編輯器", "Show Editor"),
+    "把编辑器窗口恢复到前台（取消截图后找不到编辑器时点这里）": ("把編輯器窗口恢複到前台（取消截圖後找不到編輯器時點這裡）", "Bring the editor back to the front (use this if you lost it)"),
+    "语言": ("語言", "Language"),
+    "退出 PyShot": ("結束 PyShot", "Exit PyShot"),
+    "按系统语言自动选择": ("按系統語言自動選擇", "Choose automatically from the system language"),
+    "界面语言已切换": ("介面語言已切換", "Interface language changed"),
+    "所有显示器拼成一张": ("所有顯示器拼成一張", "All Monitors as One Image"),
+    "把每块显示器按逻辑位置拼成一张长图": ("把每塊顯示器按逻輯位置拼成一張長圖", "Stitch every monitor into a single image"),
+    "拖拽滚动条自动滚动": ("拖曳捲動條自動捲動", "Drag the scrollbar to scroll automatically"),
+    "已记录滚动条位置": ("已記录捲動條位置", "Scrollbar position recorded"),
+    "滚到底会自动结束；想中途停止点控制条上的按钮。": ("滾到底会自動結束；想中途停止點控製條上的按钮。", ""),
+    "滚动截图完成": ("捲動截圖完成", "Scrolling capture done"),
+    "已拼接 ": ("已拼接 ", ""),
+    " px 长图": (" px 長圖", ""),
+    "滚动截图失败": ("捲動截圖失敗", "Scrolling capture failed"),
+    "PyShot 已启动": ("PyShot 已啟動", "PyShot started"),
+    "右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n找不到图标时点任务栏右侧的 ∧ 展开。": ("右鍵托盤圖示：捲動長截圖 / 螢幕取色 / 釘圖 / 結束。\n找不到圖示時點任務栏右侧的 ∧ 展開。", ""),
+    "打开图片": ("開啟圖片", "Open Image"),
+    "图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)": ("圖片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)", "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp)"),
+    "[PyShot] 全局热键已注册：": ("[PyShot] 全局快速鍵已注册：", ""),
+    "[PyShot] 热键注册失败，已尝试：": ("[PyShot] 快速鍵注册失敗，已尝試：", ""),
+    "{} 区域截图": ("{} 區域截圖", "{} Capture Region"),
+    "{} 全屏截图": ("{} 全螢幕截圖", "{} Capture Full Screen"),
+    "PyShot 截图工具\n{}\n双击图标截图": ("PyShot 截圖工具\n{}\n雙擊圖示截圖", "PyShot Screen Capture\n{}\nDouble-click the icon to capture"),
+    "PyShot 截图工具\n双击图标截图 · 右键菜单": ("PyShot 截圖工具\n雙擊圖示截圖 · 右鍵菜單", ""),
+    "跟随系统": ("跟隨系統", "Follow system"),
+    "主屏": ("主屏", "Primary"),
+    "（未检测到显示器）": ("（未偵測到顯示器）", "(no monitor detected)"),
+    "全屏截图完成": ("全螢幕截圖完成", "Full-screen capture done"),
+    "滚动截图": ("捲動截圖", "Scrolling capture"),
+    "区域太小，请框选更高的可滚动区域": ("區域太小，請框選更高的可捲動區域", "Area too small — select a taller scrollable region"),
+    "滑块锚点 ({}, {})，开始自动拖拽滚动。\n": ("滑桿錨點 ({}, {})，開始自動拖曳捲動。\n", "Thumb anchor ({}, {}) — starting to drag.\n"),
+    "已复制": ("已複製", "Copied"),
+    "贴图": ("釘圖", "Pin"),
+    "剪贴板里没有图片": ("剪貼簿裡沒有圖片", "No image in the clipboard"),
+    "PyShot 热键不可用": ("PyShot 快速鍵不可用", "PyShot hotkeys unavailable"),
+    "可用环境变量 PYSHOT_HOTKEY 指定其他组合，例如 PYSHOT_HOTKEY=ctrl+alt+j": ("可用環境變數 PYSHOT_HOTKEY 指定其他組合，例如 PYSHOT_HOTKEY=ctrl+alt+j", ""),
+    "按 {} 框选截图，或双击托盘图标。\n": ("按 {} 框選截圖，或雙擊托盤圖示。\n", "Press {} to capture a region, or double-click the tray icon.\n"),
+    "区域 ": ("區域 ", ""),
+    "全屏 ": ("全螢幕 ", ""),
+    "热键（{}）都被占用，请双击托盘图标截图。\n": ("快速鍵（{}）都被佔用，請雙擊托盤圖示截圖。\n", "Hotkeys ({}) are all taken — double-click the tray icon to capture.\n"),
+    "显示器 {}": ("顯示器 {}", "Monitor {}"),
+    "打开编辑器失败": ("開啟編輯器失敗", "Could not open the editor"),
+    "全屏截图失败": ("全螢幕截圖失敗", "Full-screen capture failed"),
+    "屏幕取色：单击复制色值    ·    Esc / 右键 取消": ("螢幕取色：單擊複製色值    ·    Esc / 右鍵 取消", "Color picker: click to copy the value    ·    Esc / right-click to cancel"),
+    "拖拽选择要滚动截图的区域    ·    Esc / 右键 取消": ("拖曳選擇要捲動截圖的區域    ·    Esc / 右鍵 取消", "Drag to select the area to scroll-capture    ·    Esc / right-click to cancel"),
+    "蓝框内可直接点击滚动条【滑块】→ 自动开始滚动    ·    Esc 取消": ("藍框內可直接點擊捲動條【滑桿】→ 自動開始捲動    ·    Esc 取消", "Click the scrollbar thumb inside the frame to start    ·    Esc to cancel"),
+    "拖拽选择截图区域    ·    Esc / 右键 取消": ("拖曳選擇截圖區域    ·    Esc / 右鍵 取消", "Drag to select a region    ·    Esc / right-click to cancel"),
+    "选择": ("選擇", "Select"),
+    "选择并移动已有标注（Delete 删除）": ("選擇并移動已有標注（Delete 刪除）", "Select and move annotations (Delete to remove)"),
+    "矩形": ("矩形", "Rectangle"),
+    "拖拽画矩形，Shift 画正方形": ("拖曳畫矩形，Shift 畫正方形", "Drag for a rectangle, Shift for a square"),
+    "椭圆": ("橢圓", "Ellipse"),
+    "拖拽画椭圆，Shift 画正圆": ("拖曳畫橢圓，Shift 畫正圓", "Drag for an ellipse, Shift for a circle"),
+    "直线": ("直線", "Line"),
+    "拖拽画直线，Shift 锁定水平/垂直/45°": ("拖曳畫直線，Shift 锁定水平/垂直/45°", "Drag for a line, Shift locks to 0/45/90°"),
+    "箭头": ("箭頭", "Arrow"),
+    "拖拽画箭头，指引方向": ("拖曳畫箭頭，指引方向", "Drag for an arrow"),
+    "画笔": ("畫筆", "Pen"),
+    "自由手绘": ("自由手绘", "Freehand drawing"),
+    "序号": ("序號", "Step Number"),
+    "单击放置递增序号，做步骤指引": ("單擊放置递增序號，做步骤指引", "Click to place an incrementing step number"),
+    "文字": ("文字", "Text"),
+    "单击后输入文字，Enter 确认": ("單擊後輸入文字，Enter 確認", "Click and type, Enter to confirm"),
+    "高亮": ("標示", "Highlight"),
+    "拖拽涂抹半透明高亮": ("拖曳涂抹半透明標示", "Drag to paint a translucent highlight"),
+    "马赛克": ("馬賽克", "Mosaic"),
+    "拖拽对区域打码": ("拖曳對區域打碼", "Drag to pixelate an area"),
+    "取色": ("取色", "Pick Color"),
+    "单击吸取图上颜色作为当前标注颜色": ("單擊吸取圖上顏色作為当前標注顏色", "Click to pick a color from the image"),
+    "裁剪": ("裁剪", "Crop"),
+    "拖拽选择保留区域，Enter 应用": ("拖曳選擇保留區域，Enter 套用", "Drag to select what to keep, Enter to apply"),
+    "水印：文字与图片可各自开关（也可同时用）\n九宫格位置或平铺、各自调不透明度、可旋转与设边距\n还能「应用并设为默认」，之后新截图自动加": ("水印：文字與圖片可各自開關（也可同時用）\n九宫格位置或平鋪、各自調不透明度、可旋轉與設邊距\n還能「套用并設為預設」，之後新截圖自動加", ""),
+    "加边框（对应 FSCapture 的「特效 → 边缘」）\n单线/双线/虚线/圆角/投影阴影/立体浮雕/边缘渐隐/拍立得白边\n边框加在图片外面，图会变大；可 Ctrl+Z 撤销": ("加邊框（對應 FSCapture 的「特效 → 邊缘」）\n單線/雙線/虛線/圓角/投影陰影/立體浮雕/邊缘漸隱/拍立得白邊\n邊框加在圖片外面，圖会變大；可 Ctrl+Z 復原", ""),
+    "撤销 (Ctrl+Z)": ("復原 (Ctrl+Z)", "Undo (Ctrl+Z)"),
+    "重做 (Ctrl+Y)": ("重做 (Ctrl+Y)", "Redo (Ctrl+Y)"),
+    "缩小 (Ctrl+滚轮)": ("縮小 (Ctrl+滾輪)", "Zoom out (Ctrl+wheel)"),
+    "放大 (Ctrl+滚轮)": ("放大 (Ctrl+滾輪)", "Zoom in (Ctrl+wheel)"),
+    "选择颜色": ("選擇顏色", "Choose a color"),
+    "输入文字，Enter 确认 / Esc 取消": ("輸入文字，Enter 確認 / Esc 取消", "Type text, Enter to confirm / Esc to cancel"),
+    "PyShot 编辑器": ("PyShot 編輯器", "PyShot Editor"),
+    " px\n滚轮/Ctrl+滚轮 缩放 · 中键拖动滚动": (" px\n滾輪/Ctrl+滾輪 縮放 · 中鍵拖動捲動", ""),
+    "关闭此标签 (Ctrl+W)": ("關閉此標籤 (Ctrl+W)", "Close this tab (Ctrl+W)"),
+    "截图": ("截圖", "Capture"),
+    "截取新区域\n会自动最小化编辑器，截完回到这里新增标签": ("截取新區域\n会自動最小化編輯器，截完回到這裡新增標籤", ""),
+    "颜色": ("顏色", "Color"),
+    "自定义颜色": ("自定義顏色", "Custom color…"),
+    "线宽": ("線寬", "Width"),
+    "字号": ("字號", "Size"),
+    "序号圆的大小\n选中已有序号时可直接调整它的大小": ("序號圓的大小\n選中已有序號時可直接調整它的大小", ""),
+    "撤销": ("復原", "Undo"),
+    "重做": ("重做", "Redo"),
+    "应用裁剪": ("套用裁剪", "Apply Crop"),
+    "应用裁剪框 (Enter)": ("套用裁剪框 (Enter)", "Apply the crop (Enter)"),
+    "复制": ("複製", "Copy"),
+    "复制到剪贴板 (Ctrl+C)": ("複製到剪貼簿 (Ctrl+C)", "Copy to clipboard (Ctrl+C)"),
+    "把当前结果钉在屏幕最上层（Snipaste 风格）": ("把当前結果钉在螢幕最上層（Snipaste 風格）", "Pin the result on top of the screen (Snipaste style)"),
+    "水印": ("水印", "Watermark"),
+    "边框": ("邊框", "Border"),
+    "保存": ("儲存", "Save"),
+    "保存为文件 (Ctrl+S)": ("儲存為檔案 (Ctrl+S)", "Save to a file (Ctrl+S)"),
+    "关闭": ("關閉", "Close"),
+    "关闭编辑器 (Esc)": ("關閉編輯器 (Esc)", "Close the editor (Esc)"),
+    "工具：选择": ("工具：選擇", ""),
+    "实际像素 (1:1)": ("實際像素 (1:1)", "Actual pixels (1:1)"),
+    "适应": ("符合", "Fit"),
+    "缩放以适应窗口": ("縮放以符合窗口", "Scale to fit the window"),
+    "截取新区域{}\n会自动最小化编辑器，截完回到这里新增标签": ("截取新區域{}\n会自動最小化編輯器，截完回到這裡新增標籤", "Capture a new region{}\nThe editor is minimized; new captures are added as tabs"),
+    "已复制到剪贴板": ("已複製到剪貼簿", "Copied to the clipboard"),
+    "已设为默认水印，之后每次新截图会自动添加": ("已設為預設水印，之後每次新截圖会自動添加", "Saved as the default watermark; it will be added automatically"),
+    "已设为默认水印（本次运行有效，配置写入失败）": ("已設為預設水印（本次運行有效，配置寫入失敗）", "Saved as the default watermark for this session (config write failed)"),
+    "保存截图": ("儲存截圖", "Save Capture"),
+    "PNG 图片 (*.png);;JPEG 图片 (*.jpg);;BMP 图片 (*.bmp)": ("PNG 圖片 (*.png);;JPEG 圖片 (*.jpg);;BMP 圖片 (*.bmp)", "PNG image (*.png);;JPEG image (*.jpg);;BMP image (*.bmp)"),
+    "工具：": ("工具：", "Tool: "),
+    " 工具": (" 工具", ""),
+    "已设为默认边框，之后每次新截图会自动加": ("已設為預設邊框，之後每次新截圖会自動加", "Saved as the default border; it will be added automatically"),
+    "已设为默认边框（本次运行有效，配置写入失败）": ("已設為預設邊框（本次運行有效，配置寫入失敗）", "Saved as the default border for this session (config write failed)"),
+    "边框宽度为 0，未做改动": ("邊框寬度為 0，未做改動", "Border width is 0 — nothing changed"),
+    "已保存：": ("已儲存：", "Saved: "),
+    "已加边框：": ("已加邊框：", "Border added: "),
+    "截图 {}": ("截圖 {}", "Capture {}"),
+    "，切回": ("，切回", ", back to "),
+    "已取色": ("已取色", "Picked"),
+    "单线边框": ("單線邊框", "Solid Line"),
+    "纯色边框，最简洁": ("純色邊框，最簡洁", "A simple solid border"),
+    "双线边框": ("雙線邊框", "Double Line"),
+    "外粗内细的双线": ("外粗內細的雙線", "A thick outer and thin inner line"),
+    "虚线边框": ("虛線邊框", "Dashed"),
+    "虚线描边": ("虛線描邊", "Dashed outline"),
+    "圆角边框": ("圓角邊框", "Rounded"),
+    "图片切圆角 + 描边": ("圖片切圓角 + 描邊", "Rounded corners with an outline"),
+    "投影阴影": ("投影陰影", "Drop Shadow"),
+    "四周柔和阴影（背景透明，适合贴到文档里）": ("四周柔和陰影（背景透明，適合貼到文档裡）", "Soft shadow, transparent background (great for documents)"),
+    "立体浮雕": ("立體浮雕", "Bevel"),
+    "左上亮、右下暗，做出凹凸感": ("左上亮、右下暗，做出凹凸感", "Light from the top-left, dark bottom-right"),
+    "边缘渐隐": ("邊缘漸隱", "Fade Edges"),
+    "图片四边渐隐到边框色": ("圖片四邊漸隱到邊框色", "The image fades into the border color"),
+    "拍立得白边": ("拍立得白邊", "Polaroid"),
+    "下方留宽白边，像拍立得": ("下方留寬白邊，像拍立得", "Wide white margin at the bottom"),
+    "手撕纸": ("手撕紙", "Torn Paper"),
+    "图片贴在一张撕下来的纸上，边缘不规则 + 投影": ("圖片貼在一張撕下來的紙上，邊缘不规则 + 投影", "The image sits on a torn piece of paper with an irregular edge and a shadow"),
+    "边框颜色": ("邊框顏色", "Border color"),
+    "边框 / 边缘效果": ("邊框 / 邊缘效果", "Border / Edge Effect"),
+    "样式": ("樣式", "Style"),
+    "宽度": ("寬度", "Width"),
+    "圆角": ("圓角", "Corner radius"),
+    "撕边": ("撕邊", "Tear"),
+    "撕口的起伏幅度；不能超过纸边宽度": ("撕口的起伏幅度；不能超過紙邊寬度", "Depth of the torn edge; cannot exceed the paper margin"),
+    "换一个撕法": ("換一個撕法", "Re-roll"),
+    "重新随机撕口（同一个种子预览和成品一致）": ("重新隨機撕口（同一個種子預覽和成品一致）", "Pick a new random tear (the preview always matches the result)"),
+    "阴影浓度": ("陰影濃度", "Shadow"),
+    "细节": ("細節", "Details"),
+    "预览": ("預覽", "Preview"),
+    "应用": ("套用", "Apply"),
+    "应用并设为默认": ("套用并設為預設", "Apply and Set as Default"),
+    "取消": ("取消", "Cancel"),
+    "投影浓度": ("投影濃度", "Shadow"),
+    "仅供参考": ("仅供参考", "For reference only"),
+    "左上": ("左上", "Top-left"),
+    "上中": ("上中", "Top-center"),
+    "右上": ("右上", "Top-right"),
+    "左中": ("左中", "Middle-left"),
+    "居中": ("居中", "Center"),
+    "右中": ("右中", "Middle-right"),
+    "左下": ("左下", "Bottom-left"),
+    "下中": ("下中", "Bottom-center"),
+    "右下": ("右下", "Bottom-right"),
+    "未启用": ("未啟用", "Disabled"),
+    "平铺": ("平鋪", "Tiled"),
+    "选择水印字体": ("選擇水印字體", "Choose the watermark font"),
+    "水印颜色": ("水印顏色", "Watermark color"),
+    " % 图宽": (" % 圖寬", ""),
+    "文字「": ("文字「", "Text “"),
+    "图片 ": ("圖片 ", ""),
+    "文字水印": ("文字水印", "Text watermark"),
+    "要加在水印上的文字（可多行）": ("要加在水印上的文字（可多行）", "Watermark text (multiple lines allowed)"),
+    "文字颜色": ("文字顏色", "Text color"),
+    "描边（深浅背景都清晰）": ("描邊（深浅背景都清晰）", "Outline (readable on any background)"),
+    "粗体": ("粗體", "Bold"),
+    "斜体": ("斜體", "Italic"),
+    "图片水印": ("圖片水印", "Image watermark"),
+    "选择一张图片（建议用透明底的 PNG）": ("選擇一張圖片（建議用透明底的 PNG）", "Choose an image (a transparent PNG works best)"),
+    "浏览…": ("瀏覽…", "Browse…"),
+    "清除": ("清除", "Clear"),
+    "选择水印图片": ("選擇水印圖片", "Choose a watermark image"),
+    "图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;所有文件 (*.*)": ("圖片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;所有檔案 (*.*)", "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;All files (*.*)"),
+    "位置与排布": ("位置與排布", "Position & Layout"),
+    "平铺整张图": ("平鋪整張圖", "Tile across the image"),
+    "字体": ("字體", "Font"),
+    "不透明度": ("不透明度", "Opacity"),
+    "大小": ("大小", "Size"),
+    "间距": ("間距", "Spacing"),
+    "旋转": ("旋轉", "Rotate"),
+    "边距": ("邊距", "Margin"),
+    "（未选择）": ("（未選擇）", "(none)"),
+    "需要 Frame 或数组，收到 ": ("需要 Frame 或數組，收到 ", ""),
+    "选区里似乎包含多块独立滚动的区域（例如上方列表 + 下方明细面板），它们滚动量不同，拼不到一起。\n请只框选其中一个面板（不含固定的明细面板/工具栏）后重试。\n（排查用：设环境变量 PYSHOT_SCROLL_DEBUG=1 会把每帧存到 ~/.pyshot/scroll_debug）": ("選區裡似乎包含多塊獨立捲動的區域（例如上方列表 + 下方明細面板），它们捲動量不同，拼不到一起。\n請只框選其中一個面板（不含固定的明細面板/工具列）後重試。\n（排查用：設環境變數 PYSHOT_SCROLL_DEBUG=1 会把每幀存到 ~/.pyshot/scroll_debug）", ""),
+    "滚动截图准备中…": ("捲動截圖准备中…", "Preparing scrolling capture…"),
+    "完成 (Enter)": ("完成 (Enter)", "Done (Enter)"),
+    "停止 (Esc)": ("停止 (Esc)", "Stop (Esc)"),
+    "{}截图中… {} 帧 / {} px": ("{}截圖中… {} 幀 / {} px", "{}capturing… {} frames / {} px"),
+    "（本帧 +{}）": ("（本幀 +{}）", "(+{} this frame)"),
+    "首帧": ("首幀", "first frame"),
+    "滚轮": ("滾輪", "Wheel"),
+    "按键": ("按鍵", "Key"),
+    "请用鼠标滚轮或 Page Down 自己滚动页面，滚到底后点「完成」": ("請用滑鼠滾輪或 Page Down 自己捲動頁面，滾到底後點「完成」", "Scroll with the wheel or Page Down, then click Done"),
+    "抓帧失败：区域过小或被遮挡": ("抓幀失敗：區域過小或被遮擋", "Capture failed: the region is too small or hidden"),
+    "抓到的画面是空白/纯色，无法拼接。\n目标窗口（如 Citrix 虚拟桌面里的应用）可能启用了硬件加速或内容保护，系统抓屏 API 拿不到内容。\n可尝试：① 在 Citrix/远程桌面里关闭硬件加速；② 用托盘菜单的「滚动长截图（手动滚动）」；③ 把该窗口最大化或调整大小后重试。": ("抓到的畫面是空白/純色，無法拼接。\n目標窗口（如 Citrix 虛擬桌面裡的套用）可能啟用了硬體加速或內容保護，系統抓屏 API 拿不到內容。\n可尝試：① 在 Citrix/遠端桌面裡關閉硬體加速；② 用托盤菜單的「捲動長截圖（手動捲動）」；③ 把該窗口最大化或調整大小後重試。", ""),
+    "拖拽没生效，改用滚轮重试": ("拖曳沒生效，改用滾輪重試", "Dragging had no effect — retrying with the wheel"),
+    "拖拽和滚轮都没能让页面滚动。\n可能原因：点击位置不在滚动区域，或该窗口不响应注入的输入。\n建议改用「滚动长截图（PageDown 自动滚动）」或「手动滚动」。": ("拖曳和滾輪都沒能讓頁面捲動。\n可能原因：點擊位置不在捲動區域，或該窗口不響應注入的輸入。\n建議改用「捲動長截圖（PageDown 自動捲動）」或「手動捲動」。", ""),
+    "没有抓到任何内容": ("沒有抓到任何內容", "Nothing was captured"),
+    "手动": ("手動", "Manual"),
+    "滚动": ("捲動", "Scroll"),
+    "抓帧尺寸发生变化，已停止（请确保窗口未移动/缩放）": ("抓幀尺寸发生變化，已停止（請確保窗口未移動/縮放）", "The captured area changed size; stopped (keep the window fixed)"),
+    "画面内容变化过快，无法对齐拼接。\n": ("畫面內容變化過快，無法對齊拼接。\n", ""),
+    "拼接 +": ("拼接 +", ""),
+    "px（静止边缘 top=": ("px（静止邊缘 top=", ""),
+    "抓帧失败：": ("抓幀失敗：", "Capture failed: "),
+    "拖拽滚动条模式下最常见的原因：点在了滚动条的**轨道**上而不是**滑块**上——那样会一次翻整页，无法拼接。请重新框选并点中滑块本身。\n": ("拖曳捲動條模式下最常见的原因：點在了捲動條的**轨道**上而不是**滑桿**上——那樣会一次翻整頁，無法拼接。請重新框選并點中滑桿本身。\n", ""),
+    "（请关闭动画/视频后重试）\n": ("（請關閉動畫/影片後重試）\n", ""),
+    "复制图片": ("複製圖片", "Copy image"),
+    "重置大小 / 透明度": ("重置大小 / 透明度", "Reset size / opacity"),
+    "关闭 (Esc)": ("關閉 (Esc)", "Close (Esc)"),
+    "PyShot 依赖检查：": ("PyShot 依赖檢查：", "PyShot dependency check:"),
+    "[PyShot] 已开启 Windows 长路径支持（解决 PySide6 安装失败）": ("[PyShot] 已開啟 Windows 長路径支援（解决 PySide6 安裝失敗）", ""),
+    "PyShot 依赖安装失败": ("PyShot 依赖安裝失敗", "PyShot dependency installation failed"),
+    "PyShot 依赖仍不可用": ("PyShot 依赖仍不可用", "PyShot dependencies are still unavailable"),
+    "[PyShot] 依赖安装完成。": ("[PyShot] 依赖安裝完成。", ""),
+    "  内嵌依赖目录: 无（将使用系统环境或自动安装）": ("  內嵌依赖目录: 無（將使用系統環境或自動安裝）", ""),
+    "  解释器: ": ("  解释器: ", ""),
+    "[PyShot] 缺少依赖：": ("[PyShot] 缺少依赖：", ""),
+    "，正在自动安装（首次约需 1-3 分钟）…": ("，正在自動安裝（首次约需 1-3 分钟）…", ", installing automatically (1–3 minutes the first time)…"),
+    "请手动执行以下命令后重新运行：\n\n": ("請手動執行以下命令後重新運行：\n\n", ""),
+    "以下库导入失败：": ("以下庫导入失敗：", "These libraries failed to import:"),
+    "  内嵌依赖目录: ": ("  內嵌依赖目录: ", ""),
+    "[PyShot] pip 执行失败：": ("[PyShot] pip 執行失敗：", ""),
+    "  [缺失] ": ("  [缺失] ", ""),
+}
+
+
+# ========================================================================
+# 来自 i18n.py
+# ========================================================================
+# -*- coding: utf-8 -*-
+"""i18n.py —— 三语支持（简体 / 繁體 / English），默认跟随系统。
+
+设计
+====
+- **键就是简体原文**（gettext 风格）：源码里写 `tr("区域截图")`，好读也好维护
+- 词表在 `i18n_data.py`（由 `_gen_i18n.py` 生成）
+- 查不到的词条**回落到原文**，所以漏译只是显示原文，不会崩
+- 语言选择存在 `~/.pyshot/settings.json`，首次运行按系统语言猜
+
+用法::
+
+
+    tr("区域截图")
+    tr("已保存：{}", path)          # 占位符用 {}，内部走 str.format
+"""
+import json
+import locale
+import os
+from pathlib import Path
+
+
+
+# 语言代码 → 菜单里显示的名字（这三项本身不翻译）
+LANGUAGES = [("zh_CN", "简体中文"), ("zh_TW", "繁體中文"), ("en", "English")]
+DEFAULT_LANGUAGE = "zh_CN"
+AUTO = "auto"
+
+SETTINGS_PATH = Path.home() / ".pyshot" / "settings.json"
+_current = None
+_settings_cache = {}
+
+
+# ---------------------------------------------------------------- 系统语言探测
+
+def system_language() -> str:
+    """按系统语言决定用哪套文案：中文分简繁，其它一律英文。"""
+    code = ""
+    # 先问 Qt（它更懂 Windows 的区域设置）
+    try:
+        from PySide6.QtCore import QLocale
+        code = QLocale.system().name() or ""      # 例：zh_CN / zh_TW / en_US
+    except Exception:                              # noqa: BLE001
+        code = ""
+    if not code:
+        try:
+            code = locale.getdefaultlocale()[0] or ""
+        except Exception:                          # noqa: BLE001
+            code = ""
+    return language_from_locale(code)
+
+
+def language_from_locale(code: str) -> str:
+    """把 'zh_TW' / 'zh-Hant-HK' / 'en_US' 这类标识归到三语之一。"""
+    c = (code or "").replace("-", "_").lower()
+    if not c:
+        return DEFAULT_LANGUAGE
+    if c.startswith("zh"):
+        # 繁体区：台湾 / 香港 / 澳门 / 以及带 Hant 的写法
+        if any(k in c for k in ("tw", "hk", "mo", "hant", "traditional")):
+            return "zh_TW"
+        return "zh_CN"
+    return "en"
+
+
+# ---------------------------------------------------------------- 设置读写
+
+def _load_settings() -> dict:
+    global _settings_cache
+    if _settings_cache:
+        return dict(_settings_cache)
+    try:
+        with open(SETTINGS_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+        _settings_cache = data if isinstance(data, dict) else {}
+    except Exception:                              # noqa: BLE001
+        _settings_cache = {}
+    return dict(_settings_cache)
+
+
+def _save_settings(data: dict) -> bool:
+    global _settings_cache
+    _settings_cache = dict(data)
+    try:
+        SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(SETTINGS_PATH, "w", encoding="utf-8") as f:
+            json.dump(_settings_cache, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception:                              # noqa: BLE001
+        return False
+
+
+def saved_language() -> str:
+    """读设置里保存的语言；没保存过返回 AUTO（表示跟随系统）。"""
+    code = str(_load_settings().get("language", AUTO) or AUTO)
+    if code in (AUTO, "", None):
+        return AUTO
+    return code if code in dict(LANGUAGES) else AUTO
+
+
+def current_language() -> str:
+    """当前语言：环境变量 PYSHOT_LANG > 保存的设置 > 系统语言。"""
+    global _current
+    if _current is None:
+        env = os.environ.get("PYSHOT_LANG")
+        if env and env in dict(LANGUAGES):
+            _current = env
+        else:
+            code = saved_language()
+            _current = system_language() if code == AUTO else code
+    return _current
+
+
+def set_language(code: str, persist: bool = True) -> str:
+    """切换语言。code 可以是三语之一，也可以是 AUTO（跟随系统）。
+
+    返回真正生效的语言代码。设置 PYSHOT_LANG 时它优先（测试/强制指定用）。
+    """
+    global _current
+    env = os.environ.get("PYSHOT_LANG")
+    if env and env in dict(LANGUAGES):
+        _current = env
+        return _current
+    if code == AUTO:
+        _current = system_language()
+    elif code in dict(LANGUAGES):
+        _current = code
+    else:
+        _current = system_language()
+    if persist:
+        data = _load_settings()
+        data["language"] = code
+        _save_settings(data)
+    return _current
+
+
+def reset_cache():
+    """测试用：清掉内存里的语言与设置缓存。"""
+    global _current, _settings_cache
+    _current = None
+    _settings_cache = {}
+
+
+def language_name(code: str) -> str:
+    return dict(LANGUAGES).get(code, code)
+
+
+# ---------------------------------------------------------------- 翻译
+
+def tr(text: str, *args, **kwargs) -> str:
+    """翻译一段文案；支持 {} 占位符。
+
+    三种情况都能处理：
+    - 传入的是**简体原文**（源码里的写法）→ 直接查表
+    - 传入的是**已经翻译过的文本**（切换语言时对现有控件再翻一次）→ 反向查回原文
+    - 查不到 → 原样返回（漏译不会崩，只是显示原文）
+    """
+    return _translate(current_language(), text, *args, **kwargs)
+
+
+def tr_in(lang: str, text: str, *args, **kwargs) -> str:
+    """指定语言翻译（生成对照/测试用）。"""
+    return _translate(lang, text, *args, **kwargs)
+
+
+def _translate(lang: str, text: str, *args, **kwargs) -> str:
+    key = text
+    if key not in TABLE:
+        key = _REVERSE.get(text, text)          # 已翻译过的文本 → 找回原文
+    entry = TABLE.get(key)
+    out = key
+    if entry is not None:
+        if lang == "zh_TW":
+            out = entry[0] or key
+        elif lang == "en":
+            out = entry[1] or key
+    if args or kwargs:
+        try:
+            out = out.format(*args, **kwargs)
+        except Exception:                          # noqa: BLE001
+            pass
+    return out
+
+
+def _build_reverse() -> dict:
+    """译文 → 原文 的索引，便于"再翻译一次"（对现有控件做通用刷新）。"""
+    rev = {}
+    for key, (zh_tw, en) in TABLE.items():
+        for value in (zh_tw, en):
+            if value and value != key:
+                rev.setdefault(value, key)
+    return rev
+
+
+_REVERSE = _build_reverse()
+
+
+def coverage() -> tuple:
+    """返回 (总条数, 繁体条数, 英文条数)——用于自检与测试。"""
+    total = len(TABLE)
+    zh_tw = sum(1 for v in TABLE.values() if v[0])
+    en = sum(1 for v in TABLE.values() if v[1])
+    return total, zh_tw, en
+
+
+# ========================================================================
 # 来自 bootstrap.py
 # ========================================================================
 # -*- coding: utf-8 -*-
@@ -31,6 +510,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+
 
 # (导入名, pip 安装名)
 # 只依赖 PySide6：拼接/图像统计都用纯 Python 实现了，不再需要 numpy。
@@ -223,6 +703,7 @@ from PySide6.QtWidgets import (QCheckBox, QColorDialog, QComboBox, QDialog,
                                QLineEdit, QPlainTextEdit, QPushButton,
                                QSlider, QSpinBox, QToolButton, QVBoxLayout,
                                QWidget)
+
 
 DEFAULT_SETTINGS = {
     # ---- 文字水印 ----
@@ -538,7 +1019,7 @@ class WatermarkDialog(QDialog):
     def __init__(self, parent=None, settings: dict | None = None,
                  image_size: QSize | None = None):
         super().__init__(parent)
-        self.setWindowTitle("水印")
+        self.setWindowTitle(tr("水印"))
         self.setMinimumWidth(560)
         self._s = normalize(settings or load_default())
         self._image_size = image_size if (image_size and image_size.isValid()) \
@@ -555,10 +1036,10 @@ class WatermarkDialog(QDialog):
         root.addWidget(self._build_preview_group())
 
         buttons = QDialogButtonBox()
-        self.btn_apply = buttons.addButton("应用", QDialogButtonBox.AcceptRole)
-        self.btn_default = buttons.addButton("应用并设为默认",
+        self.btn_apply = buttons.addButton(tr("应用"), QDialogButtonBox.AcceptRole)
+        self.btn_default = buttons.addButton(tr("应用并设为默认"),
                                              QDialogButtonBox.AcceptRole)
-        buttons.addButton("取消", QDialogButtonBox.RejectRole)
+        buttons.addButton(tr("取消"), QDialogButtonBox.RejectRole)
         self.btn_apply.clicked.connect(self._accept_apply)
         self.btn_default.clicked.connect(self._accept_default)
         root.addWidget(buttons)
@@ -568,7 +1049,7 @@ class WatermarkDialog(QDialog):
 
     # ---------- 文字水印 ----------
     def _build_text_group(self) -> QGroupBox:
-        box = QGroupBox("文字水印")
+        box = QGroupBox(tr("文字水印"))
         box.setCheckable(True)
         box.setChecked(self._s["use_text"])
         self.grp_text = box
@@ -577,7 +1058,7 @@ class WatermarkDialog(QDialog):
 
         self.text = QPlainTextEdit(self._s["text"])
         self.text.setFixedHeight(54)
-        self.text.setPlaceholderText("要加在水印上的文字（可多行）")
+        self.text.setPlaceholderText(tr("要加在水印上的文字（可多行）"))
         self.text.textChanged.connect(self._refresh_preview)
         lay.addWidget(self.text)
 
@@ -585,20 +1066,20 @@ class WatermarkDialog(QDialog):
         self.font_btn = QPushButton()
         self.font_btn.setMinimumWidth(220)
         self.font_btn.clicked.connect(self._pick_font)
-        row.addWidget(QLabel("字体"))
+        row.addWidget(QLabel(tr("字体")))
         row.addWidget(self.font_btn, 1)
 
         self.color_btn = QPushButton()
         self.color_btn.setFixedSize(52, 26)
-        self.color_btn.setToolTip("文字颜色")
+        self.color_btn.setToolTip(tr("文字颜色"))
         self.color_btn.clicked.connect(self._pick_color)
-        row.addWidget(QLabel("颜色"))
+        row.addWidget(QLabel(tr("颜色")))
         row.addWidget(self.color_btn)
         row.addStretch(1)
         lay.addLayout(row)
 
         row2 = QHBoxLayout()
-        row2.addWidget(QLabel("不透明度"))
+        row2.addWidget(QLabel(tr("不透明度")))
         self.text_alpha = QSlider(Qt.Horizontal)
         self.text_alpha.setRange(0, 100)
         self.text_alpha.setValue(_pct(self._s["text_alpha"]))
@@ -610,7 +1091,7 @@ class WatermarkDialog(QDialog):
         self.text_alpha_label.setMinimumWidth(42)
         row2.addWidget(self.text_alpha_label)
 
-        self.outline = QCheckBox("描边（深浅背景都清晰）")
+        self.outline = QCheckBox(tr("描边（深浅背景都清晰）"))
         self.outline.setChecked(self._s["outline"])
         self.outline.toggled.connect(self._refresh_preview)
         row2.addWidget(self.outline)
@@ -661,7 +1142,7 @@ class WatermarkDialog(QDialog):
 
     # ---------- 图片水印 ----------
     def _build_image_group(self) -> QGroupBox:
-        box = QGroupBox("图片水印")
+        box = QGroupBox(tr("图片水印"))
         box.setCheckable(True)
         box.setChecked(self._s["use_image"])
         self.grp_image = box
@@ -671,18 +1152,18 @@ class WatermarkDialog(QDialog):
         row = QHBoxLayout()
         self.image_path = QLineEdit(self._s["image_path"])
         self.image_path.setReadOnly(True)
-        self.image_path.setPlaceholderText("选择一张图片（建议用透明底的 PNG）")
+        self.image_path.setPlaceholderText(tr("选择一张图片（建议用透明底的 PNG）"))
         row.addWidget(self.image_path, 1)
-        browse = QPushButton("浏览…")
+        browse = QPushButton(tr("浏览…"))
         browse.clicked.connect(self._pick_image)
         row.addWidget(browse)
-        clear = QPushButton("清除")
+        clear = QPushButton(tr("清除"))
         clear.clicked.connect(self._clear_image)
         row.addWidget(clear)
         lay.addLayout(row)
 
         row2 = QHBoxLayout()
-        row2.addWidget(QLabel("大小"))
+        row2.addWidget(QLabel(tr("大小")))
         self.image_scale = QSpinBox()
         self.image_scale.setRange(1, 300)
         self.image_scale.setSuffix(" % 图宽")
@@ -690,7 +1171,7 @@ class WatermarkDialog(QDialog):
         self.image_scale.valueChanged.connect(self._on_scale)
         row2.addWidget(self.image_scale)
 
-        row2.addWidget(QLabel("不透明度"))
+        row2.addWidget(QLabel(tr("不透明度")))
         self.image_alpha = QSlider(Qt.Horizontal)
         self.image_alpha.setRange(0, 100)
         self.image_alpha.setValue(_pct(self._s["image_alpha"]))
@@ -723,8 +1204,8 @@ class WatermarkDialog(QDialog):
 
     def _pick_image(self):
         path, _ = QFileDialog.getOpenFileName(
-            self, "选择水印图片", "",
-            "图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;所有文件 (*.*)")
+            self, tr("选择水印图片"), "",
+            tr("图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;所有文件 (*.*)"))
         if not path:
             return
         self._s["image_path"] = path
@@ -755,7 +1236,7 @@ class WatermarkDialog(QDialog):
 
     # ---------- 位置与排布 ----------
     def _build_layout_group(self) -> QGroupBox:
-        box = QGroupBox("位置与排布")
+        box = QGroupBox(tr("位置与排布"))
         lay = QHBoxLayout(box)
 
         grid = QGridLayout()
@@ -773,13 +1254,13 @@ class WatermarkDialog(QDialog):
         lay.addLayout(grid)
 
         right = QVBoxLayout()
-        self.tile = QCheckBox("平铺整张图")
+        self.tile = QCheckBox(tr("平铺整张图"))
         self.tile.setChecked(self._s["tile"])
         self.tile.toggled.connect(self._on_tile)
         right.addWidget(self.tile)
 
         row = QHBoxLayout()
-        row.addWidget(QLabel("间距"))
+        row.addWidget(QLabel(tr("间距")))
         self.spacing = QSpinBox()
         self.spacing.setRange(0, 2000)
         self.spacing.setSuffix(" px")
@@ -790,7 +1271,7 @@ class WatermarkDialog(QDialog):
         right.addLayout(row)
 
         row2 = QHBoxLayout()
-        row2.addWidget(QLabel("旋转"))
+        row2.addWidget(QLabel(tr("旋转")))
         self.rotation = QSpinBox()
         self.rotation.setRange(-180, 180)
         self.rotation.setSuffix(" °")
@@ -798,7 +1279,7 @@ class WatermarkDialog(QDialog):
         self.rotation.valueChanged.connect(self._on_rotation)
         row2.addWidget(self.rotation)
 
-        row2.addWidget(QLabel("边距"))
+        row2.addWidget(QLabel(tr("边距")))
         self.margin = QSpinBox()
         self.margin.setRange(0, 2000)
         self.margin.setSuffix(" px")
@@ -835,7 +1316,7 @@ class WatermarkDialog(QDialog):
 
     # ---------- 预览 ----------
     def _build_preview_group(self) -> QGroupBox:
-        box = QGroupBox("预览")
+        box = QGroupBox(tr("预览"))
         lay = QVBoxLayout(box)
         self.preview = QLabel()
         self.preview.setFixedSize(self.PREVIEW_W, self.PREVIEW_H)
@@ -939,6 +1420,7 @@ from PySide6.QtWidgets import (QCheckBox, QColorDialog, QComboBox, QDialog,
                                QDialogButtonBox, QFormLayout, QGroupBox,
                                QHBoxLayout, QLabel, QPushButton, QSlider,
                                QSpinBox, QVBoxLayout)
+
 
 # (值, 显示名, 说明)
 STYLES = [
@@ -1310,7 +1792,7 @@ class BorderDialog(QDialog):
     def __init__(self, parent=None, settings: dict | None = None,
                  image_size: QSize | None = None):
         super().__init__(parent)
-        self.setWindowTitle("边框 / 边缘效果")
+        self.setWindowTitle(tr("边框 / 边缘效果"))
         self.setMinimumWidth(520)
         self._s = normalize_border(settings or load_border_default())
         self._image_size = image_size if (image_size and image_size.isValid()) \
@@ -1321,12 +1803,12 @@ class BorderDialog(QDialog):
 
         self.style = QComboBox()
         for key, name, tip in STYLES:
-            self.style.addItem(name, key)
-            self.style.setItemData(self.style.count() - 1, tip, Qt.ToolTipRole)
+            self.style.addItem(tr(name), key)
+            self.style.setItemData(self.style.count() - 1, tr(tip), Qt.ToolTipRole)
         idx = [k for k, _, _ in STYLES].index(self._s["style"])
         self.style.setCurrentIndex(idx)
         self.style.currentIndexChanged.connect(self._on_style)
-        form.addRow("样式", self.style)
+        form.addRow(tr("样式"), self.style)
 
         row = QHBoxLayout()
         self.width = QSpinBox()
@@ -1338,10 +1820,10 @@ class BorderDialog(QDialog):
         self.color_btn = QPushButton()
         self.color_btn.setFixedSize(52, 26)
         self.color_btn.clicked.connect(self._pick_color)
-        row.addWidget(QLabel("颜色"))
+        row.addWidget(QLabel(tr("颜色")))
         row.addWidget(self.color_btn)
         row.addStretch(1)
-        form.addRow("宽度", row)
+        form.addRow(tr("宽度"), row)
 
         row2 = QHBoxLayout()
         self.radius = QSpinBox()
@@ -1349,20 +1831,20 @@ class BorderDialog(QDialog):
         self.radius.setSuffix(" px")
         self.radius.setValue(self._s["radius"])
         self.radius.valueChanged.connect(self._on_radius)
-        self.radius_label = QLabel("圆角")
+        self.radius_label = QLabel(tr("圆角"))
         row2.addWidget(self.radius_label)
         row2.addWidget(self.radius)
 
         # 手撕纸专用：撕边幅度 + 换一个撕法
-        self.tear_label = QLabel("撕边")
+        self.tear_label = QLabel(tr("撕边"))
         self.tear = QSpinBox()
         self.tear.setRange(0, 200)
         self.tear.setSuffix(" px")
-        self.tear.setToolTip("撕口的起伏幅度；不能超过纸边宽度")
+        self.tear.setToolTip(tr("撕口的起伏幅度；不能超过纸边宽度"))
         self.tear.setValue(self._s["tear"])
         self.tear.valueChanged.connect(self._on_tear)
-        self.reseed = QPushButton("换一个撕法")
-        self.reseed.setToolTip("重新随机撕口（同一个种子预览和成品一致）")
+        self.reseed = QPushButton(tr("换一个撕法"))
+        self.reseed.setToolTip(tr("重新随机撕口（同一个种子预览和成品一致）"))
         self.reseed.clicked.connect(self._on_reseed)
         row2.addWidget(self.tear_label)
         row2.addWidget(self.tear)
@@ -1376,15 +1858,15 @@ class BorderDialog(QDialog):
             lambda v: self.alpha_label.setText(f"{v}%"))
         self.alpha_label = QLabel(f"{int(round(self._s['shadow_alpha'] * 100 / 255))}%")
         self.alpha_label.setMinimumWidth(40)
-        self.alpha_text = QLabel("阴影浓度")
+        self.alpha_text = QLabel(tr("阴影浓度"))
         row2.addWidget(self.alpha_text)
         row2.addWidget(self.alpha, 1)
         row2.addWidget(self.alpha_label)
         row2.addStretch(1)
-        form.addRow("细节", row2)
+        form.addRow(tr("细节"), row2)
         root.addLayout(form)
 
-        prev = QGroupBox("预览")
+        prev = QGroupBox(tr("预览"))
         pl = QVBoxLayout(prev)
         self.preview = QLabel()
         self.preview.setFixedSize(self.PREVIEW_MAX)
@@ -1397,10 +1879,10 @@ class BorderDialog(QDialog):
         root.addWidget(self.note)
 
         buttons = QDialogButtonBox()
-        self.btn_apply = buttons.addButton("应用", QDialogButtonBox.AcceptRole)
-        self.btn_default = buttons.addButton("应用并设为默认",
+        self.btn_apply = buttons.addButton(tr("应用"), QDialogButtonBox.AcceptRole)
+        self.btn_default = buttons.addButton(tr("应用并设为默认"),
                                              QDialogButtonBox.AcceptRole)
-        buttons.addButton("取消", QDialogButtonBox.RejectRole)
+        buttons.addButton(tr("取消"), QDialogButtonBox.RejectRole)
         self.btn_apply.clicked.connect(self._accept_apply)
         self.btn_default.clicked.connect(self._accept_default)
         root.addWidget(buttons)
@@ -1426,12 +1908,12 @@ class BorderDialog(QDialog):
         self.alpha_label.setVisible(show_alpha)
         self.alpha_text.setVisible(show_alpha)
         if is_torn:
-            self.alpha_text.setText("投影浓度")
+            self.alpha_text.setText(tr("投影浓度"))
             self.tear.setMaximum(max(1, self.width.value()))
         else:
-            self.alpha_text.setText("阴影浓度")
+            self.alpha_text.setText(tr("阴影浓度"))
         tips = {k: t for k, _, t in STYLES}
-        self.note.setText(tips.get(key, ""))
+        self.note.setText(tr(tips.get(key, "")))
         self._refresh_preview()
 
     def _on_width(self, v):
@@ -1980,6 +2462,7 @@ def clone_shapes(shapes):
 # -*- coding: utf-8 -*-
 """现代化深色主题：全局 QSS + 自绘矢量工具图标。"""
 from PySide6.QtCore import QPointF, Qt
+from PySide6.QtCore import QRectF
 from PySide6.QtGui import (QColor, QFont, QIcon, QPainter, QPainterPath,
                            QPalette, QPen, QPixmap)
 
@@ -2429,6 +2912,14 @@ def _draw_redo(p, c):
     p.drawLine(QPointF(19, 9), QPointF(14, 9))
 
 
+def _draw_globe(p, c):
+    """地球（语言切换菜单用）。"""
+    p.drawEllipse(QPointF(12, 12), 8.5, 8.5)
+    p.drawEllipse(QPointF(12, 12), 3.8, 8.5)          # 经线
+    p.drawLine(QPointF(3.5, 12), QPointF(20.5, 12))   # 赤道
+    p.drawArc(QRectF(3.5, 6.5, 17, 11), 0, 180 * 16)
+
+
 _ICON_DRAWERS = {
     "select": _draw_select, "rect": _draw_rect, "ellipse": _draw_ellipse,
     "line": _draw_line, "arrow": _draw_arrow, "pen": _draw_pen,
@@ -2437,6 +2928,7 @@ _ICON_DRAWERS = {
     "camera": _draw_camera, "undo": _draw_undo, "redo": _draw_redo,
     "monitor": _draw_monitor, "scroll": _draw_scroll, "image": _draw_image,
     "window": _draw_window, "pin": _draw_pin, "exit": _draw_exit,
+    "globe": _draw_globe,
 }
 
 
@@ -2762,6 +3254,7 @@ from PySide6.QtGui import QAction, QColor, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QApplication, QMenu, QWidget
 
 
+
 class PinWindow(QWidget):
     closed = Signal(object)  # 参数为自身，便于宿主从列表移除
 
@@ -2828,15 +3321,15 @@ class PinWindow(QWidget):
     # ---------- 菜单 ----------
     def _show_menu(self, global_pos: QPoint):
         menu = QMenu(self)
-        act_copy = QAction("复制图片", self)
+        act_copy = QAction(tr("复制图片"), self)
         act_copy.triggered.connect(
             lambda: QApplication.clipboard().setPixmap(self._pix))
         menu.addAction(act_copy)
-        act_reset = QAction("重置大小 / 透明度", self)
+        act_reset = QAction(tr("重置大小 / 透明度"), self)
         act_reset.triggered.connect(self._reset)
         menu.addAction(act_reset)
         menu.addSeparator()
-        act_close = QAction("关闭 (Esc)", self)
+        act_close = QAction(tr("关闭 (Esc)"), self)
         act_close.triggered.connect(self.close)
         menu.addAction(act_close)
         menu.exec(global_pos)
@@ -2875,6 +3368,7 @@ from PySide6.QtCore import QPoint, QRect, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import (QColor, QCursor, QFont, QGuiApplication, QImage,
                            QPainter, QPainterPath, QPen, QPixmap, QRegion)
 from PySide6.QtWidgets import QWidget
+
 
 MASK_COLOR = QColor(6, 10, 18, 150)   # 遮罩：偏深的蓝黑，任何背景都能看出"已进入截图状态"
 VK_LBUTTON = 0x01
@@ -3388,14 +3882,13 @@ class SnipperOverlay(QWidget):
     def _draw_hint(self, p: QPainter, anchor: QPoint | None = None):
         """提示条：明确告知当前模式和退出方式，避免看起来像卡死。"""
         if self.mode == "color":
-            text = "屏幕取色：单击复制色值    ·    Esc / 右键 取消"
+            text = tr("屏幕取色：单击复制色值    ·    Esc / 右键 取消")
         elif self.mode == "scroll":
-            text = "拖拽选择要滚动截图的区域    ·    Esc / 右键 取消"
+            text = tr("拖拽选择要滚动截图的区域    ·    Esc / 右键 取消")
         elif self.mode == "point":
-            text = ("蓝框内可直接点击滚动条【滑块】→ 自动开始滚动"
-                    "    ·    Esc 取消")
+            text = tr("蓝框内可直接点击滚动条【滑块】→ 自动开始滚动    ·    Esc 取消")
         else:
-            text = "拖拽选择截图区域    ·    Esc / 右键 取消"
+            text = tr("拖拽选择截图区域    ·    Esc / 右键 取消")
         metrics = p.fontMetrics()
         w = metrics.horizontalAdvance(text) + 36
         h = metrics.height() + 16
@@ -3459,6 +3952,7 @@ from pathlib import Path
 from PySide6.QtCore import (QEventLoop, QObject, QPoint, QRect, Qt, QTimer, Signal)
 from PySide6.QtGui import QColor, QCursor, QGuiApplication, QImage, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+
 
 MOUSEEVENTF_WHEEL = 0x0800
 user32 = ctypes.windll.user32          # 提到模块级，便于测试打桩
@@ -3974,14 +4468,14 @@ class ScrollControlBar(QWidget):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(10, 6, 10, 6)
         row = QHBoxLayout()
-        self.label = QLabel("滚动截图准备中…")
+        self.label = QLabel(tr("滚动截图准备中…"))
         row.addWidget(self.label)
         btn = QPushButton("完成 (Enter)" if manual else "停止 (Esc)")
         btn.clicked.connect(self.stopped)
         row.addWidget(btn)
         lay.addLayout(row)
         if manual:
-            hint = QLabel("请用鼠标滚轮或 Page Down 自己滚动页面，滚到底后点「完成」")
+            hint = QLabel(tr("请用鼠标滚轮或 Page Down 自己滚动页面，滚到底后点「完成」"))
             hint.setStyleSheet("color: #aeb6c2; font-size: 11px;")
             lay.addWidget(hint)
         self.adjustSize()
@@ -4002,9 +4496,11 @@ class ScrollControlBar(QWidget):
 
     def set_progress(self, frames: int, height: int, offset: int | None = None):
         prefix = f"{self.title} · " if self.title else ""
-        text = f"{prefix}{'手动' if self.manual else '滚动'}截图中… {frames} 帧 / {height} px"
+        text = prefix + tr("{}截图中… {} 帧 / {} px",
+                                   tr("手动") if self.manual else tr("滚动"),
+                                   frames, height)
         if offset:
-            text += f"（本帧 +{offset}）"
+            text += tr("（本帧 +{}）", offset)
         self.label.setText(text)
         self.adjustSize()
 
@@ -4149,11 +4645,11 @@ class ScrollCapture(QObject):
         try:
             frame = self._grab_settled()
         except Exception as ex:
-            self.failed.emit(f"抓帧失败：{ex}")
+            self.failed.emit(tr("抓帧失败：") + str(ex))
             self._cleanup()
             return
         if frame.isNull() or frame.width() < 8 or frame.height() < 80:
-            self.failed.emit("抓帧失败：区域过小或被遮挡")
+            self.failed.emit(tr("抓帧失败：区域过小或被遮挡"))
             self._cleanup()
             return
 
@@ -4180,7 +4676,7 @@ class ScrollCapture(QObject):
             self._debug_dump(fr, "首帧")
         else:
             if fr.h != self._prev.h or fr.w != self._prev.w:
-                self.failed.emit("抓帧尺寸发生变化，已停止（请确保窗口未移动/缩放）")
+                self.failed.emit(tr("抓帧尺寸发生变化，已停止（请确保窗口未移动/缩放）"))
                 self._cleanup()
                 return
             s, diff = find_scroll(self._prev, fr)
@@ -4292,7 +4788,7 @@ class ScrollCapture(QObject):
     def _finish(self):
         self._cleanup()
         if self._acc is None:
-            self.failed.emit("没有抓到任何内容")
+            self.failed.emit(tr("没有抓到任何内容"))
             return
         self.finished_ok.emit(frame_to_pixmap(self._acc, self._dpr))
 
@@ -4345,6 +4841,7 @@ from PySide6.QtWidgets import (QApplication, QColorDialog, QDialog, QFileDialog,
                                QScrollArea, QSizePolicy, QSpinBox, QTabBar,
                                QTabWidget, QToolButton, QVBoxLayout, QWidget,
                                QButtonGroup)
+
 
 
 
@@ -4772,7 +5269,7 @@ class Canvas(QWidget):
     def _open_text_editor(self, pos: QPointF):
         self._text_pos = pos
         edit = QLineEdit(self)
-        edit.setPlaceholderText("输入文字，Enter 确认 / Esc 取消")
+        edit.setPlaceholderText(tr("输入文字，Enter 确认 / Esc 取消"))
         font = edit.font()
         font.setPixelSize(max(12, int(self.font_size * self.zoom)))
         edit.setFont(font)
@@ -5034,7 +5531,7 @@ class EditorWindow(QMainWindow):
 
     def __init__(self, pixmap: QPixmap | None = None, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("PyShot 编辑器")
+        self.setWindowTitle(tr("PyShot 编辑器"))
         self._prev_tool = "select"
         # 跨标签共享的绘制属性（切标签/新截图沿用当前工具与样式）
         self._shared = {"tool": "select", "color": QColor(PALETTE[0]),
@@ -5104,7 +5601,7 @@ class EditorWindow(QMainWindow):
         scroll.setWidgetResizable(False)
         scroll.setAlignment(Qt.AlignCenter)
 
-        idx = self.tabs.addTab(scroll, title or f"截图 {self.tabs.count() + 1}")
+        idx = self.tabs.addTab(scroll, title or tr("截图 {}").format(self.tabs.count() + 1))
         self.tabs.setTabToolTip(
             idx, f"{pixmap.width()} × {pixmap.height()} px\n"
                  "滚轮/Ctrl+滚轮 缩放 · 中键拖动滚动")
@@ -5112,7 +5609,7 @@ class EditorWindow(QMainWindow):
         close_btn = QToolButton()
         close_btn.setObjectName("tabclose")
         close_btn.setText("✕")
-        close_btn.setToolTip("关闭此标签 (Ctrl+W)")
+        close_btn.setToolTip(tr("关闭此标签 (Ctrl+W)"))
         close_btn.setCursor(Qt.PointingHandCursor)
         close_btn.clicked.connect(lambda _=False, page=scroll: self._close_page(page))
         self.tabs.tabBar().setTabButton(idx, QTabBar.RightSide, close_btn)
@@ -5133,6 +5630,37 @@ class EditorWindow(QMainWindow):
         except Exception:                      # noqa: BLE001
             pass
         return canvas
+
+    def retranslate(self):
+        """语言切换后刷新界面文案（画布与标注不受影响）。
+
+        做法是"把当前显示的文案再翻译一次"：i18n 内部有译文→原文的反查，
+        所以英文/繁体文本也能翻译回目标语言，反复切换不会错乱。
+        """
+
+        self.setWindowTitle(_tr("PyShot 编辑器"))
+        # 通用扫描：按钮 / 标签 / 复选框 / 分组框的文本与提示
+        for w in self.findChildren(object):
+            try:
+                if hasattr(w, "text") and callable(getattr(w, "setText", None)):
+                    txt = w.text()
+                    if txt:
+                        w.setText(_tr(txt))
+                if hasattr(w, "setToolTip"):
+                    tip = w.toolTip()
+                    if tip:
+                        w.setToolTip(_tr(tip))
+            except Exception:                      # noqa: BLE001
+                continue
+        # 工具轨道与状态栏
+        try:
+            for tid, name, tip in TOOLS:
+                btn = self.tool_buttons.get(tid)
+                if btn is not None:
+                    btn.setToolTip(_tr("{} — {}", _tr(name), _tr(tip)))
+            self.set_tool(self.tool)
+        except Exception:                          # noqa: BLE001
+            pass
 
     def close_tab(self, idx: int):
         page = self.tabs.widget(idx)
@@ -5217,7 +5745,7 @@ class EditorWindow(QMainWindow):
                 btn.setIconSize(QSize(24, 24))
                 btn.setFixedSize(44, 42)
                 btn.setToolButtonStyle(Qt.ToolButtonIconOnly)
-                btn.setToolTip(f"{name} — {tip}")
+                btn.setToolTip(tr("{} — {}", tr(name), tr(tip)))
                 btn.setCheckable(True)
                 btn.setCursor(Qt.PointingHandCursor)
                 btn.clicked.connect(lambda checked, t=tid: self.set_tool(t))
@@ -5284,19 +5812,19 @@ class EditorWindow(QMainWindow):
 
         # ---------- 第 1 行：截图 / 颜色 / 尺寸 ----------
         r1 = row()
-        btn_shot = QPushButton("截图")
+        btn_shot = QPushButton(tr("截图"))
         btn_shot.setObjectName("primarybtn")
         btn_shot.setIcon(make_icon("camera"))
         btn_shot.setIconSize(QSize(17, 17))
         btn_shot.setFixedHeight(self._CTRL_H)
-        btn_shot.setToolTip("截取新区域\n会自动最小化编辑器，截完回到这里新增标签")
+        btn_shot.setToolTip(tr("截取新区域\n会自动最小化编辑器，截完回到这里新增标签"))
         btn_shot.setCursor(Qt.PointingHandCursor)
         btn_shot.clicked.connect(self.capture_requested)
         self.btn_shot = btn_shot
         r1.addWidget(btn_shot)
         r1.addWidget(self._top_sep())
 
-        color_label = QLabel("颜色")
+        color_label = QLabel(tr("颜色"))
         color_label.setAlignment(Qt.AlignVCenter)
         swatches = []
         self.color_buttons = []
@@ -5311,7 +5839,7 @@ class EditorWindow(QMainWindow):
         more = QPushButton("…")
         more.setObjectName("swatchMore")
         more.setFixedSize(20, 20)
-        more.setToolTip("自定义颜色")
+        more.setToolTip(tr("自定义颜色"))
         more.clicked.connect(self._pick_color)
         r1.addWidget(self._group(color_label, *swatches, more))
         self._refresh_swatch_state()
@@ -5340,45 +5868,45 @@ class EditorWindow(QMainWindow):
         self.step_spin.setValue(int(self._shared["step_diameter"]))
         self.step_spin.setFixedHeight(self._CTRL_H)
         self.step_spin.setFixedWidth(80)
-        self.step_spin.setToolTip("序号圆的大小\n选中已有序号时可直接调整它的大小")
+        self.step_spin.setToolTip(tr("序号圆的大小\n选中已有序号时可直接调整它的大小"))
         self.step_spin.valueChanged.connect(self._on_step_size_changed)
         r1.addWidget(self._labeled("序号", self.step_spin))
 
         # ---------- 第 2 行：编辑 / 输出 ----------
         r2 = row()
-        self.act_undo = QAction("撤销", self)
-        self.act_undo.setToolTip("撤销 (Ctrl+Z)")
+        self.act_undo = QAction(tr("撤销"), self)
+        self.act_undo.setToolTip(tr("撤销 (Ctrl+Z)"))
         self.act_undo.triggered.connect(lambda: self.canvas and self.canvas.undo())
-        self.act_redo = QAction("重做", self)
-        self.act_redo.setToolTip("重做 (Ctrl+Y)")
+        self.act_redo = QAction(tr("重做"), self)
+        self.act_redo.setToolTip(tr("重做 (Ctrl+Y)"))
         self.act_redo.triggered.connect(lambda: self.canvas and self.canvas.redo())
-        self.act_crop_ok = QAction("应用裁剪", self)
-        self.act_crop_ok.setToolTip("应用裁剪框 (Enter)")
+        self.act_crop_ok = QAction(tr("应用裁剪"), self)
+        self.act_crop_ok.setToolTip(tr("应用裁剪框 (Enter)"))
         self.act_crop_ok.triggered.connect(
             lambda: self.canvas and self.canvas.apply_crop())
-        act_copy = QAction("复制", self)
-        act_copy.setToolTip("复制到剪贴板 (Ctrl+C)")
+        act_copy = QAction(tr("复制"), self)
+        act_copy.setToolTip(tr("复制到剪贴板 (Ctrl+C)"))
         act_copy.triggered.connect(self.copy_to_clipboard)
-        act_pin = QAction("贴图", self)
-        act_pin.setToolTip("把当前结果钉在屏幕最上层（Snipaste 风格）")
+        act_pin = QAction(tr("贴图"), self)
+        act_pin.setToolTip(tr("把当前结果钉在屏幕最上层（Snipaste 风格）"))
         act_pin.triggered.connect(self.pin_to_screen)
-        act_wm = QAction("水印", self)
+        act_wm = QAction(tr("水印"), self)
         act_wm.setToolTip(
             "水印：文字与图片可各自开关（也可同时用）\n"
             "九宫格位置或平铺、各自调不透明度、可旋转与设边距\n"
             "还能「应用并设为默认」，之后新截图自动加")
         act_wm.triggered.connect(self.add_watermark)
-        act_border = QAction("边框", self)
+        act_border = QAction(tr("边框"), self)
         act_border.setToolTip(
             "加边框（对应 FSCapture 的「特效 → 边缘」）\n"
             "单线/双线/虚线/圆角/投影阴影/立体浮雕/边缘渐隐/拍立得白边\n"
             "边框加在图片外面，图会变大；可 Ctrl+Z 撤销")
         act_border.triggered.connect(self.add_border)
-        act_save = QAction("保存", self)
-        act_save.setToolTip("保存为文件 (Ctrl+S)")
+        act_save = QAction(tr("保存"), self)
+        act_save.setToolTip(tr("保存为文件 (Ctrl+S)"))
         act_save.triggered.connect(self.save_as)
-        act_close = QAction("关闭", self)
-        act_close.setToolTip("关闭编辑器 (Esc)")
+        act_close = QAction(tr("关闭"), self)
+        act_close.setToolTip(tr("关闭编辑器 (Esc)"))
         act_close.triggered.connect(self.close)
 
         undo_btn = self._icon_button("undo", "撤销 (Ctrl+Z)",
@@ -5419,7 +5947,7 @@ class EditorWindow(QMainWindow):
         sb.setSizeGripEnabled(False)      # 去掉右下角的多余手柄
         self.tool_name_label = QLabel()
         self.tool_name_label.setObjectName("toolname")
-        self.tool_name_label.setText("工具：选择")
+        self.tool_name_label.setText(tr("工具：选择"))
         sb.addWidget(self.tool_name_label)
         self.size_label = QLabel("")
         self.size_label.setObjectName("sizelabel")
@@ -5488,7 +6016,7 @@ class EditorWindow(QMainWindow):
             return
         suffix = f"（{hotkey}）" if hotkey else ""
         self.btn_shot.setToolTip(
-            f"截取新区域{suffix}\n会自动最小化编辑器，截完回到这里新增标签")
+            tr("截取新区域{}\n会自动最小化编辑器，截完回到这里新增标签", suffix))
 
     # ---------- 行为 ----------
     def set_tool(self, tid: str):
@@ -5511,12 +6039,13 @@ class EditorWindow(QMainWindow):
         self.tool_buttons[tid].setChecked(True)
         self._refresh_actions()
         name = dict((t, n) for t, n, _ in TOOLS).get(tid, tid)
-        self.tool_name_label.setText(f"工具：{name}")
+        self.tool_name_label.setText(tr("工具：") + tr(name))
 
     def _on_color_picked(self, color: QColor):
         self._refresh_swatch_state()
         self.statusBar().showMessage(
-            f"已取色 {color.name().upper()}，切回 {dict((t, n) for t, n, _ in TOOLS)[self._prev_tool]} 工具",
+            tr("已取色") + f" {color.name().upper()}" + tr("，切回")
+            + tr(dict((t, n) for t, n, _ in TOOLS)[self._prev_tool]) + tr(" 工具"),
             3000)
         self.set_tool(self._prev_tool)  # 取色后自动切回之前的工具
 
@@ -5620,7 +6149,7 @@ class EditorWindow(QMainWindow):
             return
         canvas._commit_text()
         QApplication.clipboard().setPixmap(canvas.render_result())
-        self.statusBar().showMessage("已复制到剪贴板", 2000)
+        self.statusBar().showMessage(tr("已复制到剪贴板"), 2000)
 
     def pin_to_screen(self):
         canvas = self.canvas
@@ -5677,7 +6206,7 @@ class EditorWindow(QMainWindow):
                 if saved else "已设为默认边框（本次运行有效，配置写入失败）",
                 4000)
         if not self.apply_border(canvas, settings):
-            self.statusBar().showMessage("边框宽度为 0，未做改动", 3000)
+            self.statusBar().showMessage(tr("边框宽度为 0，未做改动"), 3000)
         else:
             self._fit_canvas(canvas, self.tabs.currentWidget())
 
@@ -5685,7 +6214,7 @@ class EditorWindow(QMainWindow):
         ok = canvas.apply_border(settings)
         if ok:
             self.statusBar().showMessage(
-                f"已加边框：{canvas.base_pixmap.width()}×"
+                tr("已加边框：") + f"{canvas.base_pixmap.width()}×"
                 f"{canvas.base_pixmap.height()} px", 4000)
         return ok
 
@@ -5697,8 +6226,8 @@ class EditorWindow(QMainWindow):
         idx = self.tabs.currentIndex() + 1
         default = f"screenshot-{idx}.png"
         path, _ = QFileDialog.getSaveFileName(
-            self, "保存截图", default,
-            "PNG 图片 (*.png);;JPEG 图片 (*.jpg);;BMP 图片 (*.bmp)")
+            self, tr("保存截图"), default,
+            tr("PNG 图片 (*.png);;JPEG 图片 (*.jpg);;BMP 图片 (*.bmp)"))
         if not path:
             return
         img = canvas.render_result().toImage()
@@ -5714,7 +6243,7 @@ class EditorWindow(QMainWindow):
         else:
             img.setDevicePixelRatio(1.0)   # PNG 存原始像素，不带 dpr 元数据
             img.save(path)
-        self.statusBar().showMessage(f"已保存：{path}", 4000)
+        self.statusBar().showMessage(tr("已保存：") + path, 4000)
 
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_Escape:
@@ -5767,6 +6296,7 @@ from PySide6.QtGui import (QAction, QColor, QCursor, QGuiApplication, QIcon,
                            QPainter, QPixmap)
 from PySide6.QtWidgets import (QApplication, QFileDialog, QMenu,
                                QSystemTrayIcon)
+
 
 
 
@@ -5954,26 +6484,30 @@ class PyShotApp(QObject):
             self.app.setQuitOnLastWindowClosed(True)
             return
         self.tray = QSystemTrayIcon(make_tray_icon(), self.app)
+        self._build_tray_menu()
+
+    def _build_tray_menu(self):
+        """构建/重建托盘菜单（切换语言时也会调它）。"""
         menu = QMenu()
         self.menu = menu
 
         # ---------- 截图 ----------
         # 高频动作置顶；快捷键用 "\t" 放到右侧列（只是显示，不注册 Qt 快捷键，
         # 避免与全局热键同时触发一次截图）
-        act_region = QAction(make_menu_icon("crop"), "区域截图", self.app)
-        act_region.setToolTip("框选一块区域截图")
+        act_region = QAction(make_menu_icon("crop"), tr("区域截图"), self.app)
+        act_region.setToolTip(tr("框选一块区域截图"))
         act_region.triggered.connect(lambda: self._deferred(self.capture_region))
         menu.addAction(act_region)
         self.act_region = act_region
 
-        act_full = QAction(make_menu_icon("camera"), "全屏截图", self.app)
-        act_full.setToolTip("截取鼠标所在的那块显示器")
+        act_full = QAction(make_menu_icon("camera"), tr("全屏截图"), self.app)
+        act_full.setToolTip(tr("截取鼠标所在的那块显示器"))
         act_full.triggered.connect(lambda: self._deferred(self.capture_fullscreen))
         menu.addAction(act_full)
         self.act_full = act_full
 
         # 选择显示器（含"所有显示器拼一张"）：弹出时按当前屏幕列表重建
-        self.menu_screens = QMenu("选择显示器截图", menu)
+        self.menu_screens = QMenu(tr("选择显示器截图"), menu)
         self.menu_screens.setIcon(make_menu_icon("monitor"))
         self.menu_screens.aboutToShow.connect(self._rebuild_screen_menu)
         menu.addMenu(self.menu_screens)
@@ -5981,7 +6515,7 @@ class PyShotApp(QObject):
         menu.addSeparator()
 
         # ---------- 滚动长截图（收进子菜单，避免主菜单过长）----------
-        menu_scroll = QMenu("滚动长截图", menu)
+        menu_scroll = QMenu(tr("滚动长截图"), menu)
         menu_scroll.setIcon(make_menu_icon("scroll"))
         for label, tip, fn in [
                 ("自动滚轮",
@@ -6007,52 +6541,60 @@ class PyShotApp(QObject):
         menu.addSeparator()
 
         # ---------- 小工具 ----------
-        act_color = QAction(make_menu_icon("pick"), "屏幕取色", self.app)
-        act_color.setToolTip("单击屏幕任意位置，把色值复制到剪贴板")
+        act_color = QAction(make_menu_icon("pick"), tr("屏幕取色"), self.app)
+        act_color.setToolTip(tr("单击屏幕任意位置，把色值复制到剪贴板"))
         act_color.triggered.connect(lambda: self._deferred(self.pick_color))
         menu.addAction(act_color)
 
-        act_pin_clip = QAction(make_menu_icon("pin"), "贴出剪贴板图片", self.app)
-        act_pin_clip.setToolTip("把剪贴板里的图片钉在屏幕最上层")
+        act_pin_clip = QAction(make_menu_icon("pin"), tr("贴出剪贴板图片"), self.app)
+        act_pin_clip.setToolTip(tr("把剪贴板里的图片钉在屏幕最上层"))
         act_pin_clip.triggered.connect(self.pin_clipboard)
         menu.addAction(act_pin_clip)
 
         menu.addSeparator()
 
         # ---------- 窗口 ----------
-        act_open = QAction(make_menu_icon("image"), "打开图片编辑…", self.app)
-        act_open.setToolTip("打开一张已有图片进行标注")
+        act_open = QAction(make_menu_icon("image"), tr("打开图片编辑…"), self.app)
+        act_open.setToolTip(tr("打开一张已有图片进行标注"))
         act_open.triggered.connect(self.open_image)
         menu.addAction(act_open)
 
-        act_editor = QAction(make_menu_icon("window"), "打开编辑器", self.app)
+        act_editor = QAction(make_menu_icon("window"), tr("打开编辑器"), self.app)
         act_editor.setToolTip(
-            "把编辑器窗口恢复到前台（取消截图后找不到编辑器时点这里）")
+            tr("把编辑器窗口恢复到前台（取消截图后找不到编辑器时点这里）"))
         act_editor.triggered.connect(self.show_editor)
         menu.addAction(act_editor)
 
         menu.addSeparator()
-        act_quit = QAction(make_menu_icon("exit"), "退出 PyShot", self.app)
+
+        # ---------- 语言 ----------
+        self.menu_lang = QMenu(tr("语言"), menu)
+        self.menu_lang.setIcon(make_menu_icon("globe"))
+        self.menu_lang.aboutToShow.connect(self._rebuild_language_menu)
+        menu.addMenu(self.menu_lang)
+
+        menu.addSeparator()
+        act_quit = QAction(make_menu_icon("exit"), tr("退出 PyShot"), self.app)
         act_quit.triggered.connect(self.app.quit)
         menu.addAction(act_quit)
 
         self.tray.setContextMenu(menu)
         # 快捷键写进右侧列（\t 之后的部分由 Qt 右对齐显示）
         if self.hotkey_text:
-            act_region.setText(f"区域截图\t{self.hotkey_text}")
+            act_region.setText(tr("区域截图") + "\t" + self.hotkey_text)
         if self.full_hotkey_text:
-            act_full.setText(f"全屏截图\t{self.full_hotkey_text}")
+            act_full.setText(tr("全屏截图") + "\t" + self.full_hotkey_text)
         hints = []
         if self.hotkey_text:
-            hints.append(f"{self.hotkey_text} 区域截图")
+            hints.append(tr("{} 区域截图", self.hotkey_text))
         if self.full_hotkey_text:
-            hints.append(f"{self.full_hotkey_text} 全屏截图")
+            hints.append(tr("{} 全屏截图", self.full_hotkey_text))
         if hints:
             self.tray.setToolTip(
-                "PyShot 截图工具\n" + " · ".join(hints) + "\n双击图标截图")
+                tr("PyShot 截图工具\n{}\n双击图标截图", " · ".join(hints)))
         else:
             self.tray.setToolTip(
-                "PyShot 截图工具\n双击图标截图 · 右键菜单")
+                tr("PyShot 截图工具\n双击图标截图 · 右键菜单"))
         self.tray.activated.connect(self._on_tray_activated)
         self.tray.show()
         # 注意：启动提示不在这里弹 —— 由 notify_ready() 统一负责，
@@ -6100,6 +6642,50 @@ class PyShotApp(QObject):
         """
         QTimer.singleShot(delay, fn)
 
+    # ---------- 语言 ----------
+    def _rebuild_language_menu(self):
+        """重建语言子菜单（勾选当前语言；含"跟随系统"）。"""
+        self.menu_lang.clear()
+        saved = saved_language()
+        for code, name in LANGUAGES:
+            act = QAction(name, self.menu_lang)
+            act.setCheckable(True)
+            act.setChecked(saved == code)
+            act.triggered.connect(
+                lambda checked=False, c=code: self._switch_language(c))
+            self.menu_lang.addAction(act)
+        self.menu_lang.addSeparator()
+        act_auto = QAction(
+            tr("跟随系统") + f"（{language_name(system_language())}）",
+            self.menu_lang)
+        act_auto.setCheckable(True)
+        act_auto.setChecked(saved == AUTO)
+        act_auto.setToolTip(tr("按系统语言自动选择"))
+        act_auto.triggered.connect(lambda: self._switch_language(AUTO))
+        self.menu_lang.addAction(act_auto)
+
+    def _switch_language(self, code: str):
+        """切换界面语言：重建托盘菜单，并让已打开的编辑器刷新文案。"""
+        lang = set_language(code)
+        self._retranslate()
+        self._notify(tr("界面语言已切换"), language_name(lang))
+
+    def _retranslate(self):
+        """语言变化后刷新界面文案。
+
+        托盘菜单直接重建；已打开的编辑器窗口调用各自的 retranslate()；
+        对话框每次打开都会新建，所以自动生效。
+        """
+        try:
+            self._build_tray_menu()
+        except Exception:                          # noqa: BLE001
+            pass
+        for ed in list(self.editors):
+            try:
+                ed.retranslate()
+            except Exception:                      # noqa: BLE001
+                pass
+
     def _rebuild_screen_menu(self):
         """按当前显示器列表重建子菜单（插拔显示器后自动更新）。
 
@@ -6110,7 +6696,7 @@ class PyShotApp(QObject):
         for i, scr in enumerate(QGuiApplication.screens()):
             geo = scr.geometry()
             dpr = float(scr.devicePixelRatio() or 1.0)
-            tag = "主屏" if scr is primary else f"显示器 {i + 1}"
+            tag = tr("主屏") if scr is primary else tr("显示器 {}").format(i + 1)
             scale = f" @{int(round(dpr * 100))}%" if abs(dpr - 1.0) > 1e-6 else ""
             act = QAction(
                 f"{tag}：{geo.width()}×{geo.height()}{scale}  ({scr.name()})",
@@ -6121,13 +6707,13 @@ class PyShotApp(QObject):
                     lambda: self.capture_fullscreen(s)))
             self.menu_screens.addAction(act)
         if not self.menu_screens.actions():
-            act = QAction("（未检测到显示器）", self.menu_screens)
+            act = QAction(tr("（未检测到显示器）"), self.menu_screens)
             act.setEnabled(False)
             self.menu_screens.addAction(act)
         self.menu_screens.addSeparator()
-        act_all = QAction("所有显示器拼成一张", self.menu_screens)
+        act_all = QAction(tr("所有显示器拼成一张"), self.menu_screens)
         act_all.setIcon(make_menu_icon("monitor"))
-        act_all.setToolTip("把每块显示器按逻辑位置拼成一张长图")
+        act_all.setToolTip(tr("把每块显示器按逻辑位置拼成一张长图"))
         act_all.triggered.connect(
             lambda: self._deferred(self.capture_all_screens))
         self.menu_screens.addAction(act_all)
@@ -6236,7 +6822,7 @@ class PyShotApp(QObject):
             except Exception as ex:  # noqa: BLE001
                 import traceback
                 traceback.print_exc()
-                self._notify("打开编辑器失败", f"{type(ex).__name__}: {ex}")
+                self._notify(tr("打开编辑器失败"), f"{type(ex).__name__}: {ex}")
             finally:
                 self._finish_capture_session()
 
@@ -6258,12 +6844,12 @@ class PyShotApp(QObject):
             try:
                 pix = grab_screen(screen)
             except Exception as ex:  # noqa: BLE001
-                self._notify("全屏截图失败", f"{type(ex).__name__}: {ex}")
+                self._notify(tr("全屏截图失败"), f"{type(ex).__name__}: {ex}")
                 self._finish_capture_session()
                 return
             label = f"{screen.name()} {pix.width()}×{pix.height()}"
             self.open_editor(pix)
-            self._notify("全屏截图完成", label)
+            self._notify(tr("全屏截图完成"), label)
             self._finish_capture_session()
 
         # 等最小化动画结束再抓，否则窗口残影会进图
@@ -6291,7 +6877,7 @@ class PyShotApp(QObject):
     def _start_scrolling(self, region, manual: bool = False, mode: str = "wheel"):
         self._on_snip_done()   # 只清引用：滚动期间编辑器保持最小化，否则会被拍进画面
         if region.width() < 50 or region.height() < 120:
-            self._notify("滚动截图", "区域太小，请框选更高的可滚动区域")
+            self._notify(tr("滚动截图"), tr("区域太小，请框选更高的可滚动区域"))
             self._finish_capture_session()
             return
         driver = None
@@ -6319,19 +6905,19 @@ class PyShotApp(QObject):
         driver = ScrollDriver("drag", region, anchor=point)
         self._launch_scroller(region, manual=False, driver=driver,
                               title="拖拽滚动条自动滚动")
-        self._notify("已记录滚动条位置",
-                     f"滑块锚点 ({point.x()}, {point.y()})，开始自动拖拽滚动。\n"
+        self._notify(tr("已记录滚动条位置"),
+                     tr("滑块锚点 ({}, {})，开始自动拖拽滚动。\n", point.x(), point.y()) +
                      "滚到底会自动结束；想中途停止点控制条上的按钮。")
 
     def _on_scroll_finished(self, pixmap: QPixmap):
         self.scroller = None
-        self._notify("滚动截图完成", f"已拼接 {pixmap.height()} px 长图")
+        self._notify(tr("滚动截图完成"), f"已拼接 {pixmap.height()} px 长图")
         self.open_editor(pixmap)
         self._finish_capture_session()
 
     def _on_scroll_failed(self, msg: str):
         self.scroller = None
-        self._notify("滚动截图失败", msg)
+        self._notify(tr("滚动截图失败"), msg)
         self._finish_capture_session()
 
     # ---------- 屏幕取色 ----------
@@ -6342,8 +6928,8 @@ class PyShotApp(QObject):
         self._on_snip_done()
         text = color.name().upper()
         QApplication.clipboard().setText(text)
-        self._notify("屏幕取色",
-                     f"{text}  RGB({color.red()}, {color.green()}, {color.blue()}) 已复制")
+        self._notify(tr("屏幕取色"),
+                     f"{text}  RGB({color.red()}, {color.green()}, {color.blue()})" + tr("已复制"))
 
     # ---------- 贴图钉板 ----------
     def pin_pixmap(self, pixmap: QPixmap, pos=None):
@@ -6357,7 +6943,7 @@ class PyShotApp(QObject):
     def pin_clipboard(self):
         pix = QApplication.clipboard().pixmap()
         if pix.isNull():
-            self._notify("贴图", "剪贴板里没有图片")
+            self._notify(tr("贴图"), tr("剪贴板里没有图片"))
             return
         self.pin_pixmap(pix, QCursor.pos())
 
@@ -6375,21 +6961,21 @@ class PyShotApp(QObject):
         if not self._hotkey_ok:
             tried = "、".join(DEFAULT_HOTKEYS)
             self._notify(
-                "PyShot 热键不可用",
-                f"热键（{tried}）都被占用，请双击托盘图标截图。\n"
+                tr("PyShot 热键不可用"),
+                tr("热键（{}）都被占用，请双击托盘图标截图。\n", tried) +
                 "可用环境变量 PYSHOT_HOTKEY 指定其他组合，"
                 "例如 PYSHOT_HOTKEY=ctrl+alt+j")
             return
         self._notify(
-            "PyShot 已启动",
-            f"按 {self.hotkey_text} 框选截图，或双击托盘图标。\n"
+            tr("PyShot 已启动"),
+            tr("按 {} 框选截图，或双击托盘图标。\n", self.hotkey_text) +
             "右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n"
             "找不到图标时点任务栏右侧的 ∧ 展开。")
 
     def open_image(self):
         path, _ = QFileDialog.getOpenFileName(
-            None, "打开图片", str(Path.home()),
-            "图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)")
+            None, tr("打开图片"), str(Path.home()),
+            tr("图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)"))
         if not path:
             return
         pix = QPixmap(path)

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """验证：真实屏幕上，覆盖层是否真的画出了遮罩（不依赖 widget.grab）。"""
 import os
+
+os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

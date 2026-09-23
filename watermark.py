@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (QCheckBox, QColorDialog, QComboBox, QDialog,
                                QLineEdit, QPlainTextEdit, QPushButton,
                                QSlider, QSpinBox, QToolButton, QVBoxLayout,
                                QWidget)
+from i18n import tr
 
 DEFAULT_SETTINGS = {
     # ---- 文字水印 ----
@@ -339,7 +340,7 @@ class WatermarkDialog(QDialog):
     def __init__(self, parent=None, settings: dict | None = None,
                  image_size: QSize | None = None):
         super().__init__(parent)
-        self.setWindowTitle("水印")
+        self.setWindowTitle(tr("水印"))
         self.setMinimumWidth(560)
         self._s = normalize(settings or load_default())
         self._image_size = image_size if (image_size and image_size.isValid()) \
@@ -356,10 +357,10 @@ class WatermarkDialog(QDialog):
         root.addWidget(self._build_preview_group())
 
         buttons = QDialogButtonBox()
-        self.btn_apply = buttons.addButton("应用", QDialogButtonBox.AcceptRole)
-        self.btn_default = buttons.addButton("应用并设为默认",
+        self.btn_apply = buttons.addButton(tr("应用"), QDialogButtonBox.AcceptRole)
+        self.btn_default = buttons.addButton(tr("应用并设为默认"),
                                              QDialogButtonBox.AcceptRole)
-        buttons.addButton("取消", QDialogButtonBox.RejectRole)
+        buttons.addButton(tr("取消"), QDialogButtonBox.RejectRole)
         self.btn_apply.clicked.connect(self._accept_apply)
         self.btn_default.clicked.connect(self._accept_default)
         root.addWidget(buttons)
@@ -369,7 +370,7 @@ class WatermarkDialog(QDialog):
 
     # ---------- 文字水印 ----------
     def _build_text_group(self) -> QGroupBox:
-        box = QGroupBox("文字水印")
+        box = QGroupBox(tr("文字水印"))
         box.setCheckable(True)
         box.setChecked(self._s["use_text"])
         self.grp_text = box
@@ -378,7 +379,7 @@ class WatermarkDialog(QDialog):
 
         self.text = QPlainTextEdit(self._s["text"])
         self.text.setFixedHeight(54)
-        self.text.setPlaceholderText("要加在水印上的文字（可多行）")
+        self.text.setPlaceholderText(tr("要加在水印上的文字（可多行）"))
         self.text.textChanged.connect(self._refresh_preview)
         lay.addWidget(self.text)
 
@@ -386,20 +387,20 @@ class WatermarkDialog(QDialog):
         self.font_btn = QPushButton()
         self.font_btn.setMinimumWidth(220)
         self.font_btn.clicked.connect(self._pick_font)
-        row.addWidget(QLabel("字体"))
+        row.addWidget(QLabel(tr("字体")))
         row.addWidget(self.font_btn, 1)
 
         self.color_btn = QPushButton()
         self.color_btn.setFixedSize(52, 26)
-        self.color_btn.setToolTip("文字颜色")
+        self.color_btn.setToolTip(tr("文字颜色"))
         self.color_btn.clicked.connect(self._pick_color)
-        row.addWidget(QLabel("颜色"))
+        row.addWidget(QLabel(tr("颜色")))
         row.addWidget(self.color_btn)
         row.addStretch(1)
         lay.addLayout(row)
 
         row2 = QHBoxLayout()
-        row2.addWidget(QLabel("不透明度"))
+        row2.addWidget(QLabel(tr("不透明度")))
         self.text_alpha = QSlider(Qt.Horizontal)
         self.text_alpha.setRange(0, 100)
         self.text_alpha.setValue(_pct(self._s["text_alpha"]))
@@ -411,7 +412,7 @@ class WatermarkDialog(QDialog):
         self.text_alpha_label.setMinimumWidth(42)
         row2.addWidget(self.text_alpha_label)
 
-        self.outline = QCheckBox("描边（深浅背景都清晰）")
+        self.outline = QCheckBox(tr("描边（深浅背景都清晰）"))
         self.outline.setChecked(self._s["outline"])
         self.outline.toggled.connect(self._refresh_preview)
         row2.addWidget(self.outline)
@@ -462,7 +463,7 @@ class WatermarkDialog(QDialog):
 
     # ---------- 图片水印 ----------
     def _build_image_group(self) -> QGroupBox:
-        box = QGroupBox("图片水印")
+        box = QGroupBox(tr("图片水印"))
         box.setCheckable(True)
         box.setChecked(self._s["use_image"])
         self.grp_image = box
@@ -472,18 +473,18 @@ class WatermarkDialog(QDialog):
         row = QHBoxLayout()
         self.image_path = QLineEdit(self._s["image_path"])
         self.image_path.setReadOnly(True)
-        self.image_path.setPlaceholderText("选择一张图片（建议用透明底的 PNG）")
+        self.image_path.setPlaceholderText(tr("选择一张图片（建议用透明底的 PNG）"))
         row.addWidget(self.image_path, 1)
-        browse = QPushButton("浏览…")
+        browse = QPushButton(tr("浏览…"))
         browse.clicked.connect(self._pick_image)
         row.addWidget(browse)
-        clear = QPushButton("清除")
+        clear = QPushButton(tr("清除"))
         clear.clicked.connect(self._clear_image)
         row.addWidget(clear)
         lay.addLayout(row)
 
         row2 = QHBoxLayout()
-        row2.addWidget(QLabel("大小"))
+        row2.addWidget(QLabel(tr("大小")))
         self.image_scale = QSpinBox()
         self.image_scale.setRange(1, 300)
         self.image_scale.setSuffix(" % 图宽")
@@ -491,7 +492,7 @@ class WatermarkDialog(QDialog):
         self.image_scale.valueChanged.connect(self._on_scale)
         row2.addWidget(self.image_scale)
 
-        row2.addWidget(QLabel("不透明度"))
+        row2.addWidget(QLabel(tr("不透明度")))
         self.image_alpha = QSlider(Qt.Horizontal)
         self.image_alpha.setRange(0, 100)
         self.image_alpha.setValue(_pct(self._s["image_alpha"]))
@@ -524,8 +525,8 @@ class WatermarkDialog(QDialog):
 
     def _pick_image(self):
         path, _ = QFileDialog.getOpenFileName(
-            self, "选择水印图片", "",
-            "图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;所有文件 (*.*)")
+            self, tr("选择水印图片"), "",
+            tr("图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;所有文件 (*.*)"))
         if not path:
             return
         self._s["image_path"] = path
@@ -556,7 +557,7 @@ class WatermarkDialog(QDialog):
 
     # ---------- 位置与排布 ----------
     def _build_layout_group(self) -> QGroupBox:
-        box = QGroupBox("位置与排布")
+        box = QGroupBox(tr("位置与排布"))
         lay = QHBoxLayout(box)
 
         grid = QGridLayout()
@@ -574,13 +575,13 @@ class WatermarkDialog(QDialog):
         lay.addLayout(grid)
 
         right = QVBoxLayout()
-        self.tile = QCheckBox("平铺整张图")
+        self.tile = QCheckBox(tr("平铺整张图"))
         self.tile.setChecked(self._s["tile"])
         self.tile.toggled.connect(self._on_tile)
         right.addWidget(self.tile)
 
         row = QHBoxLayout()
-        row.addWidget(QLabel("间距"))
+        row.addWidget(QLabel(tr("间距")))
         self.spacing = QSpinBox()
         self.spacing.setRange(0, 2000)
         self.spacing.setSuffix(" px")
@@ -591,7 +592,7 @@ class WatermarkDialog(QDialog):
         right.addLayout(row)
 
         row2 = QHBoxLayout()
-        row2.addWidget(QLabel("旋转"))
+        row2.addWidget(QLabel(tr("旋转")))
         self.rotation = QSpinBox()
         self.rotation.setRange(-180, 180)
         self.rotation.setSuffix(" °")
@@ -599,7 +600,7 @@ class WatermarkDialog(QDialog):
         self.rotation.valueChanged.connect(self._on_rotation)
         row2.addWidget(self.rotation)
 
-        row2.addWidget(QLabel("边距"))
+        row2.addWidget(QLabel(tr("边距")))
         self.margin = QSpinBox()
         self.margin.setRange(0, 2000)
         self.margin.setSuffix(" px")
@@ -636,7 +637,7 @@ class WatermarkDialog(QDialog):
 
     # ---------- 预览 ----------
     def _build_preview_group(self) -> QGroupBox:
-        box = QGroupBox("预览")
+        box = QGroupBox(tr("预览"))
         lay = QVBoxLayout(box)
         self.preview = QLabel()
         self.preview.setFixedSize(self.PREVIEW_W, self.PREVIEW_H)

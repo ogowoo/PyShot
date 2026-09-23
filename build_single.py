@@ -21,6 +21,8 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 MODULES = [
+    "i18n_data.py",
+    "i18n.py",
     "bootstrap.py",
     "watermark.py",
     "border.py",
@@ -34,7 +36,7 @@ MODULES = [
     "main.py",
 ]
 
-LOCAL_MODULES = ("bootstrap", "watermark", "border", "shapes", "style", "capture_utils",
+LOCAL_MODULES = ("i18n_data", "i18n", "bootstrap", "watermark", "border", "shapes", "style", "capture_utils",
                  "pinboard", "snipper", "scroller", "editor", "main")
 
 _LOCAL_ALT = "|".join(LOCAL_MODULES)

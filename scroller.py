@@ -18,6 +18,7 @@ from pathlib import Path
 from PySide6.QtCore import (QEventLoop, QObject, QPoint, QRect, Qt, QTimer, Signal)
 from PySide6.QtGui import QColor, QCursor, QGuiApplication, QImage, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from i18n import tr
 
 MOUSEEVENTF_WHEEL = 0x0800
 user32 = ctypes.windll.user32          # 提到模块级，便于测试打桩
@@ -533,14 +534,14 @@ class ScrollControlBar(QWidget):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(10, 6, 10, 6)
         row = QHBoxLayout()
-        self.label = QLabel("滚动截图准备中…")
+        self.label = QLabel(tr("滚动截图准备中…"))
         row.addWidget(self.label)
         btn = QPushButton("完成 (Enter)" if manual else "停止 (Esc)")
         btn.clicked.connect(self.stopped)
         row.addWidget(btn)
         lay.addLayout(row)
         if manual:
-            hint = QLabel("请用鼠标滚轮或 Page Down 自己滚动页面，滚到底后点「完成」")
+            hint = QLabel(tr("请用鼠标滚轮或 Page Down 自己滚动页面，滚到底后点「完成」"))
             hint.setStyleSheet("color: #aeb6c2; font-size: 11px;")
             lay.addWidget(hint)
         self.adjustSize()
@@ -561,9 +562,11 @@ class ScrollControlBar(QWidget):
 
     def set_progress(self, frames: int, height: int, offset: int | None = None):
         prefix = f"{self.title} · " if self.title else ""
-        text = f"{prefix}{'手动' if self.manual else '滚动'}截图中… {frames} 帧 / {height} px"
+        text = prefix + tr("{}截图中… {} 帧 / {} px",
+                                   tr("手动") if self.manual else tr("滚动"),
+                                   frames, height)
         if offset:
-            text += f"（本帧 +{offset}）"
+            text += tr("（本帧 +{}）", offset)
         self.label.setText(text)
         self.adjustSize()
 
@@ -708,11 +711,11 @@ class ScrollCapture(QObject):
         try:
             frame = self._grab_settled()
         except Exception as ex:
-            self.failed.emit(f"抓帧失败：{ex}")
+            self.failed.emit(tr("抓帧失败：") + str(ex))
             self._cleanup()
             return
         if frame.isNull() or frame.width() < 8 or frame.height() < 80:
-            self.failed.emit("抓帧失败：区域过小或被遮挡")
+            self.failed.emit(tr("抓帧失败：区域过小或被遮挡"))
             self._cleanup()
             return
 
@@ -739,7 +742,7 @@ class ScrollCapture(QObject):
             self._debug_dump(fr, "首帧")
         else:
             if fr.h != self._prev.h or fr.w != self._prev.w:
-                self.failed.emit("抓帧尺寸发生变化，已停止（请确保窗口未移动/缩放）")
+                self.failed.emit(tr("抓帧尺寸发生变化，已停止（请确保窗口未移动/缩放）"))
                 self._cleanup()
                 return
             s, diff = find_scroll(self._prev, fr)
@@ -851,7 +854,7 @@ class ScrollCapture(QObject):
     def _finish(self):
         self._cleanup()
         if self._acc is None:
-            self.failed.emit("没有抓到任何内容")
+            self.failed.emit(tr("没有抓到任何内容"))
             return
         self.finished_ok.emit(frame_to_pixmap(self._acc, self._dpr))
 

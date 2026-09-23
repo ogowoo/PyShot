@@ -14,6 +14,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from i18n import tr
 
 # (导入名, pip 安装名)
 # 只依赖 PySide6：拼接/图像统计都用纯 Python 实现了，不再需要 numpy。

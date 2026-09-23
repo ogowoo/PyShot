@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """抓一张编辑器界面的真实渲染图，检查主题效果。"""
 import os
+
+os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

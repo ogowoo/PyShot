@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """交互测试：真实窗口环境下模拟框选，抓取覆盖层画面验证选区可见性。"""
 import os
+
+os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

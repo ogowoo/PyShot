@@ -12,6 +12,7 @@
 from PySide6.QtCore import QPoint, Qt, Signal
 from PySide6.QtGui import QAction, QColor, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QApplication, QMenu, QWidget
+from i18n import tr
 
 
 class PinWindow(QWidget):
@@ -80,15 +81,15 @@ class PinWindow(QWidget):
     # ---------- 菜单 ----------
     def _show_menu(self, global_pos: QPoint):
         menu = QMenu(self)
-        act_copy = QAction("复制图片", self)
+        act_copy = QAction(tr("复制图片"), self)
         act_copy.triggered.connect(
             lambda: QApplication.clipboard().setPixmap(self._pix))
         menu.addAction(act_copy)
-        act_reset = QAction("重置大小 / 透明度", self)
+        act_reset = QAction(tr("重置大小 / 透明度"), self)
         act_reset.triggered.connect(self._reset)
         menu.addAction(act_reset)
         menu.addSeparator()
-        act_close = QAction("关闭 (Esc)", self)
+        act_close = QAction(tr("关闭 (Esc)"), self)
         act_close.triggered.connect(self.close)
         menu.addAction(act_close)
         menu.exec(global_pos)

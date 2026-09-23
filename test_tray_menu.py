@@ -5,6 +5,8 @@
 这里把"整理好的结构"锁住：新增项必须放进合适的分组，不能随手往顶层塞。
 """
 import os
+
+os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案
 import sys
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -119,9 +121,10 @@ check("窗口项成组（打开图片/打开编辑器相邻）",
       names.index("打开图片编辑…") + 1 == names.index("打开编辑器"))
 check("退出在最后", names[-1] == "退出 PyShot", str(names[-1]))
 
-# 分组分隔线：4 条（截图|滚动、滚动|工具、工具|窗口、窗口|退出）
+# 分组分隔线：5 条（截图|滚动、滚动|工具、工具|语言、语言|退出 …）
 sep_count = sum(1 for t in top if t[2])
-check("分隔线数量为 4", sep_count == 4, f"{sep_count} 条")
+check("分隔线数量合理（5 条）", sep_count == 5, f"{sep_count} 条")
+check("有语言子菜单", "语言" in names, str(names))
 
 # ---------- 图标与快捷键显示 ----------
 plain = [a for a in menu.actions() if not a.isSeparator()]

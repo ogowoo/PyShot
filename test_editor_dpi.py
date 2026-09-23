@@ -10,6 +10,8 @@
 本测试模拟：在某个控件坐标按下鼠标开始画 → 检查渲染结果里图形是否落在该位置。
 """
 import os
+
+os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案
 import sys
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")

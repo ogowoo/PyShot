@@ -2,6 +2,8 @@
 """验证单文件版 PyShot.py：导入、核心功能、依赖自举逻辑。"""
 import importlib.util
 import os
+
+os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案
 import sys
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")

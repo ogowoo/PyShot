@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """真实桌面端到端流程测试：启动 → 框选截图 → 编辑器出现（并抓屏留证）。"""
 import os
+
+os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

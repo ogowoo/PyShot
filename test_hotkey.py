@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """全局热键测试：解析、候选降级、实际注册、文案同步。"""
 import os
+
+os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案
 import sys
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")

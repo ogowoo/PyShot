@@ -18,6 +18,7 @@ from shapes import (ArrowShape, EllipseShape, HighlightShape, LineShape,
                     TextShape, WatermarkShape, clone_shapes)
 from style import ACCENT, SpinBox, make_icon, make_tool_icon
 from watermark import WatermarkDialog, load_default, save_default
+from i18n import tr
 
 TOOLS = [
     ("select",    "选择",   "选择并移动已有标注（Delete 删除）"),
@@ -441,7 +442,7 @@ class Canvas(QWidget):
     def _open_text_editor(self, pos: QPointF):
         self._text_pos = pos
         edit = QLineEdit(self)
-        edit.setPlaceholderText("输入文字，Enter 确认 / Esc 取消")
+        edit.setPlaceholderText(tr("输入文字，Enter 确认 / Esc 取消"))
         font = edit.font()
         font.setPixelSize(max(12, int(self.font_size * self.zoom)))
         edit.setFont(font)
@@ -703,7 +704,7 @@ class EditorWindow(QMainWindow):
 
     def __init__(self, pixmap: QPixmap | None = None, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("PyShot 编辑器")
+        self.setWindowTitle(tr("PyShot 编辑器"))
         self._prev_tool = "select"
         # 跨标签共享的绘制属性（切标签/新截图沿用当前工具与样式）
         self._shared = {"tool": "select", "color": QColor(PALETTE[0]),
@@ -773,7 +774,7 @@ class EditorWindow(QMainWindow):
         scroll.setWidgetResizable(False)
         scroll.setAlignment(Qt.AlignCenter)
 
-        idx = self.tabs.addTab(scroll, title or f"截图 {self.tabs.count() + 1}")
+        idx = self.tabs.addTab(scroll, title or tr("截图 {}").format(self.tabs.count() + 1))
         self.tabs.setTabToolTip(
             idx, f"{pixmap.width()} × {pixmap.height()} px\n"
                  "滚轮/Ctrl+滚轮 缩放 · 中键拖动滚动")
@@ -781,7 +782,7 @@ class EditorWindow(QMainWindow):
         close_btn = QToolButton()
         close_btn.setObjectName("tabclose")
         close_btn.setText("✕")
-        close_btn.setToolTip("关闭此标签 (Ctrl+W)")
+        close_btn.setToolTip(tr("关闭此标签 (Ctrl+W)"))
         close_btn.setCursor(Qt.PointingHandCursor)
         close_btn.clicked.connect(lambda _=False, page=scroll: self._close_page(page))
         self.tabs.tabBar().setTabButton(idx, QTabBar.RightSide, close_btn)
@@ -802,6 +803,37 @@ class EditorWindow(QMainWindow):
         except Exception:                      # noqa: BLE001
             pass
         return canvas
+
+    def retranslate(self):
+        """语言切换后刷新界面文案（画布与标注不受影响）。
+
+        做法是"把当前显示的文案再翻译一次"：i18n 内部有译文→原文的反查，
+        所以英文/繁体文本也能翻译回目标语言，反复切换不会错乱。
+        """
+        from i18n import tr as _tr
+        self.setWindowTitle(_tr("PyShot 编辑器"))
+        # 通用扫描：按钮 / 标签 / 复选框 / 分组框的文本与提示
+        for w in self.findChildren(object):
+            try:
+                if hasattr(w, "text") and callable(getattr(w, "setText", None)):
+                    txt = w.text()
+                    if txt:
+                        w.setText(_tr(txt))
+                if hasattr(w, "setToolTip"):
+                    tip = w.toolTip()
+                    if tip:
+                        w.setToolTip(_tr(tip))
+            except Exception:                      # noqa: BLE001
+                continue
+        # 工具轨道与状态栏
+        try:
+            for tid, name, tip in TOOLS:
+                btn = self.tool_buttons.get(tid)
+                if btn is not None:
+                    btn.setToolTip(_tr("{} — {}", _tr(name), _tr(tip)))
+            self.set_tool(self.tool)
+        except Exception:                          # noqa: BLE001
+            pass
 
     def close_tab(self, idx: int):
         page = self.tabs.widget(idx)
@@ -886,7 +918,7 @@ class EditorWindow(QMainWindow):
                 btn.setIconSize(QSize(24, 24))
                 btn.setFixedSize(44, 42)
                 btn.setToolButtonStyle(Qt.ToolButtonIconOnly)
-                btn.setToolTip(f"{name} — {tip}")
+                btn.setToolTip(tr("{} — {}", tr(name), tr(tip)))
                 btn.setCheckable(True)
                 btn.setCursor(Qt.PointingHandCursor)
                 btn.clicked.connect(lambda checked, t=tid: self.set_tool(t))
@@ -953,19 +985,19 @@ class EditorWindow(QMainWindow):
 
         # ---------- 第 1 行：截图 / 颜色 / 尺寸 ----------
         r1 = row()
-        btn_shot = QPushButton("截图")
+        btn_shot = QPushButton(tr("截图"))
         btn_shot.setObjectName("primarybtn")
         btn_shot.setIcon(make_icon("camera"))
         btn_shot.setIconSize(QSize(17, 17))
         btn_shot.setFixedHeight(self._CTRL_H)
-        btn_shot.setToolTip("截取新区域\n会自动最小化编辑器，截完回到这里新增标签")
+        btn_shot.setToolTip(tr("截取新区域\n会自动最小化编辑器，截完回到这里新增标签"))
         btn_shot.setCursor(Qt.PointingHandCursor)
         btn_shot.clicked.connect(self.capture_requested)
         self.btn_shot = btn_shot
         r1.addWidget(btn_shot)
         r1.addWidget(self._top_sep())
 
-        color_label = QLabel("颜色")
+        color_label = QLabel(tr("颜色"))
         color_label.setAlignment(Qt.AlignVCenter)
         swatches = []
         self.color_buttons = []
@@ -980,7 +1012,7 @@ class EditorWindow(QMainWindow):
         more = QPushButton("…")
         more.setObjectName("swatchMore")
         more.setFixedSize(20, 20)
-        more.setToolTip("自定义颜色")
+        more.setToolTip(tr("自定义颜色"))
         more.clicked.connect(self._pick_color)
         r1.addWidget(self._group(color_label, *swatches, more))
         self._refresh_swatch_state()
@@ -1009,45 +1041,45 @@ class EditorWindow(QMainWindow):
         self.step_spin.setValue(int(self._shared["step_diameter"]))
         self.step_spin.setFixedHeight(self._CTRL_H)
         self.step_spin.setFixedWidth(80)
-        self.step_spin.setToolTip("序号圆的大小\n选中已有序号时可直接调整它的大小")
+        self.step_spin.setToolTip(tr("序号圆的大小\n选中已有序号时可直接调整它的大小"))
         self.step_spin.valueChanged.connect(self._on_step_size_changed)
         r1.addWidget(self._labeled("序号", self.step_spin))
 
         # ---------- 第 2 行：编辑 / 输出 ----------
         r2 = row()
-        self.act_undo = QAction("撤销", self)
-        self.act_undo.setToolTip("撤销 (Ctrl+Z)")
+        self.act_undo = QAction(tr("撤销"), self)
+        self.act_undo.setToolTip(tr("撤销 (Ctrl+Z)"))
         self.act_undo.triggered.connect(lambda: self.canvas and self.canvas.undo())
-        self.act_redo = QAction("重做", self)
-        self.act_redo.setToolTip("重做 (Ctrl+Y)")
+        self.act_redo = QAction(tr("重做"), self)
+        self.act_redo.setToolTip(tr("重做 (Ctrl+Y)"))
         self.act_redo.triggered.connect(lambda: self.canvas and self.canvas.redo())
-        self.act_crop_ok = QAction("应用裁剪", self)
-        self.act_crop_ok.setToolTip("应用裁剪框 (Enter)")
+        self.act_crop_ok = QAction(tr("应用裁剪"), self)
+        self.act_crop_ok.setToolTip(tr("应用裁剪框 (Enter)"))
         self.act_crop_ok.triggered.connect(
             lambda: self.canvas and self.canvas.apply_crop())
-        act_copy = QAction("复制", self)
-        act_copy.setToolTip("复制到剪贴板 (Ctrl+C)")
+        act_copy = QAction(tr("复制"), self)
+        act_copy.setToolTip(tr("复制到剪贴板 (Ctrl+C)"))
         act_copy.triggered.connect(self.copy_to_clipboard)
-        act_pin = QAction("贴图", self)
-        act_pin.setToolTip("把当前结果钉在屏幕最上层（Snipaste 风格）")
+        act_pin = QAction(tr("贴图"), self)
+        act_pin.setToolTip(tr("把当前结果钉在屏幕最上层（Snipaste 风格）"))
         act_pin.triggered.connect(self.pin_to_screen)
-        act_wm = QAction("水印", self)
+        act_wm = QAction(tr("水印"), self)
         act_wm.setToolTip(
             "水印：文字与图片可各自开关（也可同时用）\n"
             "九宫格位置或平铺、各自调不透明度、可旋转与设边距\n"
             "还能「应用并设为默认」，之后新截图自动加")
         act_wm.triggered.connect(self.add_watermark)
-        act_border = QAction("边框", self)
+        act_border = QAction(tr("边框"), self)
         act_border.setToolTip(
             "加边框（对应 FSCapture 的「特效 → 边缘」）\n"
             "单线/双线/虚线/圆角/投影阴影/立体浮雕/边缘渐隐/拍立得白边\n"
             "边框加在图片外面，图会变大；可 Ctrl+Z 撤销")
         act_border.triggered.connect(self.add_border)
-        act_save = QAction("保存", self)
-        act_save.setToolTip("保存为文件 (Ctrl+S)")
+        act_save = QAction(tr("保存"), self)
+        act_save.setToolTip(tr("保存为文件 (Ctrl+S)"))
         act_save.triggered.connect(self.save_as)
-        act_close = QAction("关闭", self)
-        act_close.setToolTip("关闭编辑器 (Esc)")
+        act_close = QAction(tr("关闭"), self)
+        act_close.setToolTip(tr("关闭编辑器 (Esc)"))
         act_close.triggered.connect(self.close)
 
         undo_btn = self._icon_button("undo", "撤销 (Ctrl+Z)",
@@ -1088,7 +1120,7 @@ class EditorWindow(QMainWindow):
         sb.setSizeGripEnabled(False)      # 去掉右下角的多余手柄
         self.tool_name_label = QLabel()
         self.tool_name_label.setObjectName("toolname")
-        self.tool_name_label.setText("工具：选择")
+        self.tool_name_label.setText(tr("工具：选择"))
         sb.addWidget(self.tool_name_label)
         self.size_label = QLabel("")
         self.size_label.setObjectName("sizelabel")
@@ -1157,7 +1189,7 @@ class EditorWindow(QMainWindow):
             return
         suffix = f"（{hotkey}）" if hotkey else ""
         self.btn_shot.setToolTip(
-            f"截取新区域{suffix}\n会自动最小化编辑器，截完回到这里新增标签")
+            tr("截取新区域{}\n会自动最小化编辑器，截完回到这里新增标签", suffix))
 
     # ---------- 行为 ----------
     def set_tool(self, tid: str):
@@ -1180,12 +1212,13 @@ class EditorWindow(QMainWindow):
         self.tool_buttons[tid].setChecked(True)
         self._refresh_actions()
         name = dict((t, n) for t, n, _ in TOOLS).get(tid, tid)
-        self.tool_name_label.setText(f"工具：{name}")
+        self.tool_name_label.setText(tr("工具：") + tr(name))
 
     def _on_color_picked(self, color: QColor):
         self._refresh_swatch_state()
         self.statusBar().showMessage(
-            f"已取色 {color.name().upper()}，切回 {dict((t, n) for t, n, _ in TOOLS)[self._prev_tool]} 工具",
+            tr("已取色") + f" {color.name().upper()}" + tr("，切回")
+            + tr(dict((t, n) for t, n, _ in TOOLS)[self._prev_tool]) + tr(" 工具"),
             3000)
         self.set_tool(self._prev_tool)  # 取色后自动切回之前的工具
 
@@ -1289,7 +1322,7 @@ class EditorWindow(QMainWindow):
             return
         canvas._commit_text()
         QApplication.clipboard().setPixmap(canvas.render_result())
-        self.statusBar().showMessage("已复制到剪贴板", 2000)
+        self.statusBar().showMessage(tr("已复制到剪贴板"), 2000)
 
     def pin_to_screen(self):
         canvas = self.canvas
@@ -1346,7 +1379,7 @@ class EditorWindow(QMainWindow):
                 if saved else "已设为默认边框（本次运行有效，配置写入失败）",
                 4000)
         if not self.apply_border(canvas, settings):
-            self.statusBar().showMessage("边框宽度为 0，未做改动", 3000)
+            self.statusBar().showMessage(tr("边框宽度为 0，未做改动"), 3000)
         else:
             self._fit_canvas(canvas, self.tabs.currentWidget())
 
@@ -1354,7 +1387,7 @@ class EditorWindow(QMainWindow):
         ok = canvas.apply_border(settings)
         if ok:
             self.statusBar().showMessage(
-                f"已加边框：{canvas.base_pixmap.width()}×"
+                tr("已加边框：") + f"{canvas.base_pixmap.width()}×"
                 f"{canvas.base_pixmap.height()} px", 4000)
         return ok
 
@@ -1366,8 +1399,8 @@ class EditorWindow(QMainWindow):
         idx = self.tabs.currentIndex() + 1
         default = f"screenshot-{idx}.png"
         path, _ = QFileDialog.getSaveFileName(
-            self, "保存截图", default,
-            "PNG 图片 (*.png);;JPEG 图片 (*.jpg);;BMP 图片 (*.bmp)")
+            self, tr("保存截图"), default,
+            tr("PNG 图片 (*.png);;JPEG 图片 (*.jpg);;BMP 图片 (*.bmp)"))
         if not path:
             return
         img = canvas.render_result().toImage()
@@ -1383,7 +1416,7 @@ class EditorWindow(QMainWindow):
         else:
             img.setDevicePixelRatio(1.0)   # PNG 存原始像素，不带 dpr 元数据
             img.save(path)
-        self.statusBar().showMessage(f"已保存：{path}", 4000)
+        self.statusBar().showMessage(tr("已保存：") + path, 4000)
 
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_Escape:

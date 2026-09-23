@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """验证放大镜渲染：红框应精确框住光标下的那个像素格。"""
 import os
+
+os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

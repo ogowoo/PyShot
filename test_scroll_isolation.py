@@ -5,6 +5,8 @@
 把编辑器恢复并前置，正好盖住要滚动的区域，之后每帧都把编辑器拍进去。
 """
 import os
+
+os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案
 import sys
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """无法抓屏场景的处理测试：空白检测 / PrintWindow 回退 / 手动滚动模式。"""
 import os
+
+os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案
 import sys
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")

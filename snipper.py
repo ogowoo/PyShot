@@ -19,6 +19,7 @@ from PySide6.QtCore import QPoint, QRect, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import (QColor, QCursor, QFont, QGuiApplication, QImage,
                            QPainter, QPainterPath, QPen, QPixmap, QRegion)
 from PySide6.QtWidgets import QWidget
+from i18n import tr
 
 MASK_COLOR = QColor(6, 10, 18, 150)   # 遮罩：偏深的蓝黑，任何背景都能看出"已进入截图状态"
 VK_LBUTTON = 0x01
@@ -533,14 +534,13 @@ class SnipperOverlay(QWidget):
     def _draw_hint(self, p: QPainter, anchor: QPoint | None = None):
         """提示条：明确告知当前模式和退出方式，避免看起来像卡死。"""
         if self.mode == "color":
-            text = "屏幕取色：单击复制色值    ·    Esc / 右键 取消"
+            text = tr("屏幕取色：单击复制色值    ·    Esc / 右键 取消")
         elif self.mode == "scroll":
-            text = "拖拽选择要滚动截图的区域    ·    Esc / 右键 取消"
+            text = tr("拖拽选择要滚动截图的区域    ·    Esc / 右键 取消")
         elif self.mode == "point":
-            text = ("蓝框内可直接点击滚动条【滑块】→ 自动开始滚动"
-                    "    ·    Esc 取消")
+            text = tr("蓝框内可直接点击滚动条【滑块】→ 自动开始滚动    ·    Esc 取消")
         else:
-            text = "拖拽选择截图区域    ·    Esc / 右键 取消"
+            text = tr("拖拽选择截图区域    ·    Esc / 右键 取消")
         metrics = p.fontMetrics()
         w = metrics.horizontalAdvance(text) + 36
         h = metrics.height() + 16
