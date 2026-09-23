@@ -829,6 +829,153 @@ def load_session() -> list:
 
 
 # ========================================================================
+# 来自 diag.py
+# ========================================================================
+# -*- coding: utf-8 -*-
+"""diag.py —— 全链路诊断日志（默认关闭，排查问题时才开）。
+
+开启方式（任选其一，等价）::
+
+    set PYSHOT_DEBUG=1
+    set PYSHOT_CAPTURE_DEBUG=1     # 旧名字，兼容
+
+输出到**控制台**和 ``~/.pyshot/debug.log``（超过 512KB 自动截断保留后半段）。
+每行都带**墙钟时间 + 毫秒 + 相对启动的毫秒**，还有每段操作的**耗时**，
+所以"双击之后到底慢在哪一步"能直接从日志看出来。
+
+用法::
+
+
+    log("截图", "触发")
+    with timed("抓屏"):            # 退出时自动记一行"耗时 xx ms"
+        frame = grab()
+    exc("打开编辑器失败")
+"""
+import os
+import time
+import traceback
+from pathlib import Path
+
+LOG_PATH = Path(os.environ.get("PYSHOT_DEBUG_LOG")
+                or (Path.home() / ".pyshot" / "debug.log"))
+DIAG_MAX_BYTES = 512 * 1024
+_T0 = time.perf_counter()
+
+
+def enabled() -> bool:
+    """是否开启诊断日志。"""
+    return bool(os.environ.get("PYSHOT_DEBUG")
+                or os.environ.get("PYSHOT_CAPTURE_DEBUG"))
+
+
+def _stamp() -> str:
+    now = time.time()
+    return (f"{time.strftime('%H:%M:%S', time.localtime(now))}"
+            f".{int(now * 1000) % 1000:03d}"
+            f" (+{(time.perf_counter() - _T0) * 1000:8.1f}ms)")
+
+
+def log(tag: str, *parts):
+    """记一行诊断日志（未开启时零开销返回）。"""
+    if not enabled():
+        return
+    line = f"{_stamp()} {tag}: " + " ".join(str(p) for p in parts)
+    try:
+        print(line, flush=True)
+    except Exception:                              # noqa: BLE001
+        pass
+    try:
+        LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+        # 轮转：只留最后一半，避免日志无限长大
+        if LOG_PATH.stat().st_size > DIAG_MAX_BYTES:
+            data = LOG_PATH.read_text(encoding="utf-8", errors="replace")
+            LOG_PATH.write_text("……（日志过长，已截断前段）……\n"
+                                + data[-(DIAG_MAX_BYTES // 2):], encoding="utf-8")
+    except Exception:                              # noqa: BLE001
+        pass
+
+
+class timed:
+    """上下文管理器：记下这段操作的耗时。
+
+    用法::
+
+        with timed("抓屏", "屏0"):   # 进入/退出各记一行，退出带耗时
+            ...
+    """
+
+    def __init__(self, tag: str, *extra):
+        self.tag = tag
+        self.extra = extra
+        self.t0 = 0.0
+
+    def __enter__(self):
+        self.t0 = time.perf_counter()
+        if enabled():
+            log(f"{self.tag}·开始", *self.extra)
+        return self
+
+    def __exit__(self, *exc_info):
+        if enabled():
+            cost = (time.perf_counter() - self.t0) * 1000
+            tail = ("异常=" + repr(exc_info[1])) if exc_info and exc_info[0] \
+                else "OK"
+            log(f"{self.tag}·结束", f"耗时 {cost:.1f} ms", tail, *self.extra)
+        return False
+
+
+def exc(tag: str, err=None):
+    """记一条异常（带完整堆栈）。"""
+    if not enabled():
+        return
+    if err is None:
+        log(tag, "异常:\n" + traceback.format_exc())
+    else:
+        log(tag, f"异常 {type(err).__name__}: {err}")
+
+
+def dump_env(extra: str = ""):
+    """开一次环境快照：录屏/多屏/缩放问题经常就差这些信息。"""
+    if not enabled():
+        return
+    try:
+        import PySide6
+        qt = PySide6.__version__
+    except Exception:                              # noqa: BLE001
+        qt = "?"
+    log("环境", f"pid={os.getpid()} python={os.sys.version.split()[0]} "
+                f"Qt={qt} platform={os.environ.get('QT_QPA_PLATFORM') or '默认'} "
+                f"cwd={os.getcwd()} {extra}")
+    try:
+        from PySide6.QtGui import QGuiApplication
+        for i, scr in enumerate(QGuiApplication.screens()):
+            g = scr.geometry()
+            log("环境·屏幕", f"#{i} {scr.name()} geo=({g.x()},{g.y()},"
+                             f"{g.width()}x{g.height()}) dpr={scr.devicePixelRatio()}"
+                             f" primary={scr is QGuiApplication.primaryScreen()}")
+    except Exception as e:                         # noqa: BLE001
+        log("环境·屏幕", f"枚举失败: {e}")
+
+
+def install_excepthook():
+    """把未捕获异常也写进日志（托盘常驻进程崩了只有它留得下证据）。"""
+    if not enabled():
+        return
+    import sys
+
+    def _hook(etype, value, tb):
+        try:
+            log("未捕获异常", "".join(traceback.format_exception(etype, value, tb)))
+        except Exception:                          # noqa: BLE001
+            pass
+        sys.__excepthook__(etype, value, tb)
+
+    sys.excepthook = _hook
+
+
+# ========================================================================
 # 来自 bootstrap.py
 # ========================================================================
 # -*- coding: utf-8 -*-
@@ -3790,6 +3937,9 @@ from PySide6.QtGui import (QColor, QCursor, QFont, QGuiApplication, QImage,
                            QPainter, QPainterPath, QPen, QPixmap, QRegion)
 from PySide6.QtWidgets import QWidget
 
+# 诊断日志：直接顶层导入（**不要**用 try/except 包着导入 —— 单文件合并时
+# 本地导入行会被删掉，留下一个空的 try 块，直接语法错误）
+
 
 # ---------------------------------------------------------------- 实例注册表
 # 覆盖层是**无父窗口**的顶层窗口 —— findChildren() 找不到它们。
@@ -3999,28 +4149,41 @@ class SnipperOverlay(QWidget):
         # 结果抓到的整张图就是**我们自己的遮罩**（纯深色 + 蓝色选框边）——
         # 用户截出来的图全是废的。所以回到物理上不可能拍到自己的顺序：
         # 先抓本屏底图（多屏/混合 DPI 下按各自 dpr 裁剪才准确），再显示遮罩。
-        self._bg = self.screen.grabWindow(0)
-        self._img = self._bg.toImage() if not self._bg.isNull() else None
+        with _dtimed("遮罩·抓底图", f"屏={self.screen.name()} "
+                                    f"dpr={self.screen.devicePixelRatio()}"):
+            self._bg = self.screen.grabWindow(0)
+            self._img = self._bg.toImage() if not self._bg.isNull() else None
+        _dlog("遮罩·抓底图结果", self.bg_report())
         if self._bg.isNull():
             self._ensure_bg()                      # 抓失败：兜底一张，别让流程断
         # 用显式几何 + show()，比 showFullScreen() 在多屏/首次显示时更可靠地铺满整屏
-        self.setGeometry(self._geo)
-        self.show()
-        self.setGeometry(self._geo)      # show 之后再钉一次，避免首次出现时尺寸不对
-        self.raise_()
-        self.activateWindow()
-        # 关掉编辑器后本进程没有可见窗口，新建的置顶窗口可能拿不到前台激活，
-        # 于是 Esc/点击全落空（用户看到的就是"遮罩挡住了，怎么都关不掉"）。
-        # 这里用原生 API 再抢一次前台。
-        try:
+        with _dtimed("遮罩·显示窗口", f"geo={self._geo.width()}x"
+                                     f"{self._geo.height()}"):
+            self.setGeometry(self._geo)
+            self.show()
+            if self.geometry() != self._geo:
+                self.setGeometry(self._geo)   # 首次上屏尺寸不对时才再钉一次
+            self.raise_()
+            self.activateWindow()
+            # 只有"本进程当前没有前台窗口"时才走原生抢前台 ——
+            # 正常情况下这一步是白花钱（实测 SetWindowPos+SetForegroundWindow
+            # +SetActiveWindow 三连是显示阶段的大头）。
+            try:
+                from PySide6.QtWidgets import QApplication
+                need_force = QApplication.activeWindow() is None
+            except Exception:                      # noqa: BLE001
+                need_force = True
+            if need_force:
+                try:
 
-            force_foreground(int(self.winId()))
-        except Exception:                          # noqa: BLE001
-            pass
+                    _dlog("遮罩·抢前台", "无前台窗口，启用原生抢前台")
+                    force_foreground(int(self.winId()))
+                except Exception:                  # noqa: BLE001
+                    pass
         # 注意：这里不能用 repaint() —— 对尚未映射完成的窗口强制同步绘制后，
         # Qt 不会再补一次绘制，窗口就会"在但没画出来"（动一下鼠标才出现）。
         self.update()
-        for delay in (0, 60, 160):       # 多次兜底：窗口映射完成后确保绘制 + 置顶
+        for delay in (0, 120):           # 兜底两次即可（原来三次，纯属多花时间）
             QTimer.singleShot(delay, self._ensure_cover)
 
     def bg_report(self) -> str:
@@ -4070,6 +4233,8 @@ class SnipperOverlay(QWidget):
 
     def finish(self):
         """结束本次截图会话：隐藏窗口但保留原生窗口，下次截图更快。"""
+        _dlog("遮罩·收起", f"屏={self.screen.name()} active={self._active} "
+                          f"visible={self.isVisible()}")
         self._point_timer.stop()
         self._clear_mask()
         self._point_local = QRect()
@@ -4123,6 +4288,9 @@ class SnipperOverlay(QWidget):
             self._point_pressed = False
 
     def _ensure_cover(self):
+        _dlog("遮罩·铺满兜底", f"active={self._active} "
+                              f"visible={self.isVisible()} "
+                              f"bg={'有' if self._bg is not None else '无'}")
         """兜底：确保覆盖层真的铺满并且是画出来的。
 
         注意：**不能**因为 _bg 还没抓回来就跳过 —— 抓屏是延后做的（先显示遮罩、
@@ -7845,7 +8013,20 @@ class PyShotApp(QObject):
         全屏覆盖层会被前台激活锁和鼠标捕获影响，表现为"窗口在但没画出来"。
         延后一拍即可稳定显示；延迟保持很小，避免拖慢首帧。
         """
-        QTimer.singleShot(delay, fn)
+        # 记下"用户动作 → 真正开始"的延迟：双击慢就是慢在这里或后面
+        try:
+            import time
+
+            name = getattr(fn, "__name__", str(fn))
+            t0 = time.perf_counter()
+
+            def _run():
+                log("延迟执行", f"{name} 排队 {delay}ms，实际等了 "
+                               f"{(time.perf_counter() - t0) * 1000:.0f}ms")
+                fn()
+            QTimer.singleShot(delay, _run)
+        except Exception:                          # noqa: BLE001
+            QTimer.singleShot(delay, fn)
 
     # ---------- 语言 ----------
     def _rebuild_language_menu(self):
@@ -7924,27 +8105,20 @@ class PyShotApp(QObject):
         self.menu_screens.addAction(act_all)
 
     def _on_tray_activated(self, reason):
+        try:
+
+            log("托盘事件", f"reason={reason}")
+        except Exception:                          # noqa: BLE001
+            pass
         if reason == QSystemTrayIcon.DoubleClick:
             self._deferred(self.capture_region)
 
     # ---------- 覆盖层复用与预热 ----------
     def _cap_log(self, *parts):
-        """截图流程诊断日志：设 PYSHOT_CAPTURE_DEBUG=1 打开。
-
-        遮罩"卡住不退"这类问题必须能看到"谁被显示了、谁没被收起"，
-        否则只能靠猜。
-        """
-        if not os.environ.get("PYSHOT_CAPTURE_DEBUG"):
-            return
+        """截图流程诊断日志（设 PYSHOT_DEBUG=1 打开，细节见 diag.py）。"""
         try:
-            import time
-            line = f"[cap {time.strftime('%H:%M:%S')}] " + " ".join(
-                str(x) for x in parts)
-            print(line, flush=True)
-            log = Path.home() / ".pyshot" / "capture_debug.log"
-            log.parent.mkdir(parents=True, exist_ok=True)
-            with open(log, "a", encoding="utf-8") as f:
-                f.write(line + "\n")
+
+            log("截图", *parts)
         except Exception:                          # noqa: BLE001
             pass
 
@@ -7956,6 +8130,7 @@ class PyShotApp(QObject):
         """
         screens = QGuiApplication.screens()
         names = [s.name() for s in screens]
+        self._cap_log("屏幕列表", names)
         if self._overlays and self._overlay_screens == names:
             return self._overlays
         for ov in self._overlays:             # 屏幕组合变了：重建
@@ -7968,6 +8143,10 @@ class PyShotApp(QObject):
             ov.point_selected.connect(self._on_scroll_anchor)
             ov.color_picked.connect(self._on_color_picked)
             ov.cancelled.connect(self._on_snip_cancelled)
+            g = scr.geometry()
+            self._cap_log("新建遮罩", f"{scr.name()} geo=({g.x()},{g.y()},"
+                                   f"{g.width()}x{g.height()}) "
+                                   f"dpr={scr.devicePixelRatio()}")
             self._overlays.append(ov)
         self._overlay_screens = names
         self._overlay = self._overlays[0] if self._overlays else None
@@ -8414,12 +8593,24 @@ def main():
         pass
     QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    try:
+
+        install_excepthook()
+        if enabled():
+            log("启动", "诊断日志已开启，写入 ~/.pyshot/debug.log")
+    except Exception:                              # noqa: BLE001
+        pass
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)  # 托盘常驻
     app.setApplicationName("PyShot")
     apply_theme(app)
 
     core = PyShotApp(app)
+    try:
+
+        dump_env()
+    except Exception:                              # noqa: BLE001
+        pass
     app.aboutToQuit.connect(core.shutdown)
 
     # Ctrl+C 优雅退出。

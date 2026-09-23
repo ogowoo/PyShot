@@ -416,7 +416,20 @@ class PyShotApp(QObject):
         全屏覆盖层会被前台激活锁和鼠标捕获影响，表现为"窗口在但没画出来"。
         延后一拍即可稳定显示；延迟保持很小，避免拖慢首帧。
         """
-        QTimer.singleShot(delay, fn)
+        # 记下"用户动作 → 真正开始"的延迟：双击慢就是慢在这里或后面
+        try:
+            import time
+            from diag import log
+            name = getattr(fn, "__name__", str(fn))
+            t0 = time.perf_counter()
+
+            def _run():
+                log("延迟执行", f"{name} 排队 {delay}ms，实际等了 "
+                               f"{(time.perf_counter() - t0) * 1000:.0f}ms")
+                fn()
+            QTimer.singleShot(delay, _run)
+        except Exception:                          # noqa: BLE001
+            QTimer.singleShot(delay, fn)
 
     # ---------- 语言 ----------
     def _rebuild_language_menu(self):
@@ -495,27 +508,20 @@ class PyShotApp(QObject):
         self.menu_screens.addAction(act_all)
 
     def _on_tray_activated(self, reason):
+        try:
+            from diag import log
+            log("托盘事件", f"reason={reason}")
+        except Exception:                          # noqa: BLE001
+            pass
         if reason == QSystemTrayIcon.DoubleClick:
             self._deferred(self.capture_region)
 
     # ---------- 覆盖层复用与预热 ----------
     def _cap_log(self, *parts):
-        """截图流程诊断日志：设 PYSHOT_CAPTURE_DEBUG=1 打开。
-
-        遮罩"卡住不退"这类问题必须能看到"谁被显示了、谁没被收起"，
-        否则只能靠猜。
-        """
-        if not os.environ.get("PYSHOT_CAPTURE_DEBUG"):
-            return
+        """截图流程诊断日志（设 PYSHOT_DEBUG=1 打开，细节见 diag.py）。"""
         try:
-            import time
-            line = f"[cap {time.strftime('%H:%M:%S')}] " + " ".join(
-                str(x) for x in parts)
-            print(line, flush=True)
-            log = Path.home() / ".pyshot" / "capture_debug.log"
-            log.parent.mkdir(parents=True, exist_ok=True)
-            with open(log, "a", encoding="utf-8") as f:
-                f.write(line + "\n")
+            from diag import log
+            log("截图", *parts)
         except Exception:                          # noqa: BLE001
             pass
 
@@ -527,6 +533,7 @@ class PyShotApp(QObject):
         """
         screens = QGuiApplication.screens()
         names = [s.name() for s in screens]
+        self._cap_log("屏幕列表", names)
         if self._overlays and self._overlay_screens == names:
             return self._overlays
         for ov in self._overlays:             # 屏幕组合变了：重建
@@ -539,6 +546,10 @@ class PyShotApp(QObject):
             ov.point_selected.connect(self._on_scroll_anchor)
             ov.color_picked.connect(self._on_color_picked)
             ov.cancelled.connect(self._on_snip_cancelled)
+            g = scr.geometry()
+            self._cap_log("新建遮罩", f"{scr.name()} geo=({g.x()},{g.y()},"
+                                   f"{g.width()}x{g.height()}) "
+                                   f"dpr={scr.devicePixelRatio()}")
             self._overlays.append(ov)
         self._overlay_screens = names
         self._overlay = self._overlays[0] if self._overlays else None
@@ -986,12 +997,24 @@ def main():
         pass
     QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    try:
+        from diag import dump_env, install_excepthook, log, enabled
+        install_excepthook()
+        if enabled():
+            log("启动", "诊断日志已开启，写入 ~/.pyshot/debug.log")
+    except Exception:                              # noqa: BLE001
+        pass
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)  # 托盘常驻
     app.setApplicationName("PyShot")
     apply_theme(app)
 
     core = PyShotApp(app)
+    try:
+        from diag import dump_env
+        dump_env()
+    except Exception:                              # noqa: BLE001
+        pass
     app.aboutToQuit.connect(core.shutdown)
 
     # Ctrl+C 优雅退出。

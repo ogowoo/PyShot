@@ -21,6 +21,9 @@ from PySide6.QtGui import (QColor, QCursor, QFont, QGuiApplication, QImage,
                            QPainter, QPainterPath, QPen, QPixmap, QRegion)
 from PySide6.QtWidgets import QWidget
 from i18n import tr
+# 诊断日志：直接顶层导入（**不要**用 try/except 包着导入 —— 单文件合并时
+# 本地导入行会被删掉，留下一个空的 try 块，直接语法错误）
+from diag import log as _dlog, timed as _dtimed
 
 # ---------------------------------------------------------------- 实例注册表
 # 覆盖层是**无父窗口**的顶层窗口 —— findChildren() 找不到它们。
@@ -230,28 +233,41 @@ class SnipperOverlay(QWidget):
         # 结果抓到的整张图就是**我们自己的遮罩**（纯深色 + 蓝色选框边）——
         # 用户截出来的图全是废的。所以回到物理上不可能拍到自己的顺序：
         # 先抓本屏底图（多屏/混合 DPI 下按各自 dpr 裁剪才准确），再显示遮罩。
-        self._bg = self.screen.grabWindow(0)
-        self._img = self._bg.toImage() if not self._bg.isNull() else None
+        with _dtimed("遮罩·抓底图", f"屏={self.screen.name()} "
+                                    f"dpr={self.screen.devicePixelRatio()}"):
+            self._bg = self.screen.grabWindow(0)
+            self._img = self._bg.toImage() if not self._bg.isNull() else None
+        _dlog("遮罩·抓底图结果", self.bg_report())
         if self._bg.isNull():
             self._ensure_bg()                      # 抓失败：兜底一张，别让流程断
         # 用显式几何 + show()，比 showFullScreen() 在多屏/首次显示时更可靠地铺满整屏
-        self.setGeometry(self._geo)
-        self.show()
-        self.setGeometry(self._geo)      # show 之后再钉一次，避免首次出现时尺寸不对
-        self.raise_()
-        self.activateWindow()
-        # 关掉编辑器后本进程没有可见窗口，新建的置顶窗口可能拿不到前台激活，
-        # 于是 Esc/点击全落空（用户看到的就是"遮罩挡住了，怎么都关不掉"）。
-        # 这里用原生 API 再抢一次前台。
-        try:
-            from capture_utils import force_foreground
-            force_foreground(int(self.winId()))
-        except Exception:                          # noqa: BLE001
-            pass
+        with _dtimed("遮罩·显示窗口", f"geo={self._geo.width()}x"
+                                     f"{self._geo.height()}"):
+            self.setGeometry(self._geo)
+            self.show()
+            if self.geometry() != self._geo:
+                self.setGeometry(self._geo)   # 首次上屏尺寸不对时才再钉一次
+            self.raise_()
+            self.activateWindow()
+            # 只有"本进程当前没有前台窗口"时才走原生抢前台 ——
+            # 正常情况下这一步是白花钱（实测 SetWindowPos+SetForegroundWindow
+            # +SetActiveWindow 三连是显示阶段的大头）。
+            try:
+                from PySide6.QtWidgets import QApplication
+                need_force = QApplication.activeWindow() is None
+            except Exception:                      # noqa: BLE001
+                need_force = True
+            if need_force:
+                try:
+                    from capture_utils import force_foreground
+                    _dlog("遮罩·抢前台", "无前台窗口，启用原生抢前台")
+                    force_foreground(int(self.winId()))
+                except Exception:                  # noqa: BLE001
+                    pass
         # 注意：这里不能用 repaint() —— 对尚未映射完成的窗口强制同步绘制后，
         # Qt 不会再补一次绘制，窗口就会"在但没画出来"（动一下鼠标才出现）。
         self.update()
-        for delay in (0, 60, 160):       # 多次兜底：窗口映射完成后确保绘制 + 置顶
+        for delay in (0, 120):           # 兜底两次即可（原来三次，纯属多花时间）
             QTimer.singleShot(delay, self._ensure_cover)
 
     def bg_report(self) -> str:
@@ -301,6 +317,8 @@ class SnipperOverlay(QWidget):
 
     def finish(self):
         """结束本次截图会话：隐藏窗口但保留原生窗口，下次截图更快。"""
+        _dlog("遮罩·收起", f"屏={self.screen.name()} active={self._active} "
+                          f"visible={self.isVisible()}")
         self._point_timer.stop()
         self._clear_mask()
         self._point_local = QRect()
@@ -354,6 +372,9 @@ class SnipperOverlay(QWidget):
             self._point_pressed = False
 
     def _ensure_cover(self):
+        _dlog("遮罩·铺满兜底", f"active={self._active} "
+                              f"visible={self.isVisible()} "
+                              f"bg={'有' if self._bg is not None else '无'}")
         """兜底：确保覆盖层真的铺满并且是画出来的。
 
         注意：**不能**因为 _bg 还没抓回来就跳过 —— 抓屏是延后做的（先显示遮罩、

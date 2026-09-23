@@ -24,6 +24,7 @@ MODULES = [
     "i18n_data.py",
     "i18n.py",
     "session.py",
+    "diag.py",
     "bootstrap.py",
     "watermark.py",
     "border.py",
@@ -37,7 +38,7 @@ MODULES = [
     "main.py",
 ]
 
-LOCAL_MODULES = ("i18n_data", "i18n", "session", "bootstrap", "watermark", "border", "shapes", "style", "capture_utils",
+LOCAL_MODULES = ("i18n_data", "i18n", "session", "diag", "bootstrap", "watermark", "border", "shapes", "style", "capture_utils",
                  "pinboard", "snipper", "scroller", "editor", "main")
 
 _LOCAL_ALT = "|".join(LOCAL_MODULES)
