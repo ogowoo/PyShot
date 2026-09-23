@@ -726,11 +726,15 @@ class ScrollCapture(QObject):
             if pixmap_is_blank(frame, min_std=1.2, black_level=10):
                 self.failed.emit(
                     tr("抓到的画面是空白/纯色，无法拼接。\n"
-                    "目标窗口（如 Citrix 虚拟桌面里的应用）可能启用了硬件加速或内容保护，"
-                    "系统抓屏 API 拿不到内容。\n"
-                    "可尝试：① 在 Citrix/远程桌面里关闭硬件加速；"
-                    "② 用托盘菜单的「滚动长截图（手动滚动）」；"
-                    "③ 把该窗口最大化或调整大小后重试。"))
+                       "目标窗口（Citrix / 远程桌面 / Java 应用）多半在用硬件加速或"
+                       "内容保护，GDI 抓屏拿不到内容。按顺序试：\n"
+                       "① Citrix Workspace：关掉「使用硬件加速进行图形处理」；"
+                       "服务端策略把「视频编解码压缩」设为不使用\n"
+                       "② Java 应用：启动参数加 -Dsun.java2d.d3d=false "
+                       "-Dsun.java2d.opengl=false -Dsun.java2d.noddraw=true"
+                       "（强制走 GDI 绘制）\n"
+                       "③ 托盘菜单用「滚动长截图（手动滚动）」：你自己滚，程序只拼帧\n"
+                       "④ 把窗口最大化或调整大小后重试"))
                 self._cleanup()
                 return
 

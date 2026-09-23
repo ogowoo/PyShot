@@ -24,6 +24,7 @@
 # key: 简体原文 -> (繁體, English)
 TABLE = {
     "触发区域截图": ("觸发區域截圖", ""),
+    "屏幕列表": ("螢幕列表", ""),
     "收起覆盖层": ("收起覆蓋層", ""),
     "个；全局兜底": ("個；全局兜底", ""),
     "截图完成": ("截圖完成", ""),
@@ -59,6 +60,9 @@ TABLE = {
     "界面语言已切换": ("介面語言已切換", "Interface language changed"),
     "所有显示器拼成一张": ("所有顯示器拼成一張", "All Monitors as One Image"),
     "把每块显示器按逻辑位置拼成一张长图": ("把每塊顯示器按邏輯位置拼成一張長圖", "Stitch every monitor into a single image"),
+    "托盘事件": ("托盤事件", ""),
+    "截图": ("截圖", "Capture"),
+    "新建遮罩": ("新建遮罩", ""),
     "拖拽滚动条自动滚动": ("拖曳捲動條自動捲動", "Drag the scrollbar to scroll automatically"),
     "已记录滚动条位置": ("已記錄捲動條位置", "Scrollbar position recorded"),
     "滚到底会自动结束；想中途停止点控制条上的按钮。": ("滾到底會自動結束；想中途停止點控製條上的按鈕。", "It stops automatically at the bottom; click the button on the bar to stop early."),
@@ -69,6 +73,8 @@ TABLE = {
     "PyShot 已启动": ("PyShot 已啟動", "PyShot started"),
     "打开图片": ("開啟圖片", "Open Image"),
     "图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)": ("圖片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)", "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp)"),
+    "启动": ("啟動", ""),
+    "诊断日志已开启，写入 ~/.pyshot/debug.log": ("诊斷日志已開啟，寫入 ~/.pyshot/debug.log", ""),
     "[PyShot] 全局热键已注册：": ("[PyShot] 全局快速鍵已註冊：", ""),
     "[PyShot] 热键注册失败，已尝试：": ("[PyShot] 快速鍵註冊失敗，已嘗試：", ""),
     "{} 区域截图": ("{} 區域截圖", "{} Capture Region"),
@@ -78,6 +84,7 @@ TABLE = {
     "热键按下：取消进行中的截图": ("快速鍵按下：取消進行中的截圖", ""),
     "已有覆盖层在运行，忽略本次触发": ("已有覆蓋層在運行，忽略本次觸发", ""),
     "遮罩已显示；": ("遮罩已顯示；", ""),
+    "延迟执行": ("延遲執行", ""),
     "跟随系统": ("跟隨系統", "Follow system"),
     "主屏": ("主屏", "Primary"),
     "（未检测到显示器）": ("（未偵測到顯示器）", "(no monitor detected)"),
@@ -95,20 +102,31 @@ TABLE = {
     " 个标签少于缓存的 ": (" 個標籤少於緩存的 ", ""),
     "区域 ": ("區域 ", ""),
     "全屏 ": ("全螢幕 ", ""),
+    " 排队 ": (" 排队 ", ""),
+    "ms，实际等了 ": ("ms，實際等了 ", ""),
     "热键（{}）都被占用，请双击托盘图标截图。\n": ("快速鍵（{}）都被佔用，請雙擊托盤圖示截圖。\n", "Hotkeys ({}) are all taken — double-click the tray icon to capture.\n"),
     "可用环境变量 PYSHOT_HOTKEY 指定其他组合，例如 PYSHOT_HOTKEY=ctrl+alt+j": ("可用環境變數 PYSHOT_HOTKEY 指定其他組合，例如 PYSHOT_HOTKEY=ctrl+alt+j", "Set PYSHOT_HOTKEY to pick another combination, e.g. PYSHOT_HOTKEY=ctrl+alt+j"),
     "PyShot 已启动（恢复了 {} 张上次的截图）": ("PyShot 已啟動（恢複了 {} 張上次的截圖）", "PyShot started (restored {} capture(s))"),
     "显示器 {}": ("顯示器 {}", "Monitor {}"),
     "打开编辑器失败": ("開啟編輯器失敗", "Could not open the editor"),
     "全屏截图失败": ("全螢幕截圖失敗", "Full-screen capture failed"),
+    "兜底：确保覆盖层真的铺满并且是画出来的。\n\n        注意：**不能**因为 _bg 还没抓回来就跳过 —— 抓屏是延后做的（先显示遮罩、\n        后抓底图），这里要是等 _bg，头几帧的兜底就全空转了，多屏/缩放下遮罩\n        可能压根没铺好（曾因此表现成\"遮罩卡住不动\"）。\n        ": ("兜底：確保覆蓋層真的鋪滿并且是畫出來的。\n\n        注意：**不能**因為 _bg 還沒抓回來就跳過 —— 抓屏是延後做的（先顯示遮罩、\n        後抓底圖），這裡要是等 _bg，頭几幀的兜底就全空轉了，多屏/縮放下遮罩\n        可能壓根沒鋪好（曾因此表現成\"遮罩卡住不動\"）。\n        ", ""),
+    "遮罩·抓底图结果": ("遮罩·抓底圖結果", ""),
+    "遮罩·收起": ("遮罩·收起", ""),
+    "遮罩·铺满兜底": ("遮罩·鋪滿兜底", ""),
+    "遮罩·抓底图": ("遮罩·抓底圖", ""),
+    "遮罩·显示窗口": ("遮罩·顯示窗口", ""),
     "底图=空": ("底圖=空", ""),
     "底图=自检失败": ("底圖=自檢失敗", ""),
+    "屏=": ("屏=", ""),
     "屏幕取色：单击复制色值    ·    Esc / 右键 取消": ("螢幕取色：單擊複製色值    ·    Esc / 右鍵 取消", "Color picker: click to copy the value    ·    Esc / right-click to cancel"),
     "底图=": ("底圖=", ""),
     " 平均亮度=": (" 平均亮度=", ""),
     " 采样色数=": (" 采樣色數=", ""),
     "（疑似纯色/拍到自己！）": ("（疑似純色/拍到自己！）", ""),
     "拖拽选择要滚动截图的区域    ·    Esc / 右键 取消": ("拖曳選擇要捲動截圖的區域    ·    Esc / 右鍵 取消", "Drag to select the area to scroll-capture    ·    Esc / right-click to cancel"),
+    "遮罩·抢前台": ("遮罩·抢前台", ""),
+    "无前台窗口，启用原生抢前台": ("無前台窗口，啟用原生抢前台", ""),
     "蓝框内可直接点击滚动条【滑块】→ 自动开始滚动    ·    Esc 取消": ("藍框內可直接點擊捲動條【滑桿】→ 自動開始捲動    ·    Esc 取消", "Click the scrollbar thumb inside the frame to start    ·    Esc to cancel"),
     "拖拽选择截图区域    ·    Esc / 右键 取消": ("拖曳選擇截圖區域    ·    Esc / 右鍵 取消", "Drag to select a region    ·    Esc / right-click to cancel"),
     "选择": ("選擇", "Select"),
@@ -175,7 +193,6 @@ TABLE = {
     "关于 PyShot": ("關於 PyShot", "About PyShot"),
     "PyShot {}\n仿 FastStone Capture 的截图与标注工具\n\n托盘右键：区域截图 / 全屏截图 / 滚动长截图 / 屏幕取色 / 贴图\n编辑器：多标签标注 · 水印 · 加边框（含手撕纸）· 三语界面": ("PyShot {}\n仿 FastStone Capture 的截圖與標注工具\n\n托盤右鍵：區域截圖 / 全螢幕截圖 / 捲動長截圖 / 螢幕取色 / 釘圖\n編輯器：多標籤標注 · 水印 · 加邊框（含手撕紙）· 三語介面", "PyShot {}\nA FastStone Capture style screenshot and annotation tool\n\nTray menu: region / full-screen capture, scrolling capture, color picker, pin\nEditor: multi-tab annotation · watermark · borders (incl. torn paper) · 3 languages"),
     "关闭此标签 (Ctrl+W)": ("關閉此標籤 (Ctrl+W)", "Close this tab (Ctrl+W)"),
-    "截图": ("截圖", "Capture"),
     "截取新区域\n会自动最小化编辑器，截完回到这里新增标签": ("截取新區域\n會自動最小化編輯器，截完回到這裡新增標籤", "Capture a new region\nThe editor is minimized and the capture is added as a tab"),
     "更多颜色…（基本颜色 + 自定义颜色）": ("更多顏色…（基本顏色 + 自定義顏色）", "More colors… (basic + custom)"),
     "序号圆的大小\n选中已有序号时可直接调整它的大小": ("序號圓的大小\n選中已有序號時可直接調整它的大小", "Step-circle size\nAdjusts the selected step number directly"),
@@ -310,7 +327,7 @@ TABLE = {
     "没有抓到任何内容": ("沒有抓到任何內容", "Nothing was captured"),
     "手动": ("手動", "Manual"),
     "滚动": ("捲動", "Scroll"),
-    "抓到的画面是空白/纯色，无法拼接。\n目标窗口（如 Citrix 虚拟桌面里的应用）可能启用了硬件加速或内容保护，系统抓屏 API 拿不到内容。\n可尝试：① 在 Citrix/远程桌面里关闭硬件加速；② 用托盘菜单的「滚动长截图（手动滚动）」；③ 把该窗口最大化或调整大小后重试。": ("抓到的畫面是空白/純色，無法拼接。\n目標窗口（如 Citrix 虛擬桌面裡的套用）可能啟用了硬體加速或內容保護，系統抓屏 API 拿不到內容。\n可嘗試：① 在 Citrix/遠端桌面裡關閉硬體加速；② 用托盤菜單的「捲動長截圖（手動捲動）」；③ 把該窗口最大化或調整大小後重試。", "The captured frames are blank/solid, so they cannot be stitched.\nThe target window (e.g. an app inside Citrix) may use hardware acceleration or content protection that blocks screen capture.\nTry: (1) disable hardware acceleration in Citrix, (2) use Manual scrolling capture from the tray menu, (3) maximize or resize the window and retry."),
+    "抓到的画面是空白/纯色，无法拼接。\n目标窗口（Citrix / 远程桌面 / Java 应用）多半在用硬件加速或内容保护，GDI 抓屏拿不到内容。按顺序试：\n① Citrix Workspace：关掉「使用硬件加速进行图形处理」；服务端策略把「视频编解码压缩」设为不使用\n② Java 应用：启动参数加 -Dsun.java2d.d3d=false -Dsun.java2d.opengl=false -Dsun.java2d.noddraw=true（强制走 GDI 绘制）\n③ 托盘菜单用「滚动长截图（手动滚动）」：你自己滚，程序只拼帧\n④ 把窗口最大化或调整大小后重试": ("抓到的畫面是空白/純色，無法拼接。\n目標窗口（Citrix / 遠端桌面 / Java 套用）多半在用硬體加速或內容保護，GDI 抓屏拿不到內容。按順序試：\n① Citrix Workspace：關掉「使用硬體加速進行圖形處理」；服務端策略把「影片編解碼壓縮」設為不使用\n② Java 套用：啟動參數加 -Dsun.java2d.d3d=false -Dsun.java2d.opengl=false -Dsun.java2d.noddraw=true（强製走 GDI 繪製）\n③ 托盤菜單用「捲動長截圖（手動捲動）」：你自己滾，程序只拼幀\n④ 把窗口最大化或調整大小後重試", "The captured frames are blank/solid and cannot be stitched.\nThe target window (Citrix / Remote Desktop / a Java app) is probably using hardware acceleration or content protection, which blocks GDI screen capture. Try, in order:\n(1) Citrix Workspace: turn off 'Use hardware acceleration for graphics'; on the server set video-codec compression to 'Do not use video codec'\n(2) Java apps: add -Dsun.java2d.d3d=false -Dsun.java2d.opengl=false -Dsun.java2d.noddraw=true to force GDI rendering\n(3) Tray menu -> Manual scrolling capture: you scroll, PyShot just stitches\n(4) Maximize or resize the window and retry"),
     "抓帧尺寸发生变化，已停止（请确保窗口未移动/缩放）": ("抓幀尺寸发生變化，已停止（請確保窗口未移動/縮放）", "The captured area changed size; stopped (keep the window fixed)"),
     "画面内容变化过快，无法对齐拼接。\n": ("畫面內容變化過快，無法對齊拼接。\n", "The content changed too fast to align and stitch.\n"),
     "拼接 +": ("拼接 +", ""),
@@ -5344,11 +5361,15 @@ class ScrollCapture(QObject):
             if pixmap_is_blank(frame, min_std=1.2, black_level=10):
                 self.failed.emit(
                     tr("抓到的画面是空白/纯色，无法拼接。\n"
-                    "目标窗口（如 Citrix 虚拟桌面里的应用）可能启用了硬件加速或内容保护，"
-                    "系统抓屏 API 拿不到内容。\n"
-                    "可尝试：① 在 Citrix/远程桌面里关闭硬件加速；"
-                    "② 用托盘菜单的「滚动长截图（手动滚动）」；"
-                    "③ 把该窗口最大化或调整大小后重试。"))
+                       "目标窗口（Citrix / 远程桌面 / Java 应用）多半在用硬件加速或"
+                       "内容保护，GDI 抓屏拿不到内容。按顺序试：\n"
+                       "① Citrix Workspace：关掉「使用硬件加速进行图形处理」；"
+                       "服务端策略把「视频编解码压缩」设为不使用\n"
+                       "② Java 应用：启动参数加 -Dsun.java2d.d3d=false "
+                       "-Dsun.java2d.opengl=false -Dsun.java2d.noddraw=true"
+                       "（强制走 GDI 绘制）\n"
+                       "③ 托盘菜单用「滚动长截图（手动滚动）」：你自己滚，程序只拼帧\n"
+                       "④ 把窗口最大化或调整大小后重试"))
                 self._cleanup()
                 return
 

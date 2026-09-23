@@ -520,8 +520,17 @@ EN = {
     "（请关闭动画/视频后重试）\n": "(close animations/videos and retry)\n",
     "选区里似乎包含多块独立滚动的区域（例如上方列表 + 下方明细面板），它们滚动量不同，拼不到一起。\n请只框选其中一个面板（不含固定的明细面板/工具栏）后重试。\n（排查用：设环境变量 PYSHOT_SCROLL_DEBUG=1 会把每帧存到 ~/.pyshot/scroll_debug）":
         "The selection seems to contain several independently scrolling areas, which cannot be stitched.\nPlease select only one panel (without fixed toolbars) and retry.\n(Diagnostics: set PYSHOT_SCROLL_DEBUG=1 to dump frames to ~/.pyshot/scroll_debug)",
-    "抓到的画面是空白/纯色，无法拼接。\n目标窗口（如 Citrix 虚拟桌面里的应用）可能启用了硬件加速或内容保护，系统抓屏 API 拿不到内容。\n可尝试：① 在 Citrix/远程桌面里关闭硬件加速；② 用托盘菜单的「滚动长截图（手动滚动）」；③ 把该窗口最大化或调整大小后重试。":
-        "The captured frames are blank/solid, so they cannot be stitched.\nThe target window (e.g. an app inside Citrix) may use hardware acceleration or content protection that blocks screen capture.\nTry: (1) disable hardware acceleration in Citrix, (2) use Manual scrolling capture from the tray menu, (3) maximize or resize the window and retry.",
+    "抓到的画面是空白/纯色，无法拼接。\n目标窗口（Citrix / 远程桌面 / Java 应用）多半在用硬件加速或内容保护，GDI 抓屏拿不到内容。按顺序试：\n① Citrix Workspace：关掉「使用硬件加速进行图形处理」；服务端策略把「视频编解码压缩」设为不使用\n② Java 应用：启动参数加 -Dsun.java2d.d3d=false -Dsun.java2d.opengl=false -Dsun.java2d.noddraw=true（强制走 GDI 绘制）\n③ 托盘菜单用「滚动长截图（手动滚动）」：你自己滚，程序只拼帧\n④ 把窗口最大化或调整大小后重试":
+        "The captured frames are blank/solid and cannot be stitched.\n"
+        "The target window (Citrix / Remote Desktop / a Java app) is probably using "
+        "hardware acceleration or content protection, which blocks GDI screen capture. "
+        "Try, in order:\n"
+        "(1) Citrix Workspace: turn off 'Use hardware acceleration for graphics'; on the "
+        "server set video-codec compression to 'Do not use video codec'\n"
+        "(2) Java apps: add -Dsun.java2d.d3d=false -Dsun.java2d.opengl=false "
+        "-Dsun.java2d.noddraw=true to force GDI rendering\n"
+        "(3) Tray menu -> Manual scrolling capture: you scroll, PyShot just stitches\n"
+        "(4) Maximize or resize the window and retry",
     "拖拽和滚轮都没能让页面滚动。\n可能原因：点击位置不在滚动区域，或该窗口不响应注入的输入。\n建议改用「滚动长截图（PageDown 自动滚动）」或「手动滚动」。":
         "Neither dragging nor the wheel scrolled the page.\nThe click may be outside the scrollable area, or the window ignores injected input.\nTry Page Down mode or Manual scroll instead.",
     # ---- 编辑器菜单栏 / 空状态 ----
