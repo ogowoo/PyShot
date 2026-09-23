@@ -36,6 +36,8 @@ TOOLS = [
     ("crop",      "裁剪",   "拖拽选择保留区域，Enter 应用"),
 ]
 
+APP_VERSION = "2.6"          # 「关于」对话框里显示的版本号
+
 PALETTE = ["#e53935", "#fb8c00", "#fdd835", "#43a047",
            "#1e88e5", "#8e24aa", "#ffffff", "#000000"]
 
@@ -949,10 +951,14 @@ class EditorWindow(QMainWindow):
         self.add_canvas(QPixmap.fromImage(img))
 
     def show_about(self):
-        QMessageBox.information(
+        """关于：一句话 + 版本号 + 主要能力（三语齐全）。"""
+        QMessageBox.about(
             self, tr("关于 PyShot"),
-            tr("PyShot —— 仿 FastStone Capture 的截图与标注工具\n"
-               "托盘右键可截图 / 滚动长截图 / 取色 / 贴图"))
+            tr("PyShot {}\n"
+               "仿 FastStone Capture 的截图与标注工具\n\n"
+               "托盘右键：区域截图 / 全屏截图 / 滚动长截图 / 屏幕取色 / 贴图\n"
+               "编辑器：多标签标注 · 水印 · 加边框（含手撕纸）· 三语界面",
+               APP_VERSION))
 
     def edit_default_watermark(self):
         """编辑"新截图自动加的水印"（不作用于当前标签）。"""

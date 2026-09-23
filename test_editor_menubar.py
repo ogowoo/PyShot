@@ -163,6 +163,42 @@ check("关掉最后一个标签回到空状态", ed.tabs.count() == 0
       and ed.stack.currentWidget() is ed.empty_page)
 check("回到空状态后菜单项又置灰", not ed.act_save.isEnabled())
 
+
+# ---------- 6) 「关于」的文案必须三语齐全（用户就是这里报的漏译）----------
+import re as _re
+from PySide6.QtWidgets import QMessageBox
+import i18n
+
+_captured = []
+_orig_about = QMessageBox.about
+QMessageBox.about = staticmethod(
+    lambda parent, title, text, *a: _captured.append((title, text)))
+try:
+    # PYSHOT_LANG 的优先级高于 set_language（那是强制指定用的），
+    # 这一段要切语言，先把它摘掉
+    _env_lang = os.environ.pop("PYSHOT_LANG", None)
+    CJK = _re.compile(r"[\u4e00-\u9fff]")
+    for lang in ("zh_CN", "zh_TW", "en"):
+        i18n.set_language(lang, persist=False)
+        _captured.clear()
+        ed.show_about()
+        title, text = _captured[0]
+        if lang == "en":
+            check("英文「关于」没有中文残留", not CJK.search(text),
+                  _re.sub("PyShot|FastStone", "", text)[:60])
+            check("英文「关于」标题正确", title == "About PyShot", title)
+        if lang == "zh_TW":
+            check("繁体「关于」用繁体", "截圖" in text and "截图" not in text,
+                  text[:40])
+        if lang == "zh_CN":
+            check("简体「关于」正常", "截图" in text, text[:40])
+        check(f"「关于」含版本号（{lang}）", "2." in text, text[:40])
+finally:
+    QMessageBox.about = _orig_about
+    i18n.set_language("zh_CN", persist=False)
+    if _env_lang is not None:
+        os.environ["PYSHOT_LANG"] = _env_lang
+
 print()
 if failures:
     print("失败项:", failures)

@@ -128,7 +128,7 @@ TABLE = {
     "编辑默认边框…": ("編輯預設邊框…", "Edit Default Border…"),
     "帮助": ("幫助", "Help"),
     "关于 PyShot": ("關於 PyShot", "About PyShot"),
-    "PyShot —— 仿 FastStone Capture 的截图与标注工具\n托盘右键可截图 / 滚动长截图 / 取色 / 贴图": ("PyShot —— 仿 FastStone Capture 的截圖與標注工具\n托盤右鍵可截圖 / 捲動長截圖 / 取色 / 釘圖", ""),
+    "PyShot {}\n仿 FastStone Capture 的截图与标注工具\n\n托盘右键：区域截图 / 全屏截图 / 滚动长截图 / 屏幕取色 / 贴图\n编辑器：多标签标注 · 水印 · 加边框（含手撕纸）· 三语界面": ("PyShot {}\n仿 FastStone Capture 的截圖與標注工具\n\n托盤右鍵：區域截圖 / 全螢幕截圖 / 捲動長截圖 / 螢幕取色 / 釘圖\n編輯器：多標籤標注 · 水印 · 加邊框（含手撕紙）· 三語介面", "PyShot {}\nA FastStone Capture style screenshot and annotation tool\n\nTray menu: region / full-screen capture, scrolling capture, color picker, pin\nEditor: multi-tab annotation · watermark · borders (incl. torn paper) · 3 languages"),
     " px\n滚轮/Ctrl+滚轮 缩放 · 中键拖动滚动": (" px\n滾輪/Ctrl+滾輪 縮放 · 中鍵拖動捲動", "px\nWheel / Ctrl+wheel to zoom · middle-drag to scroll"),
     "关闭此标签 (Ctrl+W)": ("關閉此標籤 (Ctrl+W)", "Close this tab (Ctrl+W)"),
     "截图": ("截圖", "Capture"),

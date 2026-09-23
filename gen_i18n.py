@@ -533,12 +533,13 @@ EN = {
     "还没有图片": "No image yet",
     "从「文件」菜单打开图片，或直接截图 / 从剪贴板粘贴":
         "Open an image from the File menu, capture the screen, or paste from the clipboard",
-    "PyShot —— 仿 FastStone Capture 的截图与标注工具\\n托盘右键可截图 / 滚动长截图 / 取色 / 贴图":
-        "PyShot — a FastStone Capture style screenshot and annotation tool\\n"
-        "Right-click the tray icon to capture, scroll-capture, pick colors or pin",
     "直接打开编辑器窗口（空白也能用，从它的「文件」菜单打开图片）":
         "Open the editor window directly (works even when empty; use its File menu to open an image)",
     "显示编辑器": "Show Editor",
+    "PyShot {}\n仿 FastStone Capture 的截图与标注工具\n\n托盘右键：区域截图 / 全屏截图 / 滚动长截图 / 屏幕取色 / 贴图\n编辑器：多标签标注 · 水印 · 加边框（含手撕纸）· 三语界面":
+        "PyShot {}\nA FastStone Capture style screenshot and annotation tool\n\n"
+        "Tray menu: region / full-screen capture, scrolling capture, color picker, pin\n"
+        "Editor: multi-tab annotation · watermark · borders (incl. torn paper) · 3 languages",
 }
 
 
