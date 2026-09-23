@@ -313,6 +313,8 @@ EN = {
         "Saved as the default border for this session (config write failed)",
     "px\\n滚轮/Ctrl+滚轮 缩放 · 中键拖动滚动":
         "px\\nWheel / Ctrl+wheel to zoom · middle-drag to scroll",
+    "滚轮/Ctrl+滚轮 缩放 · 中键或空格拖动查看":
+        "Wheel / Ctrl+wheel to zoom · middle-drag or Space to pan",
     # ---- 边框对话框 ----
     "单线边框": "Solid Line",
     "纯色边框，最简洁": "A simple solid border",
@@ -540,6 +542,11 @@ EN = {
         "PyShot {}\nA FastStone Capture style screenshot and annotation tool\n\n"
         "Tray menu: region / full-screen capture, scrolling capture, color picker, pin\n"
         "Editor: multi-tab annotation · watermark · borders (incl. torn paper) · 3 languages",
+    "抓手": "Hand",
+    "拖拽移动画面（图放大后看不同位置）；任何工具下按住中键或空格也能拖":
+        "Drag to move the view (look around once zoomed in); middle-drag or hold Space works with any tool",
+    "px\n滚轮/Ctrl+滚轮 缩放 · 中键或空格拖动查看":
+        "px\nWheel / Ctrl+wheel to zoom · middle-drag or Space to pan",
 }
 
 

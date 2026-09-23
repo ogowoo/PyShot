@@ -116,6 +116,8 @@ TABLE = {
     "单击吸取图上颜色作为当前标注颜色": ("單擊吸取圖上顏色作為當前標注顏色", "Click to pick a color from the image"),
     "裁剪": ("裁剪", "Crop"),
     "拖拽选择保留区域，Enter 应用": ("拖曳選擇保留區域，Enter 套用", "Drag to select what to keep, Enter to apply"),
+    "抓手": ("抓手", "Hand"),
+    "拖拽移动画面（图放大后看不同位置）；任何工具下按住中键或空格也能拖": ("拖曳移動畫面（圖放大後看不同位置）；任何工具下按住中鍵或空格也能拖", "Drag to move the view (look around once zoomed in); middle-drag or hold Space works with any tool"),
     "选择颜色": ("選擇顏色", "Choose a color"),
     "输入文字，Enter 确认 / Esc 取消": ("輸入文字，Enter 確認 / Esc 取消", "Type text, Enter to confirm / Esc to cancel"),
     "PyShot 编辑器": ("PyShot 編輯器", "PyShot Editor"),
@@ -146,7 +148,6 @@ TABLE = {
     "帮助": ("幫助", "Help"),
     "关于 PyShot": ("關於 PyShot", "About PyShot"),
     "PyShot {}\n仿 FastStone Capture 的截图与标注工具\n\n托盘右键：区域截图 / 全屏截图 / 滚动长截图 / 屏幕取色 / 贴图\n编辑器：多标签标注 · 水印 · 加边框（含手撕纸）· 三语界面": ("PyShot {}\n仿 FastStone Capture 的截圖與標注工具\n\n托盤右鍵：區域截圖 / 全螢幕截圖 / 捲動長截圖 / 螢幕取色 / 釘圖\n編輯器：多標籤標注 · 水印 · 加邊框（含手撕紙）· 三語介面", "PyShot {}\nA FastStone Capture style screenshot and annotation tool\n\nTray menu: region / full-screen capture, scrolling capture, color picker, pin\nEditor: multi-tab annotation · watermark · borders (incl. torn paper) · 3 languages"),
-    " px\n滚轮/Ctrl+滚轮 缩放 · 中键拖动滚动": (" px\n滾輪/Ctrl+滾輪 縮放 · 中鍵拖動捲動", "px\nWheel / Ctrl+wheel to zoom · middle-drag to scroll"),
     "关闭此标签 (Ctrl+W)": ("關閉此標籤 (Ctrl+W)", "Close this tab (Ctrl+W)"),
     "截图": ("截圖", "Capture"),
     "截取新区域\n会自动最小化编辑器，截完回到这里新增标签": ("截取新區域\n會自動最小化編輯器，截完回到這裡新增標籤", "Capture a new region\nThe editor is minimized and the capture is added as a tab"),
@@ -177,6 +178,7 @@ TABLE = {
     "保存截图": ("儲存截圖", "Save Capture"),
     "PNG 图片 (*.png);;JPEG 图片 (*.jpg);;BMP 图片 (*.bmp)": ("PNG 圖片 (*.png);;JPEG 圖片 (*.jpg);;BMP 圖片 (*.bmp)", "PNG image (*.png);;JPEG image (*.jpg);;BMP image (*.bmp)"),
     "已设为默认边框，之后每次新截图会自动加": ("已設為預設邊框，之後每次新截圖會自動加", "Saved as the default border; it will be added automatically"),
+    "滚轮/Ctrl+滚轮 缩放 · 中键或空格拖动查看": ("滾輪/Ctrl+滾輪 縮放 · 中鍵或空格拖動查看", "Wheel / Ctrl+wheel to zoom · middle-drag or Space to pan"),
     "线宽": ("線寬", "Width"),
     "字号": ("字號", "Size"),
     "适应": ("符合", "Fit"),
@@ -2961,6 +2963,15 @@ def _draw_globe(p, c):
     p.drawArc(QRectF(3.5, 6.5, 17, 11), 0, 180 * 16)
 
 
+def _draw_hand(p, c):
+    """抓手（拖动查看）：简化手掌 + 三根手指。"""
+    p.drawRoundedRect(QRectF(7, 11, 10, 9), 3, 3)          # 掌
+    for x in (8.6, 11.4, 14.2):                            # 手指
+        p.drawLine(QPointF(x, 11), QPointF(x, 5.5))
+    p.drawLine(QPointF(7, 13), QPointF(4.6, 9.5))          # 拇指
+    p.drawLine(QPointF(17, 13.5), QPointF(19, 11))
+
+
 _ICON_DRAWERS = {
     "select": _draw_select, "rect": _draw_rect, "ellipse": _draw_ellipse,
     "line": _draw_line, "arrow": _draw_arrow, "pen": _draw_pen,
@@ -2969,7 +2980,7 @@ _ICON_DRAWERS = {
     "camera": _draw_camera, "undo": _draw_undo, "redo": _draw_redo,
     "monitor": _draw_monitor, "scroll": _draw_scroll, "image": _draw_image,
     "window": _draw_window, "pin": _draw_pin, "exit": _draw_exit,
-    "globe": _draw_globe,
+    "globe": _draw_globe, "hand": _draw_hand, "pan": _draw_hand,
 }
 
 
@@ -4902,6 +4913,7 @@ TOOLS = [
     ("mosaic",    "马赛克", "拖拽对区域打码"),
     ("pick",      "取色",   "单击吸取图上颜色作为当前标注颜色"),
     ("crop",      "裁剪",   "拖拽选择保留区域，Enter 应用"),
+    ("pan",       "抓手",   "拖拽移动画面（图放大后看不同位置）；任何工具下按住中键或空格也能拖"),
 ]
 
 APP_VERSION = "2.6"          # 「关于」对话框里显示的版本号
@@ -5022,6 +5034,13 @@ class Canvas(QWidget):
         # 1 个图像像素恰好落在 1 个屏幕物理像素上，不会被系统放大而发虚。
         self.dpr = float(self.base_pixmap.devicePixelRatio() or 1.0)
         self.shapes: list = []
+        # 拖动查看（平移画面）的状态
+        self._panning = False
+        self._space_pan = False          # 按住空格临时抓手
+        self._pan_from = QPointF()
+        self._pan_scroll = (0, 0)
+        self._scroll_area = None
+        self.setFocusPolicy(Qt.StrongFocus)     # 为了接空格键
         self.tool = "select"
         self.color = QColor(PALETTE[0])
         self.pen_width = 3
@@ -5110,9 +5129,88 @@ class Canvas(QWidget):
         self.shapes_changed.emit()
 
     # ---------- 鼠标交互 ----------
+    # ---------- 拖动查看（放大后平移画面）----------
+    def scroll_area(self):
+        """找到承载自己的 QScrollArea（add_canvas 里会存一份引用）。"""
+        area = getattr(self, "_scroll_area", None)
+        if area is not None:
+            return area
+        w = self.parent()
+        while w is not None:
+            if isinstance(w, QScrollArea):
+                return w
+            w = w.parent()
+        return None
+
+    def _pan_begin(self, e):
+        """开始拖动：记下按下位置与当时的滚动量。"""
+        area = self.scroll_area()
+        if area is None:
+            return False
+        self._panning = True
+        self._pan_from = e.position()
+        self._pan_scroll = (area.horizontalScrollBar().value(),
+                            area.verticalScrollBar().value())
+        self._pan_moved = False
+        self.setCursor(Qt.ClosedHandCursor)
+        return True
+
+    def _pan_update(self, e) -> bool:
+        """拖动中：把鼠标位移反向加到滚动条上。"""
+        if not self._panning:
+            return False
+        area = self.scroll_area()
+        if area is None:
+            return False
+        d = e.position() - self._pan_from
+        if abs(d.x()) > 1 or abs(d.y()) > 1:
+            self._pan_moved = True
+        area.horizontalScrollBar().setValue(int(self._pan_scroll[0] - d.x()))
+        area.verticalScrollBar().setValue(int(self._pan_scroll[1] - d.y()))
+        return True
+
+    def _pan_end(self):
+        was = self._panning
+        self._panning = False
+        self.set_tool_cursor()
+        return was
+
+    def can_pan(self) -> bool:
+        """当前是否处于"拖动能平移"的状态（抓手工具 / 按住空格）。"""
+        return self.tool == "pan" or self._space_pan
+
+    def set_tool_cursor(self):
+        """按当前工具设置鼠标形状。"""
+        if self.tool == "pan" or self._space_pan:
+            self.setCursor(Qt.ClosedHandCursor if self._panning
+                           else Qt.OpenHandCursor)
+        elif self.tool == "select":
+            self.setCursor(Qt.ArrowCursor)
+        else:
+            self.setCursor(Qt.CrossCursor)
+
+    def keyReleaseEvent(self, e):
+        if e.key() == Qt.Key_Space and not e.isAutoRepeat():
+            self._space_pan = False
+            if not self._panning:
+                self.set_tool_cursor()
+            e.accept()
+            return
+        super().keyReleaseEvent(e)
+
     def mousePressEvent(self, e):
         self._commit_text()
+        # 中键：任何工具下都能拖动画面（以前这里直接 return，中键其实没用）
+        if e.button() == Qt.MiddleButton:
+            self._pan_begin(e)
+            e.accept()
+            return
         if e.button() != Qt.LeftButton:
+            return
+        # 抓手工具 / 按住空格：左键拖动 = 平移画面
+        if self.can_pan():
+            self._pan_begin(e)
+            e.accept()
             return
         pos = self.clamp(self.to_image(e.position()))
         self._drag_start = pos
@@ -5189,6 +5287,8 @@ class Canvas(QWidget):
         self.update()
 
     def mouseMoveEvent(self, e):
+        if self._pan_update(e):                 # 拖动查看优先
+            return
         self._hover_pos = e.position()
         if self.tool == "pick":
             self.update()  # 刷新取色放大镜
@@ -5245,6 +5345,10 @@ class Canvas(QWidget):
         super().leaveEvent(e)
 
     def mouseReleaseEvent(self, e):
+        if self._panning and (e.button() in (Qt.MiddleButton, Qt.LeftButton)):
+            self._pan_end()
+            e.accept()
+            return
         if e.button() != Qt.LeftButton:
             return
         if self.tool == "select":
@@ -5276,6 +5380,12 @@ class Canvas(QWidget):
             self.apply_crop()
 
     def keyPressEvent(self, e):
+        # 按住空格 = 临时抓手（和 Photoshop 一致，松开恢复原工具）
+        if e.key() == Qt.Key_Space and not e.isAutoRepeat():
+            self._space_pan = True
+            self.set_tool_cursor()
+            e.accept()
+            return
         if e.key() in (Qt.Key_Delete, Qt.Key_Backspace):
             if self._selected is not None and self._selected in self.shapes:
                 self.push_undo()
@@ -5888,6 +5998,7 @@ class EditorWindow(QMainWindow):
         canvas.zoom_changed.connect(lambda z, c=canvas: self._on_canvas_zoom(c, z))
 
         scroll = QScrollArea()
+        canvas._scroll_area = scroll            # 拖动查看时要用它调滚动条
         scroll.setWidget(canvas)
         scroll.setWidgetResizable(False)
         scroll.setAlignment(Qt.AlignCenter)
@@ -5895,7 +6006,7 @@ class EditorWindow(QMainWindow):
         idx = self.tabs.addTab(scroll, title or tr("截图 {}").format(self.tabs.count() + 1))
         self.tabs.setTabToolTip(
             idx, f"{pixmap.width()} × {pixmap.height()} px\n"
-                 "滚轮/Ctrl+滚轮 缩放 · 中键拖动滚动")
+                 + tr("滚轮/Ctrl+滚轮 缩放 · 中键或空格拖动查看"))
         # 自定义关闭按钮（自带图标在深色主题下几乎看不见）
         close_btn = QToolButton()
         close_btn.setObjectName("tabclose")
@@ -6008,6 +6119,7 @@ class EditorWindow(QMainWindow):
         ["rect", "ellipse", "line", "arrow", "pen"],
         ["step", "text", "highlight", "mosaic"],
         ["pick", "crop"],
+        ["pan"],
     ]
 
     def _build_toolbar(self) -> QWidget:
@@ -6327,7 +6439,7 @@ class EditorWindow(QMainWindow):
                 c.cancel_crop() if tid != "crop" else None
                 c._selected = None
                 c._hover_pos = None
-                c.setCursor(Qt.CrossCursor if tid != "select" else Qt.ArrowCursor)
+                c.set_tool_cursor()            # 抓手工具显示手型
                 c.update()
         self.tool_buttons[tid].setChecked(True)
         self._refresh_actions()

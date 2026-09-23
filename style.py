@@ -459,6 +459,15 @@ def _draw_globe(p, c):
     p.drawArc(QRectF(3.5, 6.5, 17, 11), 0, 180 * 16)
 
 
+def _draw_hand(p, c):
+    """抓手（拖动查看）：简化手掌 + 三根手指。"""
+    p.drawRoundedRect(QRectF(7, 11, 10, 9), 3, 3)          # 掌
+    for x in (8.6, 11.4, 14.2):                            # 手指
+        p.drawLine(QPointF(x, 11), QPointF(x, 5.5))
+    p.drawLine(QPointF(7, 13), QPointF(4.6, 9.5))          # 拇指
+    p.drawLine(QPointF(17, 13.5), QPointF(19, 11))
+
+
 _ICON_DRAWERS = {
     "select": _draw_select, "rect": _draw_rect, "ellipse": _draw_ellipse,
     "line": _draw_line, "arrow": _draw_arrow, "pen": _draw_pen,
@@ -467,7 +476,7 @@ _ICON_DRAWERS = {
     "camera": _draw_camera, "undo": _draw_undo, "redo": _draw_redo,
     "monitor": _draw_monitor, "scroll": _draw_scroll, "image": _draw_image,
     "window": _draw_window, "pin": _draw_pin, "exit": _draw_exit,
-    "globe": _draw_globe,
+    "globe": _draw_globe, "hand": _draw_hand, "pan": _draw_hand,
 }
 
 
