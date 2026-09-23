@@ -6284,6 +6284,7 @@ class EditorWindow(QMainWindow):
 import ctypes
 import ctypes.wintypes
 import os
+import signal
 import sys
 from pathlib import Path
 
@@ -6486,6 +6487,11 @@ class PyShotApp(QObject):
             return
         self.tray = QSystemTrayIcon(make_tray_icon(), self.app)
         self._build_tray_menu()
+        # 这两行**必须留在初始化里**：_build_tray_menu 只负责重建菜单，
+        # 如果把 connect/show 也放进它，重建（切换语言）时会重复连接；
+        # 但要是从初始化里删掉，托盘图标就根本不显示（曾因此出过 bug）。
+        self.tray.activated.connect(self._on_tray_activated)
+        self.tray.show()
 
     def _build_tray_menu(self):
         """构建/重建托盘菜单（切换语言时也会调它）。"""
@@ -6679,7 +6685,7 @@ class PyShotApp(QObject):
             self._build_tray_menu()
         except Exception:                          # noqa: BLE001
             pass
-        for ed in list(self.editors):
+        for ed in list(getattr(self, "editors", [])):
             try:
                 ed.retranslate()
             except Exception:                      # noqa: BLE001
@@ -7033,6 +7039,26 @@ def main():
 
     core = PyShotApp(app)
     app.aboutToQuit.connect(core.shutdown)
+
+    # Ctrl+C 优雅退出。
+    # 直接在控制台按 Ctrl+C 时，Python 会把 KeyboardInterrupt 抛进 Qt 的原生事件
+    # 过滤器回调里，表现为一大段 "Error calling Python override of
+    # QAbstractNativeEventFilter::nativeEventFilter()" 报错、而且进程不一定退。
+    # 这里把 SIGINT 接管掉：用一个空转的 QTimer 让 Python 有机会处理信号，
+    # 收到信号就正常 quit()（会走 shutdown，把托盘图标和热键都收干净）。
+    def _on_sigint(signum, frame):
+        print()  # 让 ^C 后面换行，提示更清楚
+        print("[PyShot] 收到 Ctrl+C，正在退出…")
+        app.quit()
+
+    try:
+        signal.signal(signal.SIGINT, _on_sigint)
+        _sigint_timer = QTimer()
+        _sigint_timer.timeout.connect(lambda: None)   # 空转，仅用来跑信号处理
+        _sigint_timer.start(200)
+        core._sigint_timer = _sigint_timer           # 持有引用，别被回收
+    except Exception:                                 # noqa: BLE001
+        pass
 
     # 命令行直接给图片路径则直接进入编辑
     if len(sys.argv) > 1 and Path(sys.argv[1]).is_file():
