@@ -3,7 +3,7 @@
 import math
 from pathlib import Path
 
-from PySide6.QtCore import (QPoint, QPointF, QRect, QRectF, QSize, Qt,
+from PySide6.QtCore import (QPoint, QPointF, QRect, QRectF, QSize, Qt, QTimer,
                             Signal)
 from PySide6.QtGui import (QAction, QColor, QGuiApplication, QIcon, QKeySequence,
                            QPainter, QPainterPath, QPen, QPixmap)
@@ -296,6 +296,9 @@ class Canvas(QWidget):
         self._scroll_area = None
         self.setFocusPolicy(Qt.StrongFocus)     # 为了接空格键
         self.tool = "select"
+        # 适应模式：窗口大小变化时自动重算缩放。
+        # 用户一旦手动缩放（滚轮/按钮）就退出，免得打断他看细节。
+        self.fit_mode = True
         self.color = QColor(PALETTE[0])
         self.pen_width = 3
         self.font_size = 20
@@ -788,6 +791,8 @@ class Canvas(QWidget):
 
     # ---------- 缩放 ----------
     def set_zoom(self, zoom: float):
+        # 任何"显式指定缩放"都算脱离适应模式（适应操作自己会再置回 True）
+        self.fit_mode = False
         self.zoom = min(4.0, max(0.1, zoom))
         self._apply_size()
         self.update()
@@ -1261,18 +1266,20 @@ class EditorWindow(QMainWindow):
         canvas = self.canvas
         if canvas is None:
             return
+        canvas.fit_mode = False                    # 手动缩放 → 退出适应模式
         canvas.set_zoom(canvas.zoom * factor)
 
     def _set_zoom(self, zoom: float):
         canvas = self.canvas
         if canvas is not None:
+            canvas.fit_mode = False                # 指定缩放 → 退出适应模式
             canvas.set_zoom(zoom)
 
     def fit_to_window(self):
         scroll = self.scroll
         canvas = self.canvas
         if canvas is not None and scroll is not None:
-            _fit_canvas(self, canvas, scroll)
+            self._fit_canvas(canvas, scroll)
 
     # ---------- 会话（记住上次的截图）----------
     def session_tabs(self) -> list:
@@ -1438,6 +1445,7 @@ class EditorWindow(QMainWindow):
         self._refresh_size_label()
         self._on_selection_changed(canvas._selected)
 
+        QTimer.singleShot(0, self._autofit_current)
     def _on_canvas_zoom(self, canvas: Canvas, zoom: float):
         if canvas is self.canvas:
             self.zoom_label.setText(f"{round(zoom * 100)}%")
@@ -1904,7 +1912,42 @@ class EditorWindow(QMainWindow):
             screen = QGuiApplication.primaryScreen().availableGeometry()
             zx = (screen.width() * 0.85 - 190) / iw
             zy = (screen.height() * 0.85 - 120) / ih
-        canvas.set_zoom(min(1.0, max(0.1, min(zx, zy))))
+        target = min(1.0, max(0.1, min(zx, zy)))
+        canvas.fit_mode = True                     # 这就是「适应窗口」
+        # 滞回：适配本身会让画布尺寸变化 → 滚动条出现/消失 → 视口又变一点，
+        # 阈值太小就会来回抖（实测差约 2.4%）。差异小于 3% 视为已经合身。
+        if abs(canvas.zoom - target) < 0.03:
+            return
+        canvas.set_zoom(target)                    # 它会清掉 fit_mode
+        canvas.fit_mode = True                     # 适应窗口：再置回
+
+    def resizeEvent(self, e):
+        """窗口尺寸变化时，处于"适应模式"的标签跟着重新适配。
+
+        用防抖：拖动窗口会连续触发 resizeEvent，攒一下再算一次。
+        """
+        super().resizeEvent(e)
+        if getattr(self, "_fitting", False):
+            return
+        if getattr(self, "_resize_timer", None) is None:
+            self._resize_timer = QTimer(self)
+            self._resize_timer.setSingleShot(True)
+            self._resize_timer.timeout.connect(self._autofit_current)
+        self._resize_timer.start(60)
+
+    def _autofit_current(self):
+        """把当前标签按窗口重新适配（仅当它处于适应模式）。"""
+        if getattr(self, "_fitting", False):
+            return
+        canvas, scroll = self.canvas, self.scroll
+        if canvas is None or scroll is None or not getattr(canvas, "fit_mode",
+                                                           False):
+            return
+        self._fitting = True
+        try:
+            self._fit_canvas(canvas, scroll)
+        finally:
+            self._fitting = False
 
     def _zoom_fit(self):
         """缩放画布以适应当前窗口可视区。"""
@@ -2035,6 +2078,7 @@ class EditorWindow(QMainWindow):
         if e.modifiers() & Qt.ControlModifier and self.canvas is not None:
             delta = e.angleDelta().y()
             factor = 1.15 if delta > 0 else 1 / 1.15
+            self.canvas.fit_mode = False           # 手动缩放 → 退出适应模式
             self.canvas.set_zoom(self.canvas.zoom * factor)
             e.accept()
             return
