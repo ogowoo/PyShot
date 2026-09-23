@@ -3956,7 +3956,8 @@ from PySide6.QtWidgets import QWidget
 
 # 诊断日志：直接顶层导入（**不要**用 try/except 包着导入 —— 单文件合并时
 # 本地导入行会被删掉，留下一个空的 try 块，直接语法错误）
-
+_dlog = log
+_dtimed = timed
 
 # ---------------------------------------------------------------- 实例注册表
 # 覆盖层是**无父窗口**的顶层窗口 —— findChildren() 找不到它们。
@@ -6768,7 +6769,7 @@ class EditorWindow(QMainWindow):
     def edit_default_watermark(self):
         """编辑"新截图自动加的水印"（不作用于当前标签）。"""
 
-
+        wm_save = save_default
         canvas = self.canvas
         size = canvas.base_pixmap.size() if canvas else QSize(640, 400)
         dlg = WatermarkDialog(self, load_default(), size)
@@ -6782,7 +6783,7 @@ class EditorWindow(QMainWindow):
     def edit_default_border(self):
         """编辑"新截图自动加的边框"（不作用于当前标签）。"""
 
-
+        bd_save = save_border_default
         canvas = self.canvas
         size = canvas.base_pixmap.size() if canvas else QSize(640, 400)
         dlg = BorderDialog(self, load_border_default(), size)
@@ -6915,7 +6916,7 @@ class EditorWindow(QMainWindow):
         做法是"把当前显示的文案再翻译一次"：i18n 内部有译文→原文的反查，
         所以英文/繁体文本也能翻译回目标语言，反复切换不会错乱。
         """
-
+        _tr = tr
         self.setWindowTitle(_tr("PyShot 编辑器"))
         # 通用扫描：按钮 / 标签 / 复选框 / 分组框的文本与提示
         for w in self.findChildren(object):

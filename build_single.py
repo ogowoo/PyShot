@@ -144,7 +144,8 @@ def strip_module(path: str) -> str:
         return "\n".join(f"{indent}{alias} = {real}"
                          for alias, real in aliases)
 
-    src = LOCAL_IMPORT_RE.sub("", src)
+    # 先处理"带别名的本地导入"：补成 `别名 = 真名`（必须在兜底删除之前！）
+    src = LOCAL_FROM_IMPORT_RE.sub(_replace, src)
     src = LOCAL_IMPORT_RE.sub("", src)             # 兜底：清掉剩余形式
     src = BOOTSTRAP_CALL_RE.sub("", src)
     # 去掉 __main__ 入口（单文件自己提供）
