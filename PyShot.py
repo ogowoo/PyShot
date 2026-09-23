@@ -5406,16 +5406,26 @@ class ScrollCapture(QObject):
         if not slow:
             return frame
         prev_fr = pixmap_to_frame(frame)
-        for wait_ms in (90, 180):
+        # 判据从 1.0 放宽到 3.0：滚动动画/视频编码噪声下，"几乎逐字节相同"
+        # 是等不到的，结果只会把中间态（撕裂帧）当成稳定帧拿去匹配 ——
+        # 那正是 s=-1 的主要来源。3.0 仍远小于"滚动了一行"造成的差异。
+        best, best_diff = frame, None
+        for wait_ms in (110, 160, 240, 320):
             _sleep_ms(wait_ms)
             again = self.grab_fn()
             if again.isNull():
                 break
             fr = pixmap_to_frame(again)
-            if frame_diff(prev_fr, fr) < 1.0:     # 画面稳定了
+            d = frame_diff(prev_fr, fr)
+            _dlog("滚动·等静止", f"差异 {d:.2f}（阈值 3.0）")
+            if best_diff is None or d < best_diff:
+                best, best_diff = again, d
+            if d < 3.0:                            # 稳定了
                 return again
             frame, prev_fr = again, fr
-        return frame
+        # 一直没稳定：用**差异最小**的那一帧，而不是最后一帧
+        _dlog("滚动·等静止", f"未达阈值，取差异最小的帧（{best_diff:.2f}）")
+        return best
 
     def _debug_dump(self, fr: Frame, note: str):
         """PYSHOT_SCROLL_DEBUG=1 时把每一帧和判定结果存盘，便于排查拼接异常。"""
