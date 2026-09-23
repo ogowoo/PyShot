@@ -556,17 +556,35 @@ class PyShotApp(QObject):
         return self._overlays
 
     def _warmup(self):
-        """启动后预热：抓屏路径 + 每块屏的覆盖层窗口，让第一次截图也能秒开遮罩。"""
-        if self.snipper is not None:        # 正在截图中，别去动覆盖层
-            return
+        """启动预热：把冷启动的代价（首次抓屏 + 首次建全屏窗口）提前付掉。
+
+        注意：这段跑在**主线程**，会在日志里显示为一段时间空白 ——
+        实测某些机器上首次抓屏要好几秒，期间界面是卡的。
+        """
+        import time
+        t0 = time.perf_counter()
+        self._cap_log("预热·开始")
         try:
-            grab_virtual_desktop()          # 预热抓屏（首次调用较慢）
-            for ov in self._ensure_overlays():
-                ov.warmup()                 # 预建置顶全屏窗口（Windows 首次极慢）
-        except Exception:                    # noqa: BLE001
-            pass                             # 预热失败不影响正常使用
+            t1 = time.perf_counter()
+            grab_virtual_desktop()
+            self._cap_log("预热·首次抓屏", f"耗时 {(time.perf_counter()-t1)*1000:.0f} ms")
+            t2 = time.perf_counter()
+            overlays = self._ensure_overlays()
+            self._cap_log("预热·建遮罩窗口",
+                          f"{len(overlays)} 块屏，耗时 {(time.perf_counter()-t2)*1000:.0f} ms")
+            for ov in overlays:
+                t3 = time.perf_counter()
+                ov.warmup()
+                self._cap_log("预热·单屏上屏",
+                              f"{ov.screen.name()} 耗时 {(time.perf_counter()-t3)*1000:.0f} ms")
+        except Exception:                          # noqa: BLE001
+            pass                               # 预热失败不影响正常使用
+        self._cap_log("预热·结束", f"总耗时 {(time.perf_counter()-t0)*1000:.0f} ms")
 
     def _on_region_selected(self, region):
+        self._cap_log("滚动·选区确定", f"region={region.x()},{region.y()} "
+                                    f"{region.width()}x{region.height()} "
+                                    f"mode={self._scroll_mode}")
         mode = self._scroll_mode
         self._scroll_mode = None
         if not mode:

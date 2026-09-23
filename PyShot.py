@@ -4655,6 +4655,9 @@ from PySide6.QtCore import (QEventLoop, QObject, QPoint, QRect, Qt, QTimer, Sign
 from PySide6.QtGui import QColor, QCursor, QGuiApplication, QImage, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
+# 诊断日志（顶层导入：单文件合并时本地导入行会被删，
+# 绝不能用 try/except 包着导入，否则留下空 try 块 → 语法错误）
+_dlog = log
 
 MOUSEEVENTF_WHEEL = 0x0800
 user32 = ctypes.windll.user32          # 提到模块级，便于测试打桩
@@ -5358,6 +5361,11 @@ class ScrollCapture(QObject):
         self._timer.setInterval(self.interval_ms)
         self._timer.timeout.connect(self._tick)
 
+    def _fail(self, msg: str):
+        """统一的失败出口：先写诊断日志，再发失败信号。"""
+        _dlog("滚动·失败", msg.replace("\n", " / ")[:160])
+        self.failed.emit(msg)
+
     def start(self):
         self.bar.show()
         if self.driver is not None:
@@ -5441,17 +5449,22 @@ class ScrollCapture(QObject):
             self._busy = False
 
     def _tick_once(self):
+        if self._frames == 0:
+            _dlog("滚动·开始", f"模式={getattr(self.driver, 'mode', None)} "
+                              f"driver={'有' if self.driver is not None else '无'} "
+                              f"max_frames={self.max_frames}")
         if self._stop_requested or self._frames >= self.max_frames:
             self._finish()
             return
         try:
             frame = self._grab_settled()
         except Exception as ex:
-            self.failed.emit(tr("抓帧失败：") + str(ex))
+            self._fail(tr("抓帧失败：") + str(ex))
             self._cleanup()
             return
+        _dlog("滚动·帧", f"#{self._frames} 抓帧 {frame.width()}x{frame.height()}")
         if frame.isNull() or frame.width() < 8 or frame.height() < 80:
-            self.failed.emit(tr("抓帧失败：区域过小或被遮挡"))
+            self._fail(tr("抓帧失败：区域过小或被遮挡"))
             self._cleanup()
             return
 
@@ -5460,7 +5473,7 @@ class ScrollCapture(QObject):
         if self._prev is None and self._frames == 0:
 
             if pixmap_is_blank(frame, min_std=1.2, black_level=10):
-                self.failed.emit(
+                self._fail(
                     tr("抓到的画面是空白/纯色，无法拼接。\n"
                        "目标窗口（Citrix / 远程桌面 / Java 应用）多半在用硬件加速或"
                        "内容保护，GDI 抓屏拿不到内容。按顺序试：\n"
@@ -5482,7 +5495,7 @@ class ScrollCapture(QObject):
             self._debug_dump(fr, "首帧")
         else:
             if fr.h != self._prev.h or fr.w != self._prev.w:
-                self.failed.emit(tr("抓帧尺寸发生变化，已停止（请确保窗口未移动/缩放）"))
+                self._fail(tr("抓帧尺寸发生变化，已停止（请确保窗口未移动/缩放）"))
                 self._cleanup()
                 return
             s, diff = find_scroll(self._prev, fr)
@@ -5518,14 +5531,16 @@ class ScrollCapture(QObject):
                 # 匹配失败时先做一次"多块独立滚动区域"诊断，给出更具体的建议
 
                 guess = best_candidate_offset(self._prev, fr)
+                _dlog("滚动·位移", f"#{self._frames} s={guess} "
+                                          f"累计高度 {int(getattr(getattr(self, '_acc', None), 'h', 0) / (self._dpr or 1))}")
                 if guess > 0:
                     t2, b2 = static_strips(self._prev, fr)
                     problem = self._check_multi_pane(fr, guess, t2, fr.h - b2)
                     if problem:
-                        self.failed.emit(problem)
+                        self._fail(problem)
                         self._cleanup()
                         return
-                self.failed.emit(
+                self._fail(
                     "画面内容变化过快，无法对齐拼接。\n"
                     + ("拖拽滚动条模式下最常见的原因：点在了滚动条的**轨道**上而不是**滑块**上——"
                        "那样会一次翻整页，无法拼接。请重新框选并点中滑块本身。\n"
@@ -5542,7 +5557,7 @@ class ScrollCapture(QObject):
                 # 多块独立滚动区域（上方列表 + 下方明细面板）拼不出来，早点说清楚
                 problem = self._check_multi_pane(fr, s, top, bottom)
                 if problem:
-                    self.failed.emit(problem)
+                    self._fail(problem)
                     self._cleanup()
                     return
                 if self._frames == 1:
@@ -5581,7 +5596,7 @@ class ScrollCapture(QObject):
                 self._do_scroll()
                 return
             if d is not None and not d.moved_ever and d.used_fallback == "wheel":
-                self.failed.emit(
+                self._fail(
                     tr("拖拽和滚轮都没能让页面滚动。\n"
                     "可能原因：点击位置不在滚动区域，或该窗口不响应注入的输入。\n"
                     "建议改用「滚动长截图（PageDown 自动滚动）」或「手动滚动」。"))
@@ -5594,7 +5609,7 @@ class ScrollCapture(QObject):
     def _finish(self):
         self._cleanup()
         if self._acc is None:
-            self.failed.emit(tr("没有抓到任何内容"))
+            self._fail(tr("没有抓到任何内容"))
             return
         self.finished_ok.emit(frame_to_pixmap(self._acc, self._dpr))
 
@@ -8275,17 +8290,35 @@ class PyShotApp(QObject):
         return self._overlays
 
     def _warmup(self):
-        """启动后预热：抓屏路径 + 每块屏的覆盖层窗口，让第一次截图也能秒开遮罩。"""
-        if self.snipper is not None:        # 正在截图中，别去动覆盖层
-            return
+        """启动预热：把冷启动的代价（首次抓屏 + 首次建全屏窗口）提前付掉。
+
+        注意：这段跑在**主线程**，会在日志里显示为一段时间空白 ——
+        实测某些机器上首次抓屏要好几秒，期间界面是卡的。
+        """
+        import time
+        t0 = time.perf_counter()
+        self._cap_log("预热·开始")
         try:
-            grab_virtual_desktop()          # 预热抓屏（首次调用较慢）
-            for ov in self._ensure_overlays():
-                ov.warmup()                 # 预建置顶全屏窗口（Windows 首次极慢）
-        except Exception:                    # noqa: BLE001
-            pass                             # 预热失败不影响正常使用
+            t1 = time.perf_counter()
+            grab_virtual_desktop()
+            self._cap_log("预热·首次抓屏", f"耗时 {(time.perf_counter()-t1)*1000:.0f} ms")
+            t2 = time.perf_counter()
+            overlays = self._ensure_overlays()
+            self._cap_log("预热·建遮罩窗口",
+                          f"{len(overlays)} 块屏，耗时 {(time.perf_counter()-t2)*1000:.0f} ms")
+            for ov in overlays:
+                t3 = time.perf_counter()
+                ov.warmup()
+                self._cap_log("预热·单屏上屏",
+                              f"{ov.screen.name()} 耗时 {(time.perf_counter()-t3)*1000:.0f} ms")
+        except Exception:                          # noqa: BLE001
+            pass                               # 预热失败不影响正常使用
+        self._cap_log("预热·结束", f"总耗时 {(time.perf_counter()-t0)*1000:.0f} ms")
 
     def _on_region_selected(self, region):
+        self._cap_log("滚动·选区确定", f"region={region.x()},{region.y()} "
+                                    f"{region.width()}x{region.height()} "
+                                    f"mode={self._scroll_mode}")
         mode = self._scroll_mode
         self._scroll_mode = None
         if not mode:
