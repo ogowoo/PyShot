@@ -7,7 +7,7 @@ from PySide6.QtCore import (QPoint, QPointF, QRect, QRectF, QSize, Qt,
                             Signal)
 from PySide6.QtGui import (QAction, QColor, QGuiApplication, QIcon, QKeySequence,
                            QPainter, QPainterPath, QPen, QPixmap)
-from PySide6.QtWidgets import (QMenu, QStackedWidget, QApplication, QColorDialog, QDialog, QFileDialog,
+from PySide6.QtWidgets import (QGridLayout, QMenu, QStackedWidget, QApplication, QColorDialog, QDialog, QFileDialog,
                                QFrame, QHBoxLayout, QLabel, QLayout, QLineEdit,
                                QMainWindow, QMessageBox, QPushButton,
                                QScrollArea, QSizePolicy, QSpinBox, QTabBar,
@@ -39,8 +39,11 @@ TOOLS = [
 
 APP_VERSION = "2.6"          # 「关于」对话框里显示的版本号
 
-PALETTE = ["#e53935", "#fb8c00", "#fdd835", "#43a047",
-           "#1e88e5", "#8e24aa", "#ffffff", "#000000"]
+# 色板：两行 20 色（红橙黄绿青蓝紫 + 灰阶），常用色一眼可选
+PALETTE = ["#e53935", "#fb8c00", "#fdd835", "#43a047", "#00acc1",
+           "#1e88e5", "#5e35b1", "#8e24aa", "#d81b60", "#6d4c41",
+           "#ffffff", "#f5f5f5", "#bdbdbd", "#757575", "#424242",
+           "#212121", "#000000", "#00e676", "#ff1744", "#ffea00"]
 
 HANDLE_SIZE = 8      # 选中图形四角/四边句柄的显示大小（屏幕像素）
 HANDLE_HIT = 11      # 句柄的点击容差
@@ -1434,22 +1437,38 @@ class EditorWindow(QMainWindow):
 
         color_label = QLabel(tr("颜色"))
         color_label.setAlignment(Qt.AlignVCenter)
-        swatches = []
+
+        # 当前颜色：拾色器吸到的 / 点色板选的，都会实时反映在这里
+        self.current_color_btn = QPushButton()
+        self.current_color_btn.setObjectName("currentColor")
+        self.current_color_btn.setFixedSize(28, 28)
+        self.current_color_btn.setCursor(Qt.PointingHandCursor)
+        self.current_color_btn.clicked.connect(self._pick_color)
+
+        # 色板拼盘：两行网格（10 列），点一下即设为当前颜色
+        palette_box = QWidget()
+        grid = QGridLayout(palette_box)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setSpacing(3)
         self.color_buttons = []
-        for hexs in PALETTE:
+        for i, hexs in enumerate(PALETTE):
             b = QPushButton()
             b.setObjectName("swatch")
-            b.setFixedSize(20, 20)
+            b.setFixedSize(18, 18)
             b.setStyleSheet(f"background:{hexs};")
+            b.setToolTip(hexs)
             b.clicked.connect(lambda checked, c=hexs: self.set_color(QColor(c)))
-            swatches.append(b)
+            grid.addWidget(b, i // 10, i % 10)
             self.color_buttons.append(b)
         more = QPushButton("…")
         more.setObjectName("swatchMore")
-        more.setFixedSize(20, 20)
+        more.setFixedSize(18, 18)
         more.setToolTip(tr("自定义颜色"))
         more.clicked.connect(self._pick_color)
-        r1.addWidget(self._group(color_label, *swatches, more))
+        grid.addWidget(more, 1, 10)
+        grid.setColumnStretch(10, 1)
+        r1.addWidget(self._group(color_label, self.current_color_btn,
+                                 palette_box))
         self._refresh_swatch_state()
         r1.addWidget(self._top_sep())
 
@@ -1712,6 +1731,15 @@ class EditorWindow(QMainWindow):
             b.setProperty("selected", QColor(hexs).name() == cur)
             b.style().unpolish(b)
             b.style().polish(b)
+        # 当前颜色按钮：背景就是当前色，提示里带上色值
+        try:
+            name = QColor(self._shared["color"]).name()
+            self.current_color_btn.setStyleSheet(
+                f"background:{name}; border:2px solid #ffffff;"
+                "border-radius:6px;")
+            self.current_color_btn.setToolTip(tr("当前颜色") + f"  {name}")
+        except Exception:                          # noqa: BLE001
+            pass
 
     def _pick_color(self):
         current = self.canvas.color if self.canvas is not None else self._shared["color"]

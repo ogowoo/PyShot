@@ -362,12 +362,21 @@ class PyShotApp(QObject):
 
     # ---------- 截图流程 ----------
     def capture_region(self):
+        self._cap_log("触发区域截图")
         self._start_snipper("region")
 
     def _start_snipper(self, mode: str, scroll_mode: str | None = None,
                        point_region: QRect | None = None):
         if self.snipper is not None:
-            return  # 已有覆盖层在运行
+            # 已有覆盖层在运行。但如果它其实已经不活跃/不可见（上次没收干净），
+            # 就直接当作残留清掉继续走 —— 否则这一句会让之后每次截图都"没反应"
+            live = [ov for ov in getattr(self, "_overlays", [])
+                    if getattr(ov, "_active", False)]
+            if live:
+                self._cap_log("已有覆盖层在运行，忽略本次触发")
+                return
+            self._cap_log("清理残留覆盖层后继续")
+            self._on_snip_done()
         self._prepare_capture()
         self._scroll_mode = scroll_mode      # None / "wheel" / "drag" / "key" / "manual"
         overlays = self._ensure_overlays()
@@ -469,6 +478,26 @@ class PyShotApp(QObject):
             self._deferred(self.capture_region)
 
     # ---------- 覆盖层复用与预热 ----------
+    def _cap_log(self, *parts):
+        """截图流程诊断日志：设 PYSHOT_CAPTURE_DEBUG=1 打开。
+
+        遮罩"卡住不退"这类问题必须能看到"谁被显示了、谁没被收起"，
+        否则只能靠猜。
+        """
+        if not os.environ.get("PYSHOT_CAPTURE_DEBUG"):
+            return
+        try:
+            import time
+            line = f"[cap {time.strftime('%H:%M:%S')}] " + " ".join(
+                str(x) for x in parts)
+            print(line, flush=True)
+            log = Path.home() / ".pyshot" / "capture_debug.log"
+            log.parent.mkdir(parents=True, exist_ok=True)
+            with open(log, "a", encoding="utf-8") as f:
+                f.write(line + "\n")
+        except Exception:                          # noqa: BLE001
+            pass
+
     def _ensure_overlays(self) -> list:
         """确保每一块显示器都有一个覆盖层。
 
@@ -547,14 +576,39 @@ class PyShotApp(QObject):
 
     def _on_snip_done(self, *args):
         # 所有屏幕的覆盖层都要收起（多屏时可能有好几个）
-        for ov in getattr(self, "_overlays", []):
-            if ov.isVisible():
-                ov.finish()
-        self.snipper = None
+        self.snipper = None                    # 先清，避免重入时提前 return
+        seen = []
+        for ov in list(getattr(self, "_overlays", [])):
+            seen.append(ov)
+        # 兜底：把"Qt 知道的所有覆盖层实例"都收掉。屏幕组合变化时
+        # _ensure_overlays 会重建列表，旧实例如果还可见就成了孤儿，
+        # 永远盖在屏幕上（用户看到的就是"遮罩挡住了"）。
+        try:
+            for ov in self.app.findChildren(SnipperOverlay):
+                if ov not in seen:
+                    seen.append(ov)
+        except Exception:                          # noqa: BLE001
+            pass
+        for ov in seen:
+            try:
+                if ov.isVisible() or getattr(ov, "_active", False):
+                    ov.finish()
+                ov.hide()                      # 双保险：无论如何都别留在屏上
+            except Exception:                      # noqa: BLE001
+                continue
+        # 最终兜底：走全局注册表把所有还活着的遮罩都收掉。
+        # findChildren 找不到它们（顶层无父窗口），不能靠 Qt 树兜底。
+        try:
+            from snipper import finish_all_overlays
+            n = finish_all_overlays()
+        except Exception:                          # noqa: BLE001
+            n = 0
+        self._cap_log("收起覆盖层", len(seen), "个；全局兜底", n, "个")
         if not self.tray_available and not self.editors:
             self.app.quit()  # 无托盘且无窗口时退出，避免程序"隐身"残留
 
     def _on_captured(self, pixmap: QPixmap):
+        self._cap_log("截图完成", pixmap.width(), "x", pixmap.height())
         self._on_snip_done()
         if self._scroll_mode:      # 滚动截图的选区，不是要编辑的截图
             self._scroll_mode = None

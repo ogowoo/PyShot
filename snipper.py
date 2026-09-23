@@ -14,12 +14,35 @@
     snipper.start()
 """
 import ctypes
+import weakref
 
 from PySide6.QtCore import QPoint, QRect, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import (QColor, QCursor, QFont, QGuiApplication, QImage,
                            QPainter, QPainterPath, QPen, QPixmap, QRegion)
 from PySide6.QtWidgets import QWidget
 from i18n import tr
+
+# ---------------------------------------------------------------- 实例注册表
+# 覆盖层是**无父窗口**的顶层窗口 —— findChildren() 找不到它们。
+# 一旦列表被重建（屏幕组合变化）或某次流程中途异常，旧实例就可能没人管、
+# 永远留在屏幕上挡住一切（用户表现："遮罩挡住了"）。
+# 所以留一份全局弱引用表，收尾时一律收掉，不依赖任何列表。
+_ALL_OVERLAYS = weakref.WeakSet()
+
+
+def finish_all_overlays():
+    """把所有还活着的覆盖层收起来（兜底）。返回处理了几个。"""
+    n = 0
+    for ov in list(_ALL_OVERLAYS):
+        try:
+            if ov.isVisible() or getattr(ov, "_active", False):
+                ov.finish()
+            ov.hide()
+            n += 1
+        except Exception:                          # noqa: BLE001
+            continue
+    return n
+
 
 MASK_COLOR = QColor(6, 10, 18, 150)   # 遮罩：偏深的蓝黑，任何背景都能看出"已进入截图状态"
 VK_LBUTTON = 0x01
@@ -152,6 +175,7 @@ class SnipperOverlay(QWidget):
         self._point_pressed = False
         self._point_timer = QTimer(self)
         self._point_timer.setInterval(25)
+        _ALL_OVERLAYS.add(self)   # 见文件头的注册表说明
         self._point_timer.timeout.connect(self._poll_point_click)
 
     def screen_geometry(self) -> QRect:

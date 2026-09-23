@@ -6,6 +6,10 @@
 
 # key: 简体原文 -> (繁體, English)
 TABLE = {
+    "触发区域截图": ("觸发區域截圖", ""),
+    "收起覆盖层": ("收起覆蓋層", ""),
+    "个；全局兜底": ("個；全局兜底", ""),
+    "截图完成": ("截圖完成", ""),
     "[PyShot] 收到 Ctrl+C，正在退出…": ("[PyShot] 收到 Ctrl+C，正在結束…", ""),
     "区域截图": ("區域截圖", "Capture Region"),
     "框选一块区域截图": ("框選一塊區域截圖", "Drag to capture a region"),
@@ -31,6 +35,7 @@ TABLE = {
     "直接打开编辑器窗口（空白也能用，从它的「文件」菜单打开图片）": ("直接開啟編輯器窗口（空白也能用，从它的「檔案」菜單開啟圖片）", "Open the editor window directly (works even when empty; use its File menu to open an image)"),
     "语言": ("語言", "Language"),
     "退出 PyShot": ("結束 PyShot", "Exit PyShot"),
+    "清理残留覆盖层后继续": ("清理残留覆蓋層後继續", ""),
     "按系统语言自动选择": ("按系統語言自動選擇", "Choose automatically from the system language"),
     "界面语言已切换": ("介面語言已切換", "Interface language changed"),
     "所有显示器拼成一张": ("所有顯示器拼成一張", "All Monitors as One Image"),
@@ -51,6 +56,7 @@ TABLE = {
     "{} 全屏截图": ("{} 全螢幕截圖", "{} Capture Full Screen"),
     "PyShot 截图工具\n{}\n双击图标截图": ("PyShot 截圖工具\n{}\n雙擊圖示截圖", "PyShot Screen Capture\n{}\nDouble-click the icon to capture"),
     "PyShot 截图工具\n双击图标截图 · 右键菜单": ("PyShot 截圖工具\n雙擊圖示截圖 · 右鍵菜單", "PyShot Screen Capture\nDouble-click to capture · right-click for the menu"),
+    "已有覆盖层在运行，忽略本次触发": ("已有覆蓋層在運行，忽略本次觸发", ""),
     "跟随系统": ("跟隨系統", "Follow system"),
     "主屏": ("主屏", "Primary"),
     "（未检测到显示器）": ("（未偵測到顯示器）", "(no monitor detected)"),
@@ -176,6 +182,7 @@ TABLE = {
     "已设为默认边框（本次运行有效，配置写入失败）": ("已設為預設邊框（本次運行有效，配置寫入失敗）", "Saved as the default border for this session (config write failed)"),
     "边框宽度为 0，未做改动": ("邊框寬度為 0，未做改動", "Border width is 0 — nothing changed"),
     "已保存：": ("已儲存：", "Saved: "),
+    "当前颜色": ("當前顏色", "Current color"),
     "已加边框：": ("已加邊框：", "Border added: "),
     "截图 {}": ("截圖 {}", "Capture {}"),
     "，切回": ("，切回", ", back to "),

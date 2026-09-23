@@ -23,6 +23,10 @@
 
 # key: 简体原文 -> (繁體, English)
 TABLE = {
+    "触发区域截图": ("觸发區域截圖", ""),
+    "收起覆盖层": ("收起覆蓋層", ""),
+    "个；全局兜底": ("個；全局兜底", ""),
+    "截图完成": ("截圖完成", ""),
     "[PyShot] 收到 Ctrl+C，正在退出…": ("[PyShot] 收到 Ctrl+C，正在結束…", ""),
     "区域截图": ("區域截圖", "Capture Region"),
     "框选一块区域截图": ("框選一塊區域截圖", "Drag to capture a region"),
@@ -48,6 +52,7 @@ TABLE = {
     "直接打开编辑器窗口（空白也能用，从它的「文件」菜单打开图片）": ("直接開啟編輯器窗口（空白也能用，从它的「檔案」菜單開啟圖片）", "Open the editor window directly (works even when empty; use its File menu to open an image)"),
     "语言": ("語言", "Language"),
     "退出 PyShot": ("結束 PyShot", "Exit PyShot"),
+    "清理残留覆盖层后继续": ("清理残留覆蓋層後继續", ""),
     "按系统语言自动选择": ("按系統語言自動選擇", "Choose automatically from the system language"),
     "界面语言已切换": ("介面語言已切換", "Interface language changed"),
     "所有显示器拼成一张": ("所有顯示器拼成一張", "All Monitors as One Image"),
@@ -68,6 +73,7 @@ TABLE = {
     "{} 全屏截图": ("{} 全螢幕截圖", "{} Capture Full Screen"),
     "PyShot 截图工具\n{}\n双击图标截图": ("PyShot 截圖工具\n{}\n雙擊圖示截圖", "PyShot Screen Capture\n{}\nDouble-click the icon to capture"),
     "PyShot 截图工具\n双击图标截图 · 右键菜单": ("PyShot 截圖工具\n雙擊圖示截圖 · 右鍵菜單", "PyShot Screen Capture\nDouble-click to capture · right-click for the menu"),
+    "已有覆盖层在运行，忽略本次触发": ("已有覆蓋層在運行，忽略本次觸发", ""),
     "跟随系统": ("跟隨系統", "Follow system"),
     "主屏": ("主屏", "Primary"),
     "（未检测到显示器）": ("（未偵測到顯示器）", "(no monitor detected)"),
@@ -193,6 +199,7 @@ TABLE = {
     "已设为默认边框（本次运行有效，配置写入失败）": ("已設為預設邊框（本次運行有效，配置寫入失敗）", "Saved as the default border for this session (config write failed)"),
     "边框宽度为 0，未做改动": ("邊框寬度為 0，未做改動", "Border width is 0 — nothing changed"),
     "已保存：": ("已儲存：", "Saved: "),
+    "当前颜色": ("當前顏色", "Current color"),
     "已加边框：": ("已加邊框：", "Border added: "),
     "截图 {}": ("截圖 {}", "Capture {}"),
     "，切回": ("，切回", ", back to "),
@@ -3716,11 +3723,34 @@ class PinWindow(QWidget):
     snipper.start()
 """
 import ctypes
+import weakref
 
 from PySide6.QtCore import QPoint, QRect, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import (QColor, QCursor, QFont, QGuiApplication, QImage,
                            QPainter, QPainterPath, QPen, QPixmap, QRegion)
 from PySide6.QtWidgets import QWidget
+
+
+# ---------------------------------------------------------------- 实例注册表
+# 覆盖层是**无父窗口**的顶层窗口 —— findChildren() 找不到它们。
+# 一旦列表被重建（屏幕组合变化）或某次流程中途异常，旧实例就可能没人管、
+# 永远留在屏幕上挡住一切（用户表现："遮罩挡住了"）。
+# 所以留一份全局弱引用表，收尾时一律收掉，不依赖任何列表。
+_ALL_OVERLAYS = weakref.WeakSet()
+
+
+def finish_all_overlays():
+    """把所有还活着的覆盖层收起来（兜底）。返回处理了几个。"""
+    n = 0
+    for ov in list(_ALL_OVERLAYS):
+        try:
+            if ov.isVisible() or getattr(ov, "_active", False):
+                ov.finish()
+            ov.hide()
+            n += 1
+        except Exception:                          # noqa: BLE001
+            continue
+    return n
 
 
 MASK_COLOR = QColor(6, 10, 18, 150)   # 遮罩：偏深的蓝黑，任何背景都能看出"已进入截图状态"
@@ -3854,6 +3884,7 @@ class SnipperOverlay(QWidget):
         self._point_pressed = False
         self._point_timer = QTimer(self)
         self._point_timer.setInterval(25)
+        _ALL_OVERLAYS.add(self)   # 见文件头的注册表说明
         self._point_timer.timeout.connect(self._poll_point_click)
 
     def screen_geometry(self) -> QRect:
@@ -5266,7 +5297,7 @@ from PySide6.QtCore import (QPoint, QPointF, QRect, QRectF, QSize, Qt,
                             Signal)
 from PySide6.QtGui import (QAction, QColor, QGuiApplication, QIcon, QKeySequence,
                            QPainter, QPainterPath, QPen, QPixmap)
-from PySide6.QtWidgets import (QMenu, QStackedWidget, QApplication, QColorDialog, QDialog, QFileDialog,
+from PySide6.QtWidgets import (QGridLayout, QMenu, QStackedWidget, QApplication, QColorDialog, QDialog, QFileDialog,
                                QFrame, QHBoxLayout, QLabel, QLayout, QLineEdit,
                                QMainWindow, QMessageBox, QPushButton,
                                QScrollArea, QSizePolicy, QSpinBox, QTabBar,
@@ -5296,8 +5327,11 @@ TOOLS = [
 
 APP_VERSION = "2.6"          # 「关于」对话框里显示的版本号
 
-PALETTE = ["#e53935", "#fb8c00", "#fdd835", "#43a047",
-           "#1e88e5", "#8e24aa", "#ffffff", "#000000"]
+# 色板：两行 20 色（红橙黄绿青蓝紫 + 灰阶），常用色一眼可选
+PALETTE = ["#e53935", "#fb8c00", "#fdd835", "#43a047", "#00acc1",
+           "#1e88e5", "#5e35b1", "#8e24aa", "#d81b60", "#6d4c41",
+           "#ffffff", "#f5f5f5", "#bdbdbd", "#757575", "#424242",
+           "#212121", "#000000", "#00e676", "#ff1744", "#ffea00"]
 
 HANDLE_SIZE = 8      # 选中图形四角/四边句柄的显示大小（屏幕像素）
 HANDLE_HIT = 11      # 句柄的点击容差
@@ -6690,22 +6724,38 @@ class EditorWindow(QMainWindow):
 
         color_label = QLabel(tr("颜色"))
         color_label.setAlignment(Qt.AlignVCenter)
-        swatches = []
+
+        # 当前颜色：拾色器吸到的 / 点色板选的，都会实时反映在这里
+        self.current_color_btn = QPushButton()
+        self.current_color_btn.setObjectName("currentColor")
+        self.current_color_btn.setFixedSize(28, 28)
+        self.current_color_btn.setCursor(Qt.PointingHandCursor)
+        self.current_color_btn.clicked.connect(self._pick_color)
+
+        # 色板拼盘：两行网格（10 列），点一下即设为当前颜色
+        palette_box = QWidget()
+        grid = QGridLayout(palette_box)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setSpacing(3)
         self.color_buttons = []
-        for hexs in PALETTE:
+        for i, hexs in enumerate(PALETTE):
             b = QPushButton()
             b.setObjectName("swatch")
-            b.setFixedSize(20, 20)
+            b.setFixedSize(18, 18)
             b.setStyleSheet(f"background:{hexs};")
+            b.setToolTip(hexs)
             b.clicked.connect(lambda checked, c=hexs: self.set_color(QColor(c)))
-            swatches.append(b)
+            grid.addWidget(b, i // 10, i % 10)
             self.color_buttons.append(b)
         more = QPushButton("…")
         more.setObjectName("swatchMore")
-        more.setFixedSize(20, 20)
+        more.setFixedSize(18, 18)
         more.setToolTip(tr("自定义颜色"))
         more.clicked.connect(self._pick_color)
-        r1.addWidget(self._group(color_label, *swatches, more))
+        grid.addWidget(more, 1, 10)
+        grid.setColumnStretch(10, 1)
+        r1.addWidget(self._group(color_label, self.current_color_btn,
+                                 palette_box))
         self._refresh_swatch_state()
         r1.addWidget(self._top_sep())
 
@@ -6968,6 +7018,15 @@ class EditorWindow(QMainWindow):
             b.setProperty("selected", QColor(hexs).name() == cur)
             b.style().unpolish(b)
             b.style().polish(b)
+        # 当前颜色按钮：背景就是当前色，提示里带上色值
+        try:
+            name = QColor(self._shared["color"]).name()
+            self.current_color_btn.setStyleSheet(
+                f"background:{name}; border:2px solid #ffffff;"
+                "border-radius:6px;")
+            self.current_color_btn.setToolTip(tr("当前颜色") + f"  {name}")
+        except Exception:                          # noqa: BLE001
+            pass
 
     def _pick_color(self):
         current = self.canvas.color if self.canvas is not None else self._shared["color"]
@@ -7489,12 +7548,21 @@ class PyShotApp(QObject):
 
     # ---------- 截图流程 ----------
     def capture_region(self):
+        self._cap_log("触发区域截图")
         self._start_snipper("region")
 
     def _start_snipper(self, mode: str, scroll_mode: str | None = None,
                        point_region: QRect | None = None):
         if self.snipper is not None:
-            return  # 已有覆盖层在运行
+            # 已有覆盖层在运行。但如果它其实已经不活跃/不可见（上次没收干净），
+            # 就直接当作残留清掉继续走 —— 否则这一句会让之后每次截图都"没反应"
+            live = [ov for ov in getattr(self, "_overlays", [])
+                    if getattr(ov, "_active", False)]
+            if live:
+                self._cap_log("已有覆盖层在运行，忽略本次触发")
+                return
+            self._cap_log("清理残留覆盖层后继续")
+            self._on_snip_done()
         self._prepare_capture()
         self._scroll_mode = scroll_mode      # None / "wheel" / "drag" / "key" / "manual"
         overlays = self._ensure_overlays()
@@ -7596,6 +7664,26 @@ class PyShotApp(QObject):
             self._deferred(self.capture_region)
 
     # ---------- 覆盖层复用与预热 ----------
+    def _cap_log(self, *parts):
+        """截图流程诊断日志：设 PYSHOT_CAPTURE_DEBUG=1 打开。
+
+        遮罩"卡住不退"这类问题必须能看到"谁被显示了、谁没被收起"，
+        否则只能靠猜。
+        """
+        if not os.environ.get("PYSHOT_CAPTURE_DEBUG"):
+            return
+        try:
+            import time
+            line = f"[cap {time.strftime('%H:%M:%S')}] " + " ".join(
+                str(x) for x in parts)
+            print(line, flush=True)
+            log = Path.home() / ".pyshot" / "capture_debug.log"
+            log.parent.mkdir(parents=True, exist_ok=True)
+            with open(log, "a", encoding="utf-8") as f:
+                f.write(line + "\n")
+        except Exception:                          # noqa: BLE001
+            pass
+
     def _ensure_overlays(self) -> list:
         """确保每一块显示器都有一个覆盖层。
 
@@ -7674,14 +7762,39 @@ class PyShotApp(QObject):
 
     def _on_snip_done(self, *args):
         # 所有屏幕的覆盖层都要收起（多屏时可能有好几个）
-        for ov in getattr(self, "_overlays", []):
-            if ov.isVisible():
-                ov.finish()
-        self.snipper = None
+        self.snipper = None                    # 先清，避免重入时提前 return
+        seen = []
+        for ov in list(getattr(self, "_overlays", [])):
+            seen.append(ov)
+        # 兜底：把"Qt 知道的所有覆盖层实例"都收掉。屏幕组合变化时
+        # _ensure_overlays 会重建列表，旧实例如果还可见就成了孤儿，
+        # 永远盖在屏幕上（用户看到的就是"遮罩挡住了"）。
+        try:
+            for ov in self.app.findChildren(SnipperOverlay):
+                if ov not in seen:
+                    seen.append(ov)
+        except Exception:                          # noqa: BLE001
+            pass
+        for ov in seen:
+            try:
+                if ov.isVisible() or getattr(ov, "_active", False):
+                    ov.finish()
+                ov.hide()                      # 双保险：无论如何都别留在屏上
+            except Exception:                      # noqa: BLE001
+                continue
+        # 最终兜底：走全局注册表把所有还活着的遮罩都收掉。
+        # findChildren 找不到它们（顶层无父窗口），不能靠 Qt 树兜底。
+        try:
+
+            n = finish_all_overlays()
+        except Exception:                          # noqa: BLE001
+            n = 0
+        self._cap_log("收起覆盖层", len(seen), "个；全局兜底", n, "个")
         if not self.tray_available and not self.editors:
             self.app.quit()  # 无托盘且无窗口时退出，避免程序"隐身"残留
 
     def _on_captured(self, pixmap: QPixmap):
+        self._cap_log("截图完成", pixmap.width(), "x", pixmap.height())
         self._on_snip_done()
         if self._scroll_mode:      # 滚动截图的选区，不是要编辑的截图
             self._scroll_mode = None

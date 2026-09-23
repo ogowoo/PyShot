@@ -554,6 +554,7 @@ EN = {
     "已清除上次的截图缓存": "Last-capture cache cleared",
     "PyShot 已启动（恢复了 {} 张上次的截图）":
         "PyShot started (restored {} capture(s))",
+    "当前颜色": "Current color",
 }
 
 
