@@ -4925,6 +4925,130 @@ def _best_offset_and_ratio(prev: Frame, cur: Frame, min_overlap: int,
     return best_s, best_same, key_ratio
 
 
+# ---------------------------------------------------------------- 条带匹配
+def _bands(prev: Frame, cur: Frame, strips: int = 6) -> list:
+    """按竖直切分，返回**确实在动**的条带 [(byte_start, byte_end), ...]。
+
+    完全静止的条带（标题栏/工具栏/侧边栏/滚动条所在的位置）必须剔除：
+    它们每帧一模一样，会把最佳对齐死死锚在偏移 0，让真正的滚动算不出来。
+    """
+    W, H = prev.w, prev.h
+    sw = max(8, W // strips)
+    moving = []
+    for i in range(strips):
+        x0 = i * sw
+        x1 = W if i == strips - 1 else min(W, x0 + sw)
+        if x1 <= x0:
+            continue
+        b0, b1 = x0 * 3, x1 * 3
+        # 整条带逐行比较（bytes 比较是 C 速度，很快）
+        if all(prev.rows[r][b0:b1] == cur.rows[r][b0:b1] for r in range(H)):
+            continue
+        moving.append((b0, b1))
+    return moving
+
+
+def _strip_offset(prev: Frame, cur: Frame, min_overlap: int,
+                  strips: int = 6, blocks: int = 6, quant: int = 20,
+                  top_candidates: int = 8, bands=None) -> tuple:
+    """只在"在动"的条带上算位移。
+
+    返回 (位移, 命中占比, 在动条带比例)；位移 -1 表示没算出来。
+    """
+    H = prev.h
+    if bands is None:
+        bands = _bands(prev, cur, strips)
+    moving_ratio = len(bands) / max(1, strips)
+    if not bands:
+        return -1, 0.0, 0.0
+
+    # 每个动条带的逐行签名 + **信息量权重**（算一次，后面反复用）
+    # 权重：一行如果整行几乎同色（空白/分隔带），它在任何偏移下都"能对上"，
+    # 拿它计分会让偏移 1、2、3… 都拿满分 —— 必须排除，只让有内容的行计分。
+    def row_weight(row: bytes) -> int:
+        """这一行"有没有内容"：看绿色通道采样点的明暗跨度。
+
+        白底黑字的跨度极大（250 vs 35），空白行跨度接近 0。
+        用跨度而不是"相邻点差异"：细文字行也能稳定判出来（之前稀疏采样
+        会把细文字漏掉，导致权重全 0、条带结果被弃用）。
+        """
+        n = len(row)
+        if n < 6:
+            return 0
+        lo, hi = 255, 0
+        for i in range(1, n - 2, 12):          # 每 4 个像素取一个绿色通道
+            v = row[i]
+            if v < lo:
+                lo = v
+            if v > hi:
+                hi = v
+            if hi - lo > 26:
+                return 1
+        return 0
+
+    keys, weights = [], []
+    for b0, b1 in bands:
+        kp = [_row_key(prev.rows[r][b0:b1], blocks, quant) for r in range(H)]
+        kc = [_row_key(cur.rows[r][b0:b1], blocks, quant) for r in range(H)]
+        # 权重 = 有内容 **且** 这一行在该条带里确实变了。
+        # 只按"有内容"是不够的：条带里还混着标题栏/列头这类静止行，
+        # 它们在真位移处并不匹配，会把得分稀释掉。
+        wt = [(row_weight(prev.rows[r][b0:b1])
+               if prev.rows[r][b0:b1] != cur.rows[r][b0:b1] else 0)
+              for r in range(H)]
+        keys.append((kp, kc))
+        weights.append(wt)
+
+    # 投票：只统计动条带里的行
+    votes = {}
+    for kp, kc in keys:
+        idx = {}
+        for r, k in enumerate(kc):
+            idx.setdefault(k, []).append(r)
+        for r, k in enumerate(kp):
+            for rc in idx.get(k, ())[:4]:
+                d = r - rc
+                if 0 <= d <= H - min_overlap:
+                    votes[d] = votes.get(d, 0) + 1
+    if not votes:
+        return -1, 0.0, moving_ratio
+
+    def score(d: int) -> float:
+        """动条带上"有内容的行"里，签名相同者所占比例（空白行不计分）。"""
+        tot = same = 0
+        for (kp, kc), wt in zip(keys, weights):
+            span = H - d
+            if span <= 0:
+                continue
+            for y in range(0, span):
+                if not wt[y + d]:
+                    continue                   # 空白行不参与
+                tot += 1
+                if kp[y + d] == kc[y]:
+                    same += 1
+        return same / max(1, tot)
+
+    cands = [d for d, _ in sorted(votes.items(), key=lambda kv: -kv[1])
+             [:top_candidates]]
+    if 0 not in cands:
+        cands.append(0)
+
+    def rank(d: int):
+        """先看加权命中率，再看票数 —— 票数能压住"空白行造成的假高分"。"""
+        return (score(d), votes.get(d, 0))
+
+    best_d = max(cands, key=rank)
+    best_sc = score(best_d)
+    if best_d > 0:                       # 精修 ±4
+        fine = list(range(max(1, best_d - 4),
+                          min(H - min_overlap, best_d + 4) + 1))
+        fd = max(fine, key=rank)
+        fs = score(fd)
+        if fs > best_sc:
+            best_d, best_sc = fd, fs
+    return best_d, best_sc, moving_ratio
+
+
 def best_candidate_offset(prev, cur, min_overlap: int = 60) -> int:
     """不管置信度，返回匹配最好的候选位移（用于诊断"多块独立滚动区域"等场景）。"""
     prev, cur = _as_frame(prev), _as_frame(cur)
@@ -4952,11 +5076,33 @@ def find_scroll(prev, cur, min_overlap: int = 60, thresh: float = 3.0,
     if prev.rows == cur.rows:            # 整帧相同 → 没滚动
         return 0, 0.0
 
+    # 先看竖条带：如果存在**完全静止的条带**，说明选区里混进了窗口外壳
+    # （标题栏/工具栏/侧边栏/滚动条），此时全局匹配会被它们锚在错误的偏移上
+    # （实测：整个窗口 1131x830 时全局给 0 或 10，真值是 252）。
+    # 这种情况下直接以条带匹配为准。
+    bands = _bands(prev, cur, 6)
+    if 0 < len(bands) < 6:
+        sd, ssc, _ = _strip_offset(prev, cur, min_overlap, bands=bands)
+        if sd >= 0 and ssc >= 0.5:
+            _dlog("滚动·条带匹配", f"静止条带 {6 - len(bands)}/6，"
+                                  f"算得 s={sd}（占比 {ssc:.2f}）")
+            return sd, 0.0
+
     best_s, best_same, key_ratio = _best_offset_and_ratio(prev, cur, min_overlap,
                                                           top_candidates)
     if best_s < 0:
+        sd, ssc = find_scroll_strip(prev, cur, min_overlap)
+        if sd >= 0 and ssc > 0:
+            _dlog("滚动·条带匹配", f"全局对不上，条带算出 s={sd}（占比 {ssc:.2f}）")
+            return sd, 0.0
         return -1, float("inf")
     if best_s == 0:
+        # 全局说"没滚动"，但区域里混了静止外壳时全局会被带偏 ——
+        # 先用条带匹配复核一次，有明确位移就以它为准。
+        sd, ssc = find_scroll_strip(prev, cur, min_overlap)
+        if sd > 0:
+            _dlog("滚动·条带匹配", f"全局 s=0，条带算出 s={sd}（占比 {ssc:.2f}）")
+            return sd, 0.0
         diff = _overlap_diff(prev, cur, 0)
         # "最佳对齐就是 0" = 画面没滚动。此时哪怕区域里有一小块在变
         # （时钟、光标、动画、Citrix 编码噪声），也不该判成"滚太多/对不上" ——
@@ -4978,6 +5124,23 @@ def find_scroll(prev, cur, min_overlap: int = 60, thresh: float = 3.0,
     if diff < loose_thresh:
         return best_s, diff
     return -1, diff
+
+
+def find_scroll_strip(prev, cur, min_overlap: int = 60,
+                      strips: int = 6, min_score: float = 0.5,
+                      min_moving: float = 0.15) -> tuple[int, float]:
+    """**条带匹配**：区域里混有大块静止外壳（标题栏/工具栏/侧栏/滚动条）时用。
+
+    返回 (s, 命中占比)；s == -1 表示没算出来。
+    只在"在动"的竖条带上定位移，所以"框得太大"不再致命。
+    """
+    prev, cur = _as_frame(prev), _as_frame(cur)
+    if cur.h != prev.h or cur.w != prev.w:
+        return -1, 0.0
+    d, sc, moving = _strip_offset(prev, cur, min_overlap, strips)
+    if d < 0 or sc < min_score or moving < min_moving:
+        return -1, sc
+    return d, sc
 
 
 def static_strips(prev, cur, thresh: float = 3.0,
@@ -5479,6 +5642,11 @@ class ScrollCapture(QObject):
             self._cleanup()
             return
         _dlog("滚动·帧", f"#{self._frames} 抓帧 {frame.width()}x{frame.height()}")
+        # 每帧都存一份（PYSHOT_SCROLL_DEBUG=1）——出问题时能逐帧对比
+        try:
+            self._debug_dump(pixmap_to_frame(frame), f"帧#{self._frames}")
+        except Exception:                          # noqa: BLE001
+            pass
         if frame.isNull() or frame.width() < 8 or frame.height() < 80:
             self._fail(tr("抓帧失败：区域过小或被遮挡"))
             self._cleanup()
