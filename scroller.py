@@ -725,12 +725,12 @@ class ScrollCapture(QObject):
             from capture_utils import pixmap_is_blank
             if pixmap_is_blank(frame, min_std=1.2, black_level=10):
                 self.failed.emit(
-                    "抓到的画面是空白/纯色，无法拼接。\n"
+                    tr("抓到的画面是空白/纯色，无法拼接。\n"
                     "目标窗口（如 Citrix 虚拟桌面里的应用）可能启用了硬件加速或内容保护，"
                     "系统抓屏 API 拿不到内容。\n"
                     "可尝试：① 在 Citrix/远程桌面里关闭硬件加速；"
                     "② 用托盘菜单的「滚动长截图（手动滚动）」；"
-                    "③ 把该窗口最大化或调整大小后重试。")
+                    "③ 把该窗口最大化或调整大小后重试。"))
                 self._cleanup()
                 return
 
@@ -842,9 +842,9 @@ class ScrollCapture(QObject):
                 return
             if d is not None and not d.moved_ever and d.used_fallback == "wheel":
                 self.failed.emit(
-                    "拖拽和滚轮都没能让页面滚动。\n"
+                    tr("拖拽和滚轮都没能让页面滚动。\n"
                     "可能原因：点击位置不在滚动区域，或该窗口不响应注入的输入。\n"
-                    "建议改用「滚动长截图（PageDown 自动滚动）」或「手动滚动」。")
+                    "建议改用「滚动长截图（PageDown 自动滚动）」或「手动滚动」。"))
                 self._cleanup()
                 return
             self._finish()

@@ -1024,7 +1024,7 @@ class EditorWindow(QMainWindow):
         self.width_spin.setFixedHeight(self._CTRL_H)
         self.width_spin.setFixedWidth(62)
         self.width_spin.valueChanged.connect(self._on_width_changed)
-        r1.addWidget(self._labeled("线宽", self.width_spin))
+        r1.addWidget(self._labeled(tr("线宽"), self.width_spin))
 
         self.font_spin = SpinBox()
         self.font_spin.setRange(10, 96)
@@ -1032,7 +1032,7 @@ class EditorWindow(QMainWindow):
         self.font_spin.setFixedHeight(self._CTRL_H)
         self.font_spin.setFixedWidth(62)
         self.font_spin.valueChanged.connect(self._on_font_changed)
-        r1.addWidget(self._labeled("字号", self.font_spin))
+        r1.addWidget(self._labeled(tr("字号"), self.font_spin))
 
         self.step_spin = SpinBox()
         self.step_spin.setRange(16, 240)
@@ -1043,7 +1043,7 @@ class EditorWindow(QMainWindow):
         self.step_spin.setFixedWidth(80)
         self.step_spin.setToolTip(tr("序号圆的大小\n选中已有序号时可直接调整它的大小"))
         self.step_spin.valueChanged.connect(self._on_step_size_changed)
-        r1.addWidget(self._labeled("序号", self.step_spin))
+        r1.addWidget(self._labeled(tr("序号"), self.step_spin))
 
         # ---------- 第 2 行：编辑 / 输出 ----------
         r2 = row()
@@ -1065,15 +1065,15 @@ class EditorWindow(QMainWindow):
         act_pin.triggered.connect(self.pin_to_screen)
         act_wm = QAction(tr("水印"), self)
         act_wm.setToolTip(
-            "水印：文字与图片可各自开关（也可同时用）\n"
+            tr("水印：文字与图片可各自开关（也可同时用）\n"
             "九宫格位置或平铺、各自调不透明度、可旋转与设边距\n"
-            "还能「应用并设为默认」，之后新截图自动加")
+            "还能「应用并设为默认」，之后新截图自动加"))
         act_wm.triggered.connect(self.add_watermark)
         act_border = QAction(tr("边框"), self)
         act_border.setToolTip(
-            "加边框（对应 FSCapture 的「特效 → 边缘」）\n"
+            tr("加边框（对应 FSCapture 的「特效 → 边缘」）\n"
             "单线/双线/虚线/圆角/投影阴影/立体浮雕/边缘渐隐/拍立得白边\n"
-            "边框加在图片外面，图会变大；可 Ctrl+Z 撤销")
+            "边框加在图片外面，图会变大；可 Ctrl+Z 撤销"))
         act_border.triggered.connect(self.add_border)
         act_save = QAction(tr("保存"), self)
         act_save.setToolTip(tr("保存为文件 (Ctrl+S)"))
@@ -1082,9 +1082,9 @@ class EditorWindow(QMainWindow):
         act_close.setToolTip(tr("关闭编辑器 (Esc)"))
         act_close.triggered.connect(self.close)
 
-        undo_btn = self._icon_button("undo", "撤销 (Ctrl+Z)",
+        undo_btn = self._icon_button("undo", tr("撤销 (Ctrl+Z)"),
                                      lambda: self.canvas and self.canvas.undo())
-        redo_btn = self._icon_button("redo", "重做 (Ctrl+Y)",
+        redo_btn = self._icon_button("redo", tr("重做 (Ctrl+Y)"),
                                      lambda: self.canvas and self.canvas.redo())
         self.btn_undo, self.btn_redo = undo_btn, redo_btn
         r2.addWidget(self._group(undo_btn, redo_btn))
@@ -1140,13 +1140,13 @@ class EditorWindow(QMainWindow):
             b.clicked.connect(fn)
             return b
 
-        zoom_out = _zbtn("−", "缩小 (Ctrl+滚轮)",
+        zoom_out = _zbtn("−", tr("缩小 (Ctrl+滚轮)"),
                          lambda: self.canvas and self.canvas.set_zoom(self.canvas.zoom / 1.2))
         self.zoom_label = QLabel("100%")
         self.zoom_label.setObjectName("zoomlabel")
         self.zoom_label.setMinimumWidth(46)
         self.zoom_label.setAlignment(Qt.AlignCenter)
-        zoom_in = _zbtn("＋", "放大 (Ctrl+滚轮)",
+        zoom_in = _zbtn("＋", tr("放大 (Ctrl+滚轮)"),
                         lambda: self.canvas and self.canvas.set_zoom(self.canvas.zoom * 1.2))
         zlay.addWidget(zoom_out)
         zlay.addWidget(self.zoom_label)
@@ -1155,9 +1155,9 @@ class EditorWindow(QMainWindow):
         sep.setObjectName("zoomsep")
         sep.setFrameShape(QFrame.VLine)
         zlay.addWidget(sep)
-        zlay.addWidget(_zbtn("100%", "实际像素 (1:1)",
+        zlay.addWidget(_zbtn("100%", tr("实际像素 (1:1)"),
                              lambda: self.canvas and self.canvas.set_zoom(1.0), width=44))
-        zlay.addWidget(_zbtn("适应", "缩放以适应窗口",
+        zlay.addWidget(_zbtn(tr("适应"), tr("缩放以适应窗口"),
                              self._zoom_fit, width=44))
         sb.addPermanentWidget(zoom_group)
 

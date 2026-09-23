@@ -112,25 +112,30 @@ def wrap_file(path: str, dry: bool = False) -> int:
         return 0
 
     lines = src.splitlines(keepends=True)
-    # 从后往前改，避免偏移失效
-    targets.sort(key=lambda n: (n.lineno, n.col_offset), reverse=True)
+    # 绝对字节偏移（AST 的 col_offset 是 UTF-8 字节偏移；且要支持**跨行**字面量，
+    # 例如用相邻字符串拼接写成的多行提示 —— 早先跳过跨行，就漏掉了水印/边框的
+    # 长 tooltip）。所以这里直接对整个文件的 bytes 做区间替换。
+    starts, pos = [], 0
+    for ln in lines:
+        starts.append(pos)
+        pos += len(ln.encode("utf-8"))
+
+    def abs_off(lineno, col):
+        return starts[lineno - 1] + col
+
+    data = src.encode("utf-8")
+    targets.sort(key=lambda n: abs_off(n.lineno, n.col_offset), reverse=True)
     for node in targets:
         end_lineno = getattr(node, "end_lineno", node.lineno)
         end_col = getattr(node, "end_col_offset", node.col_offset)
-        if node.lineno != end_lineno:            # 跨行字符串不动
+        s_off = abs_off(node.lineno, node.col_offset)
+        e_off = abs_off(end_lineno, end_col)
+        seg = data[s_off:e_off].decode("utf-8")
+        if not seg.lstrip().startswith(('"', "'", 'f"', "f'")):
             continue
-        li = node.lineno - 1
-        # 注意：AST 的 col_offset 是 **UTF-8 字节偏移**，不是字符偏移。
-        # 行内有中文时按字符切片会错位（第一版就因此把文件改坏过），
-        # 所以这里统一用 bytes 切片再解码。
-        raw = lines[li].encode("utf-8")
-        seg = raw[node.col_offset:end_col].decode("utf-8")
-        if not (seg.startswith(('"', "'", 'f"', "f'"))):
-            continue
-        new = raw[:node.col_offset] + f"tr({seg})".encode("utf-8") + raw[end_col:]
-        lines[li] = new.decode("utf-8")
+        data = data[:s_off] + b"tr(" + data[s_off:e_off] + b")" + data[e_off:]
 
-    out = "".join(lines)
+    out = data.decode("utf-8")
     if not dry:
         open(path, "w", encoding="utf-8", newline="\n").write(out)
     return len(targets)

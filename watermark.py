@@ -487,7 +487,7 @@ class WatermarkDialog(QDialog):
         row2.addWidget(QLabel(tr("大小")))
         self.image_scale = QSpinBox()
         self.image_scale.setRange(1, 300)
-        self.image_scale.setSuffix(" % 图宽")
+        self.image_scale.setSuffix(tr(" % 图宽"))
         self.image_scale.setValue(int(round(self._s["image_scale"] * 100)))
         self.image_scale.valueChanged.connect(self._on_scale)
         row2.addWidget(self.image_scale)
@@ -548,7 +548,7 @@ class WatermarkDialog(QDialog):
         pix = load_image(self._s)
         if pix is None:
             self.image_thumb.setPixmap(QPixmap())
-            self.image_thumb.setText("无")
+            self.image_thumb.setText(tr("（无图片）"))
             return
         self.image_thumb.setText("")
         self.image_thumb.setPixmap(
@@ -567,7 +567,7 @@ class WatermarkDialog(QDialog):
             b.setCheckable(True)
             b.setAutoExclusive(True)
             b.setFixedSize(30, 26)
-            b.setToolTip(POSITION_NAMES[i])
+            b.setToolTip(tr(POSITION_NAMES[i]))
             b.clicked.connect(lambda checked=False, k=i: self._set_position(k))
             grid.addWidget(b, i // 3, i % 3)
             self._pos_buttons.append(b)

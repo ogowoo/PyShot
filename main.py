@@ -268,8 +268,8 @@ class PyShotApp(QObject):
                 ("手动滚动",
                  "自己用滚轮滚动，程序只负责逐帧拼接",
                  lambda: self.capture_scrolling(manual=True))]:
-            act = QAction(label, menu_scroll)
-            act.setToolTip(tip)
+            act = QAction(tr(label), menu_scroll)
+            act.setToolTip(tr(tip))
             act.triggered.connect(
                 lambda checked=False, f=fn: self._deferred(f))
             menu_scroll.addAction(act)
@@ -332,8 +332,6 @@ class PyShotApp(QObject):
         else:
             self.tray.setToolTip(
                 tr("PyShot 截图工具\n双击图标截图 · 右键菜单"))
-        self.tray.activated.connect(self._on_tray_activated)
-        self.tray.show()
         # 注意：启动提示不在这里弹 —— 由 notify_ready() 统一负责，
         # 否则构造托盘和 main() 会各弹一次，用户看到两个气泡。
 
@@ -700,14 +698,14 @@ class PyShotApp(QObject):
             self._notify(
                 tr("PyShot 热键不可用"),
                 tr("热键（{}）都被占用，请双击托盘图标截图。\n", tried) +
-                "可用环境变量 PYSHOT_HOTKEY 指定其他组合，"
-                "例如 PYSHOT_HOTKEY=ctrl+alt+j")
+                tr("可用环境变量 PYSHOT_HOTKEY 指定其他组合，"
+                   "例如 PYSHOT_HOTKEY=ctrl+alt+j"))
             return
         self._notify(
             tr("PyShot 已启动"),
             tr("按 {} 框选截图，或双击托盘图标。\n", self.hotkey_text) +
-            "右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n"
-            "找不到图标时点任务栏右侧的 ∧ 展开。")
+            tr("右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n"
+               "找不到图标时点任务栏右侧的 ∧ 展开。"))
 
     def open_image(self):
         path, _ = QFileDialog.getOpenFileName(

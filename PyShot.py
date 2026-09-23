@@ -32,7 +32,7 @@ TABLE = {
     "自动滚轮": ("自動滾輪", "Auto Wheel"),
     "框选可滚动区域，程序自己发滚轮逐屏拼接（普通网页/文档）": ("框選可捲動區域，程序自己发滾輪逐屏拼接（普通網頁/文档）", "Select a scrollable area; PyShot sends wheel events and stitches (web pages, documents)"),
     "拖拽滚动条": ("拖曳捲動條", "Drag Scrollbar"),
-    "框选区域后点一下滚动条滑块，程序按住滑块匀速拖拽。\n远程桌面 / Citrix 里最稳：步长会实测标定": ("框選區域後點一下捲動條滑桿，程序按住滑桿匀速拖曳。\n遠端桌面 / Citrix 裡最稳：步長会實測標定", ""),
+    "框选区域后点一下滚动条滑块，程序按住滑块匀速拖拽。\n远程桌面 / Citrix 里最稳：步长会实测标定": ("框選區域後點一下捲動條滑桿，程序按住滑桿勻速拖曳。\n遠端桌面 / Citrix 裡最穩：步長會實測標定", "Select an area, then click the scrollbar thumb; PyShot drags it steadily.\nMost reliable in Remote Desktop / Citrix (the step size is calibrated automatically)"),
     "按键翻页": ("按鍵翻頁", "Page Down"),
     "框选区域后程序发送 PageDown 翻页（适合没有滚动条的应用）": ("框選區域後程序发送 PageDown 翻頁（適合沒有捲動條的套用）", "Select an area; PyShot sends Page Down (for apps without a scrollbar)"),
     "手动滚动": ("手動捲動", "Manual Scroll"),
@@ -50,24 +50,23 @@ TABLE = {
     "按系统语言自动选择": ("按系統語言自動選擇", "Choose automatically from the system language"),
     "界面语言已切换": ("介面語言已切換", "Interface language changed"),
     "所有显示器拼成一张": ("所有顯示器拼成一張", "All Monitors as One Image"),
-    "把每块显示器按逻辑位置拼成一张长图": ("把每塊顯示器按逻輯位置拼成一張長圖", "Stitch every monitor into a single image"),
+    "把每块显示器按逻辑位置拼成一张长图": ("把每塊顯示器按邏輯位置拼成一張長圖", "Stitch every monitor into a single image"),
     "拖拽滚动条自动滚动": ("拖曳捲動條自動捲動", "Drag the scrollbar to scroll automatically"),
-    "已记录滚动条位置": ("已記录捲動條位置", "Scrollbar position recorded"),
-    "滚到底会自动结束；想中途停止点控制条上的按钮。": ("滾到底会自動結束；想中途停止點控製條上的按钮。", ""),
+    "已记录滚动条位置": ("已記錄捲動條位置", "Scrollbar position recorded"),
+    "滚到底会自动结束；想中途停止点控制条上的按钮。": ("滾到底會自動結束；想中途停止點控製條上的按鈕。", "It stops automatically at the bottom; click the button on the bar to stop early."),
     "滚动截图完成": ("捲動截圖完成", "Scrolling capture done"),
-    "已拼接 ": ("已拼接 ", ""),
-    " px 长图": (" px 長圖", ""),
+    "已拼接 ": ("已拼接 ", "Stitched "),
+    " px 长图": (" px 長圖", " px"),
     "滚动截图失败": ("捲動截圖失敗", "Scrolling capture failed"),
     "PyShot 已启动": ("PyShot 已啟動", "PyShot started"),
-    "右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n找不到图标时点任务栏右侧的 ∧ 展开。": ("右鍵托盤圖示：捲動長截圖 / 螢幕取色 / 釘圖 / 結束。\n找不到圖示時點任務栏右侧的 ∧ 展開。", ""),
     "打开图片": ("開啟圖片", "Open Image"),
     "图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)": ("圖片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)", "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp)"),
-    "[PyShot] 全局热键已注册：": ("[PyShot] 全局快速鍵已注册：", ""),
-    "[PyShot] 热键注册失败，已尝试：": ("[PyShot] 快速鍵注册失敗，已尝試：", ""),
+    "[PyShot] 全局热键已注册：": ("[PyShot] 全局快速鍵已註冊：", ""),
+    "[PyShot] 热键注册失败，已尝试：": ("[PyShot] 快速鍵註冊失敗，已嘗試：", ""),
     "{} 区域截图": ("{} 區域截圖", "{} Capture Region"),
     "{} 全屏截图": ("{} 全螢幕截圖", "{} Capture Full Screen"),
     "PyShot 截图工具\n{}\n双击图标截图": ("PyShot 截圖工具\n{}\n雙擊圖示截圖", "PyShot Screen Capture\n{}\nDouble-click the icon to capture"),
-    "PyShot 截图工具\n双击图标截图 · 右键菜单": ("PyShot 截圖工具\n雙擊圖示截圖 · 右鍵菜單", ""),
+    "PyShot 截图工具\n双击图标截图 · 右键菜单": ("PyShot 截圖工具\n雙擊圖示截圖 · 右鍵菜單", "PyShot Screen Capture\nDouble-click to capture · right-click for the menu"),
     "跟随系统": ("跟隨系統", "Follow system"),
     "主屏": ("主屏", "Primary"),
     "（未检测到显示器）": ("（未偵測到顯示器）", "(no monitor detected)"),
@@ -79,11 +78,12 @@ TABLE = {
     "贴图": ("釘圖", "Pin"),
     "剪贴板里没有图片": ("剪貼簿裡沒有圖片", "No image in the clipboard"),
     "PyShot 热键不可用": ("PyShot 快速鍵不可用", "PyShot hotkeys unavailable"),
-    "可用环境变量 PYSHOT_HOTKEY 指定其他组合，例如 PYSHOT_HOTKEY=ctrl+alt+j": ("可用環境變數 PYSHOT_HOTKEY 指定其他組合，例如 PYSHOT_HOTKEY=ctrl+alt+j", ""),
     "按 {} 框选截图，或双击托盘图标。\n": ("按 {} 框選截圖，或雙擊托盤圖示。\n", "Press {} to capture a region, or double-click the tray icon.\n"),
+    "右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n找不到图标时点任务栏右侧的 ∧ 展开。": ("右鍵托盤圖示：捲動長截圖 / 螢幕取色 / 釘圖 / 結束。\n找不到圖示時點任務欄右側的 ∧ 展開。", "Right-click the tray icon: scrolling capture / color picker / pin / exit.\nIf the icon is hidden, click the ∧ arrow near the clock."),
     "区域 ": ("區域 ", ""),
     "全屏 ": ("全螢幕 ", ""),
     "热键（{}）都被占用，请双击托盘图标截图。\n": ("快速鍵（{}）都被佔用，請雙擊托盤圖示截圖。\n", "Hotkeys ({}) are all taken — double-click the tray icon to capture.\n"),
+    "可用环境变量 PYSHOT_HOTKEY 指定其他组合，例如 PYSHOT_HOTKEY=ctrl+alt+j": ("可用環境變數 PYSHOT_HOTKEY 指定其他組合，例如 PYSHOT_HOTKEY=ctrl+alt+j", "Set PYSHOT_HOTKEY to pick another combination, e.g. PYSHOT_HOTKEY=ctrl+alt+j"),
     "显示器 {}": ("顯示器 {}", "Monitor {}"),
     "打开编辑器失败": ("開啟編輯器失敗", "Could not open the editor"),
     "全屏截图失败": ("全螢幕截圖失敗", "Full-screen capture failed"),
@@ -98,67 +98,67 @@ TABLE = {
     "椭圆": ("橢圓", "Ellipse"),
     "拖拽画椭圆，Shift 画正圆": ("拖曳畫橢圓，Shift 畫正圓", "Drag for an ellipse, Shift for a circle"),
     "直线": ("直線", "Line"),
-    "拖拽画直线，Shift 锁定水平/垂直/45°": ("拖曳畫直線，Shift 锁定水平/垂直/45°", "Drag for a line, Shift locks to 0/45/90°"),
+    "拖拽画直线，Shift 锁定水平/垂直/45°": ("拖曳畫直線，Shift 鎖定水平/垂直/45°", "Drag for a line, Shift locks to 0/45/90°"),
     "箭头": ("箭頭", "Arrow"),
     "拖拽画箭头，指引方向": ("拖曳畫箭頭，指引方向", "Drag for an arrow"),
     "画笔": ("畫筆", "Pen"),
-    "自由手绘": ("自由手绘", "Freehand drawing"),
+    "自由手绘": ("自由手繪", "Freehand drawing"),
     "序号": ("序號", "Step Number"),
-    "单击放置递增序号，做步骤指引": ("單擊放置递增序號，做步骤指引", "Click to place an incrementing step number"),
+    "单击放置递增序号，做步骤指引": ("單擊放置遞增序號，做步驟指引", "Click to place an incrementing step number"),
     "文字": ("文字", "Text"),
     "单击后输入文字，Enter 确认": ("單擊後輸入文字，Enter 確認", "Click and type, Enter to confirm"),
     "高亮": ("標示", "Highlight"),
-    "拖拽涂抹半透明高亮": ("拖曳涂抹半透明標示", "Drag to paint a translucent highlight"),
+    "拖拽涂抹半透明高亮": ("拖曳塗抹半透明標示", "Drag to paint a translucent highlight"),
     "马赛克": ("馬賽克", "Mosaic"),
     "拖拽对区域打码": ("拖曳對區域打碼", "Drag to pixelate an area"),
     "取色": ("取色", "Pick Color"),
-    "单击吸取图上颜色作为当前标注颜色": ("單擊吸取圖上顏色作為当前標注顏色", "Click to pick a color from the image"),
+    "单击吸取图上颜色作为当前标注颜色": ("單擊吸取圖上顏色作為當前標注顏色", "Click to pick a color from the image"),
     "裁剪": ("裁剪", "Crop"),
     "拖拽选择保留区域，Enter 应用": ("拖曳選擇保留區域，Enter 套用", "Drag to select what to keep, Enter to apply"),
-    "水印：文字与图片可各自开关（也可同时用）\n九宫格位置或平铺、各自调不透明度、可旋转与设边距\n还能「应用并设为默认」，之后新截图自动加": ("水印：文字與圖片可各自開關（也可同時用）\n九宫格位置或平鋪、各自調不透明度、可旋轉與設邊距\n還能「套用并設為預設」，之後新截圖自動加", ""),
-    "加边框（对应 FSCapture 的「特效 → 边缘」）\n单线/双线/虚线/圆角/投影阴影/立体浮雕/边缘渐隐/拍立得白边\n边框加在图片外面，图会变大；可 Ctrl+Z 撤销": ("加邊框（對應 FSCapture 的「特效 → 邊缘」）\n單線/雙線/虛線/圓角/投影陰影/立體浮雕/邊缘漸隱/拍立得白邊\n邊框加在圖片外面，圖会變大；可 Ctrl+Z 復原", ""),
-    "撤销 (Ctrl+Z)": ("復原 (Ctrl+Z)", "Undo (Ctrl+Z)"),
-    "重做 (Ctrl+Y)": ("重做 (Ctrl+Y)", "Redo (Ctrl+Y)"),
-    "缩小 (Ctrl+滚轮)": ("縮小 (Ctrl+滾輪)", "Zoom out (Ctrl+wheel)"),
-    "放大 (Ctrl+滚轮)": ("放大 (Ctrl+滾輪)", "Zoom in (Ctrl+wheel)"),
     "选择颜色": ("選擇顏色", "Choose a color"),
     "输入文字，Enter 确认 / Esc 取消": ("輸入文字，Enter 確認 / Esc 取消", "Type text, Enter to confirm / Esc to cancel"),
     "PyShot 编辑器": ("PyShot 編輯器", "PyShot Editor"),
-    " px\n滚轮/Ctrl+滚轮 缩放 · 中键拖动滚动": (" px\n滾輪/Ctrl+滾輪 縮放 · 中鍵拖動捲動", ""),
+    " px\n滚轮/Ctrl+滚轮 缩放 · 中键拖动滚动": (" px\n滾輪/Ctrl+滾輪 縮放 · 中鍵拖動捲動", "px\nWheel / Ctrl+wheel to zoom · middle-drag to scroll"),
     "关闭此标签 (Ctrl+W)": ("關閉此標籤 (Ctrl+W)", "Close this tab (Ctrl+W)"),
     "截图": ("截圖", "Capture"),
-    "截取新区域\n会自动最小化编辑器，截完回到这里新增标签": ("截取新區域\n会自動最小化編輯器，截完回到這裡新增標籤", ""),
+    "截取新区域\n会自动最小化编辑器，截完回到这里新增标签": ("截取新區域\n會自動最小化編輯器，截完回到這裡新增標籤", "Capture a new region\nThe editor is minimized and the capture is added as a tab"),
     "颜色": ("顏色", "Color"),
     "自定义颜色": ("自定義顏色", "Custom color…"),
-    "线宽": ("線寬", "Width"),
-    "字号": ("字號", "Size"),
-    "序号圆的大小\n选中已有序号时可直接调整它的大小": ("序號圓的大小\n選中已有序號時可直接調整它的大小", ""),
+    "序号圆的大小\n选中已有序号时可直接调整它的大小": ("序號圓的大小\n選中已有序號時可直接調整它的大小", "Step-circle size\nAdjusts the selected step number directly"),
     "撤销": ("復原", "Undo"),
+    "撤销 (Ctrl+Z)": ("復原 (Ctrl+Z)", "Undo (Ctrl+Z)"),
     "重做": ("重做", "Redo"),
+    "重做 (Ctrl+Y)": ("重做 (Ctrl+Y)", "Redo (Ctrl+Y)"),
     "应用裁剪": ("套用裁剪", "Apply Crop"),
     "应用裁剪框 (Enter)": ("套用裁剪框 (Enter)", "Apply the crop (Enter)"),
     "复制": ("複製", "Copy"),
     "复制到剪贴板 (Ctrl+C)": ("複製到剪貼簿 (Ctrl+C)", "Copy to clipboard (Ctrl+C)"),
-    "把当前结果钉在屏幕最上层（Snipaste 风格）": ("把当前結果钉在螢幕最上層（Snipaste 風格）", "Pin the result on top of the screen (Snipaste style)"),
+    "把当前结果钉在屏幕最上层（Snipaste 风格）": ("把當前結果钉在螢幕最上層（Snipaste 風格）", "Pin the result on top of the screen (Snipaste style)"),
     "水印": ("水印", "Watermark"),
+    "水印：文字与图片可各自开关（也可同时用）\n九宫格位置或平铺、各自调不透明度、可旋转与设边距\n还能「应用并设为默认」，之后新截图自动加": ("水印：文字與圖片可各自開關（也可同時用）\n九宮格位置或平鋪、各自調不透明度、可旋轉與設邊距\n還能「套用并設為預設」，之後新截圖自動加", "Watermark: text and image can be used together\n9-grid position or tiling, separate opacity, rotation and margin\nApply and set as default to add it to new captures"),
     "边框": ("邊框", "Border"),
+    "加边框（对应 FSCapture 的「特效 → 边缘」）\n单线/双线/虚线/圆角/投影阴影/立体浮雕/边缘渐隐/拍立得白边\n边框加在图片外面，图会变大；可 Ctrl+Z 撤销": ("加邊框（對應 FSCapture 的「特效 → 邊缘」）\n單線/雙線/虛線/圓角/投影陰影/立體浮雕/邊缘漸隱/拍立得白邊\n邊框加在圖片外面，圖會變大；可 Ctrl+Z 復原", "Border (FSCapture's Effects -> Edge)\nSolid / double / dashed / rounded / drop shadow / bevel / fade / polaroid / torn paper\nThe border goes outside the image, so the result gets bigger; Ctrl+Z to undo"),
     "保存": ("儲存", "Save"),
     "保存为文件 (Ctrl+S)": ("儲存為檔案 (Ctrl+S)", "Save to a file (Ctrl+S)"),
     "关闭": ("關閉", "Close"),
     "关闭编辑器 (Esc)": ("關閉編輯器 (Esc)", "Close the editor (Esc)"),
-    "工具：选择": ("工具：選擇", ""),
-    "实际像素 (1:1)": ("實際像素 (1:1)", "Actual pixels (1:1)"),
-    "适应": ("符合", "Fit"),
-    "缩放以适应窗口": ("縮放以符合窗口", "Scale to fit the window"),
-    "截取新区域{}\n会自动最小化编辑器，截完回到这里新增标签": ("截取新區域{}\n会自動最小化編輯器，截完回到這裡新增標籤", "Capture a new region{}\nThe editor is minimized; new captures are added as tabs"),
+    "工具：选择": ("工具：選擇", "Tool: Select"),
+    "缩小 (Ctrl+滚轮)": ("縮小 (Ctrl+滾輪)", "Zoom out (Ctrl+wheel)"),
+    "放大 (Ctrl+滚轮)": ("放大 (Ctrl+滾輪)", "Zoom in (Ctrl+wheel)"),
+    "截取新区域{}\n会自动最小化编辑器，截完回到这里新增标签": ("截取新區域{}\n會自動最小化編輯器，截完回到這裡新增標籤", "Capture a new region{}\nThe editor is minimized; new captures are added as tabs"),
     "已复制到剪贴板": ("已複製到剪貼簿", "Copied to the clipboard"),
-    "已设为默认水印，之后每次新截图会自动添加": ("已設為預設水印，之後每次新截圖会自動添加", "Saved as the default watermark; it will be added automatically"),
+    "已设为默认水印，之后每次新截图会自动添加": ("已設為預設水印，之後每次新截圖會自動添加", "Saved as the default watermark; it will be added automatically"),
     "已设为默认水印（本次运行有效，配置写入失败）": ("已設為預設水印（本次運行有效，配置寫入失敗）", "Saved as the default watermark for this session (config write failed)"),
     "保存截图": ("儲存截圖", "Save Capture"),
     "PNG 图片 (*.png);;JPEG 图片 (*.jpg);;BMP 图片 (*.bmp)": ("PNG 圖片 (*.png);;JPEG 圖片 (*.jpg);;BMP 圖片 (*.bmp)", "PNG image (*.png);;JPEG image (*.jpg);;BMP image (*.bmp)"),
+    "线宽": ("線寬", "Width"),
+    "字号": ("字號", "Size"),
+    "实际像素 (1:1)": ("實際像素 (1:1)", "Actual pixels (1:1)"),
+    "适应": ("符合", "Fit"),
+    "缩放以适应窗口": ("縮放以符合窗口", "Scale to fit the window"),
     "工具：": ("工具：", "Tool: "),
-    " 工具": (" 工具", ""),
-    "已设为默认边框，之后每次新截图会自动加": ("已設為預設邊框，之後每次新截圖会自動加", "Saved as the default border; it will be added automatically"),
+    " 工具": (" 工具", " Tool"),
+    "已设为默认边框，之后每次新截图会自动加": ("已設為預設邊框，之後每次新截圖會自動加", "Saved as the default border; it will be added automatically"),
     "已设为默认边框（本次运行有效，配置写入失败）": ("已設為預設邊框（本次運行有效，配置寫入失敗）", "Saved as the default border for this session (config write failed)"),
     "边框宽度为 0，未做改动": ("邊框寬度為 0，未做改動", "Border width is 0 — nothing changed"),
     "已保存：": ("已儲存：", "Saved: "),
@@ -167,7 +167,7 @@ TABLE = {
     "，切回": ("，切回", ", back to "),
     "已取色": ("已取色", "Picked"),
     "单线边框": ("單線邊框", "Solid Line"),
-    "纯色边框，最简洁": ("純色邊框，最簡洁", "A simple solid border"),
+    "纯色边框，最简洁": ("純色邊框，最簡潔", "A simple solid border"),
     "双线边框": ("雙線邊框", "Double Line"),
     "外粗内细的双线": ("外粗內細的雙線", "A thick outer and thin inner line"),
     "虚线边框": ("虛線邊框", "Dashed"),
@@ -183,7 +183,7 @@ TABLE = {
     "拍立得白边": ("拍立得白邊", "Polaroid"),
     "下方留宽白边，像拍立得": ("下方留寬白邊，像拍立得", "Wide white margin at the bottom"),
     "手撕纸": ("手撕紙", "Torn Paper"),
-    "图片贴在一张撕下来的纸上，边缘不规则 + 投影": ("圖片貼在一張撕下來的紙上，邊缘不规则 + 投影", "The image sits on a torn piece of paper with an irregular edge and a shadow"),
+    "图片贴在一张撕下来的纸上，边缘不规则 + 投影": ("圖片貼在一張撕下來的紙上，邊缘不規則 + 投影", "The image sits on a torn piece of paper with an irregular edge and a shadow"),
     "边框颜色": ("邊框顏色", "Border color"),
     "边框 / 边缘效果": ("邊框 / 邊缘效果", "Border / Edge Effect"),
     "样式": ("樣式", "Style"),
@@ -200,7 +200,7 @@ TABLE = {
     "应用并设为默认": ("套用并設為預設", "Apply and Set as Default"),
     "取消": ("取消", "Cancel"),
     "投影浓度": ("投影濃度", "Shadow"),
-    "仅供参考": ("仅供参考", "For reference only"),
+    "仅供参考": ("僅供參考", "For reference only"),
     "左上": ("左上", "Top-left"),
     "上中": ("上中", "Top-center"),
     "右上": ("右上", "Top-right"),
@@ -214,19 +214,19 @@ TABLE = {
     "平铺": ("平鋪", "Tiled"),
     "选择水印字体": ("選擇水印字體", "Choose the watermark font"),
     "水印颜色": ("水印顏色", "Watermark color"),
-    " % 图宽": (" % 圖寬", ""),
     "文字「": ("文字「", "Text “"),
-    "图片 ": ("圖片 ", ""),
+    "图片 ": ("圖片 ", "Image "),
     "文字水印": ("文字水印", "Text watermark"),
     "要加在水印上的文字（可多行）": ("要加在水印上的文字（可多行）", "Watermark text (multiple lines allowed)"),
     "文字颜色": ("文字顏色", "Text color"),
-    "描边（深浅背景都清晰）": ("描邊（深浅背景都清晰）", "Outline (readable on any background)"),
+    "描边（深浅背景都清晰）": ("描邊（深淺背景都清晰）", "Outline (readable on any background)"),
     "粗体": ("粗體", "Bold"),
     "斜体": ("斜體", "Italic"),
     "图片水印": ("圖片水印", "Image watermark"),
     "选择一张图片（建议用透明底的 PNG）": ("選擇一張圖片（建議用透明底的 PNG）", "Choose an image (a transparent PNG works best)"),
     "浏览…": ("瀏覽…", "Browse…"),
     "清除": ("清除", "Clear"),
+    " % 图宽": (" % 圖寬", "% of width"),
     "选择水印图片": ("選擇水印圖片", "Choose a watermark image"),
     "图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;所有文件 (*.*)": ("圖片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;所有檔案 (*.*)", "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;All files (*.*)"),
     "位置与排布": ("位置與排布", "Position & Layout"),
@@ -234,13 +234,14 @@ TABLE = {
     "字体": ("字體", "Font"),
     "不透明度": ("不透明度", "Opacity"),
     "大小": ("大小", "Size"),
+    "（无图片）": ("（無圖片）", "(no image)"),
     "间距": ("間距", "Spacing"),
     "旋转": ("旋轉", "Rotate"),
     "边距": ("邊距", "Margin"),
     "（未选择）": ("（未選擇）", "(none)"),
     "需要 Frame 或数组，收到 ": ("需要 Frame 或數組，收到 ", ""),
-    "选区里似乎包含多块独立滚动的区域（例如上方列表 + 下方明细面板），它们滚动量不同，拼不到一起。\n请只框选其中一个面板（不含固定的明细面板/工具栏）后重试。\n（排查用：设环境变量 PYSHOT_SCROLL_DEBUG=1 会把每帧存到 ~/.pyshot/scroll_debug）": ("選區裡似乎包含多塊獨立捲動的區域（例如上方列表 + 下方明細面板），它们捲動量不同，拼不到一起。\n請只框選其中一個面板（不含固定的明細面板/工具列）後重試。\n（排查用：設環境變數 PYSHOT_SCROLL_DEBUG=1 会把每幀存到 ~/.pyshot/scroll_debug）", ""),
-    "滚动截图准备中…": ("捲動截圖准备中…", "Preparing scrolling capture…"),
+    "选区里似乎包含多块独立滚动的区域（例如上方列表 + 下方明细面板），它们滚动量不同，拼不到一起。\n请只框选其中一个面板（不含固定的明细面板/工具栏）后重试。\n（排查用：设环境变量 PYSHOT_SCROLL_DEBUG=1 会把每帧存到 ~/.pyshot/scroll_debug）": ("選區裡似乎包含多塊獨立捲動的區域（例如上方列表 + 下方明細面板），它們捲動量不同，拼不到一起。\n請只框選其中一個面板（不含固定的明細面板/工具列）後重試。\n（排查用：設環境變數 PYSHOT_SCROLL_DEBUG=1 會把每幀存到 ~/.pyshot/scroll_debug）", "The selection seems to contain several independently scrolling areas, which cannot be stitched.\nPlease select only one panel (without fixed toolbars) and retry.\n(Diagnostics: set PYSHOT_SCROLL_DEBUG=1 to dump frames to ~/.pyshot/scroll_debug)"),
+    "滚动截图准备中…": ("捲動截圖準備中…", "Preparing scrolling capture…"),
     "完成 (Enter)": ("完成 (Enter)", "Done (Enter)"),
     "停止 (Esc)": ("停止 (Esc)", "Stop (Esc)"),
     "{}截图中… {} 帧 / {} px": ("{}截圖中… {} 幀 / {} px", "{}capturing… {} frames / {} px"),
@@ -250,34 +251,34 @@ TABLE = {
     "按键": ("按鍵", "Key"),
     "请用鼠标滚轮或 Page Down 自己滚动页面，滚到底后点「完成」": ("請用滑鼠滾輪或 Page Down 自己捲動頁面，滾到底後點「完成」", "Scroll with the wheel or Page Down, then click Done"),
     "抓帧失败：区域过小或被遮挡": ("抓幀失敗：區域過小或被遮擋", "Capture failed: the region is too small or hidden"),
-    "抓到的画面是空白/纯色，无法拼接。\n目标窗口（如 Citrix 虚拟桌面里的应用）可能启用了硬件加速或内容保护，系统抓屏 API 拿不到内容。\n可尝试：① 在 Citrix/远程桌面里关闭硬件加速；② 用托盘菜单的「滚动长截图（手动滚动）」；③ 把该窗口最大化或调整大小后重试。": ("抓到的畫面是空白/純色，無法拼接。\n目標窗口（如 Citrix 虛擬桌面裡的套用）可能啟用了硬體加速或內容保護，系統抓屏 API 拿不到內容。\n可尝試：① 在 Citrix/遠端桌面裡關閉硬體加速；② 用托盤菜單的「捲動長截圖（手動捲動）」；③ 把該窗口最大化或調整大小後重試。", ""),
     "拖拽没生效，改用滚轮重试": ("拖曳沒生效，改用滾輪重試", "Dragging had no effect — retrying with the wheel"),
-    "拖拽和滚轮都没能让页面滚动。\n可能原因：点击位置不在滚动区域，或该窗口不响应注入的输入。\n建议改用「滚动长截图（PageDown 自动滚动）」或「手动滚动」。": ("拖曳和滾輪都沒能讓頁面捲動。\n可能原因：點擊位置不在捲動區域，或該窗口不響應注入的輸入。\n建議改用「捲動長截圖（PageDown 自動捲動）」或「手動捲動」。", ""),
     "没有抓到任何内容": ("沒有抓到任何內容", "Nothing was captured"),
     "手动": ("手動", "Manual"),
     "滚动": ("捲動", "Scroll"),
+    "抓到的画面是空白/纯色，无法拼接。\n目标窗口（如 Citrix 虚拟桌面里的应用）可能启用了硬件加速或内容保护，系统抓屏 API 拿不到内容。\n可尝试：① 在 Citrix/远程桌面里关闭硬件加速；② 用托盘菜单的「滚动长截图（手动滚动）」；③ 把该窗口最大化或调整大小后重试。": ("抓到的畫面是空白/純色，無法拼接。\n目標窗口（如 Citrix 虛擬桌面裡的套用）可能啟用了硬體加速或內容保護，系統抓屏 API 拿不到內容。\n可嘗試：① 在 Citrix/遠端桌面裡關閉硬體加速；② 用托盤菜單的「捲動長截圖（手動捲動）」；③ 把該窗口最大化或調整大小後重試。", "The captured frames are blank/solid, so they cannot be stitched.\nThe target window (e.g. an app inside Citrix) may use hardware acceleration or content protection that blocks screen capture.\nTry: (1) disable hardware acceleration in Citrix, (2) use Manual scrolling capture from the tray menu, (3) maximize or resize the window and retry."),
     "抓帧尺寸发生变化，已停止（请确保窗口未移动/缩放）": ("抓幀尺寸发生變化，已停止（請確保窗口未移動/縮放）", "The captured area changed size; stopped (keep the window fixed)"),
-    "画面内容变化过快，无法对齐拼接。\n": ("畫面內容變化過快，無法對齊拼接。\n", ""),
+    "画面内容变化过快，无法对齐拼接。\n": ("畫面內容變化過快，無法對齊拼接。\n", "The content changed too fast to align and stitch.\n"),
     "拼接 +": ("拼接 +", ""),
-    "px（静止边缘 top=": ("px（静止邊缘 top=", ""),
+    "px（静止边缘 top=": ("px（靜止邊缘 top=", ""),
+    "拖拽和滚轮都没能让页面滚动。\n可能原因：点击位置不在滚动区域，或该窗口不响应注入的输入。\n建议改用「滚动长截图（PageDown 自动滚动）」或「手动滚动」。": ("拖曳和滾輪都沒能讓頁面捲動。\n可能原因：點擊位置不在捲動區域，或該窗口不響應注入的輸入。\n建議改用「捲動長截圖（PageDown 自動捲動）」或「手動捲動」。", "Neither dragging nor the wheel scrolled the page.\nThe click may be outside the scrollable area, or the window ignores injected input.\nTry Page Down mode or Manual scroll instead."),
     "抓帧失败：": ("抓幀失敗：", "Capture failed: "),
-    "拖拽滚动条模式下最常见的原因：点在了滚动条的**轨道**上而不是**滑块**上——那样会一次翻整页，无法拼接。请重新框选并点中滑块本身。\n": ("拖曳捲動條模式下最常见的原因：點在了捲動條的**轨道**上而不是**滑桿**上——那樣会一次翻整頁，無法拼接。請重新框選并點中滑桿本身。\n", ""),
-    "（请关闭动画/视频后重试）\n": ("（請關閉動畫/影片後重試）\n", ""),
+    "拖拽滚动条模式下最常见的原因：点在了滚动条的**轨道**上而不是**滑块**上——那样会一次翻整页，无法拼接。请重新框选并点中滑块本身。\n": ("拖曳捲動條模式下最常見的原因：點在了捲動條的**軌道**上而不是**滑桿**上——那樣會一次翻整頁，無法拼接。請重新框選并點中滑桿本身。\n", "Most common cause: you clicked the scrollbar *track* instead of the *thumb*, which jumps a whole page. Select again and click the thumb itself.\n"),
+    "（请关闭动画/视频后重试）\n": ("（請關閉動畫/影片後重試）\n", "(close animations/videos and retry)\n"),
     "复制图片": ("複製圖片", "Copy image"),
     "重置大小 / 透明度": ("重置大小 / 透明度", "Reset size / opacity"),
     "关闭 (Esc)": ("關閉 (Esc)", "Close (Esc)"),
-    "PyShot 依赖检查：": ("PyShot 依赖檢查：", "PyShot dependency check:"),
-    "[PyShot] 已开启 Windows 长路径支持（解决 PySide6 安装失败）": ("[PyShot] 已開啟 Windows 長路径支援（解决 PySide6 安裝失敗）", ""),
-    "PyShot 依赖安装失败": ("PyShot 依赖安裝失敗", "PyShot dependency installation failed"),
-    "PyShot 依赖仍不可用": ("PyShot 依赖仍不可用", "PyShot dependencies are still unavailable"),
-    "[PyShot] 依赖安装完成。": ("[PyShot] 依赖安裝完成。", ""),
-    "  内嵌依赖目录: 无（将使用系统环境或自动安装）": ("  內嵌依赖目录: 無（將使用系統環境或自動安裝）", ""),
-    "  解释器: ": ("  解释器: ", ""),
-    "[PyShot] 缺少依赖：": ("[PyShot] 缺少依赖：", ""),
-    "，正在自动安装（首次约需 1-3 分钟）…": ("，正在自動安裝（首次约需 1-3 分钟）…", ", installing automatically (1–3 minutes the first time)…"),
+    "PyShot 依赖检查：": ("PyShot 依賴檢查：", "PyShot dependency check:"),
+    "[PyShot] 已开启 Windows 长路径支持（解决 PySide6 安装失败）": ("[PyShot] 已開啟 Windows 長路徑支援（解决 PySide6 安裝失敗）", ""),
+    "PyShot 依赖安装失败": ("PyShot 依賴安裝失敗", "PyShot dependency installation failed"),
+    "PyShot 依赖仍不可用": ("PyShot 依賴仍不可用", "PyShot dependencies are still unavailable"),
+    "[PyShot] 依赖安装完成。": ("[PyShot] 依賴安裝完成。", ""),
+    "  内嵌依赖目录: 无（将使用系统环境或自动安装）": ("  內嵌依賴目錄: 無（將使用系統環境或自動安裝）", ""),
+    "  解释器: ": ("  解釋器: ", ""),
+    "[PyShot] 缺少依赖：": ("[PyShot] 缺少依賴：", ""),
+    "，正在自动安装（首次约需 1-3 分钟）…": ("，正在自動安裝（首次約需 1-3 分鐘）…", ", installing automatically (1–3 minutes the first time)…"),
     "请手动执行以下命令后重新运行：\n\n": ("請手動執行以下命令後重新運行：\n\n", ""),
-    "以下库导入失败：": ("以下庫导入失敗：", "These libraries failed to import:"),
-    "  内嵌依赖目录: ": ("  內嵌依赖目录: ", ""),
+    "以下库导入失败：": ("以下庫導入失敗：", "These libraries failed to import:"),
+    "  内嵌依赖目录: ": ("  內嵌依賴目錄: ", ""),
     "[PyShot] pip 执行失败：": ("[PyShot] pip 執行失敗：", ""),
     "  [缺失] ": ("  [缺失] ", ""),
 }
@@ -1166,7 +1167,7 @@ class WatermarkDialog(QDialog):
         row2.addWidget(QLabel(tr("大小")))
         self.image_scale = QSpinBox()
         self.image_scale.setRange(1, 300)
-        self.image_scale.setSuffix(" % 图宽")
+        self.image_scale.setSuffix(tr(" % 图宽"))
         self.image_scale.setValue(int(round(self._s["image_scale"] * 100)))
         self.image_scale.valueChanged.connect(self._on_scale)
         row2.addWidget(self.image_scale)
@@ -1227,7 +1228,7 @@ class WatermarkDialog(QDialog):
         pix = load_image(self._s)
         if pix is None:
             self.image_thumb.setPixmap(QPixmap())
-            self.image_thumb.setText("无")
+            self.image_thumb.setText(tr("（无图片）"))
             return
         self.image_thumb.setText("")
         self.image_thumb.setPixmap(
@@ -1246,7 +1247,7 @@ class WatermarkDialog(QDialog):
             b.setCheckable(True)
             b.setAutoExclusive(True)
             b.setFixedSize(30, 26)
-            b.setToolTip(POSITION_NAMES[i])
+            b.setToolTip(tr(POSITION_NAMES[i]))
             b.clicked.connect(lambda checked=False, k=i: self._set_position(k))
             grid.addWidget(b, i // 3, i % 3)
             self._pos_buttons.append(b)
@@ -4659,12 +4660,12 @@ class ScrollCapture(QObject):
 
             if pixmap_is_blank(frame, min_std=1.2, black_level=10):
                 self.failed.emit(
-                    "抓到的画面是空白/纯色，无法拼接。\n"
+                    tr("抓到的画面是空白/纯色，无法拼接。\n"
                     "目标窗口（如 Citrix 虚拟桌面里的应用）可能启用了硬件加速或内容保护，"
                     "系统抓屏 API 拿不到内容。\n"
                     "可尝试：① 在 Citrix/远程桌面里关闭硬件加速；"
                     "② 用托盘菜单的「滚动长截图（手动滚动）」；"
-                    "③ 把该窗口最大化或调整大小后重试。")
+                    "③ 把该窗口最大化或调整大小后重试。"))
                 self._cleanup()
                 return
 
@@ -4776,9 +4777,9 @@ class ScrollCapture(QObject):
                 return
             if d is not None and not d.moved_ever and d.used_fallback == "wheel":
                 self.failed.emit(
-                    "拖拽和滚轮都没能让页面滚动。\n"
+                    tr("拖拽和滚轮都没能让页面滚动。\n"
                     "可能原因：点击位置不在滚动区域，或该窗口不响应注入的输入。\n"
-                    "建议改用「滚动长截图（PageDown 自动滚动）」或「手动滚动」。")
+                    "建议改用「滚动长截图（PageDown 自动滚动）」或「手动滚动」。"))
                 self._cleanup()
                 return
             self._finish()
@@ -5851,7 +5852,7 @@ class EditorWindow(QMainWindow):
         self.width_spin.setFixedHeight(self._CTRL_H)
         self.width_spin.setFixedWidth(62)
         self.width_spin.valueChanged.connect(self._on_width_changed)
-        r1.addWidget(self._labeled("线宽", self.width_spin))
+        r1.addWidget(self._labeled(tr("线宽"), self.width_spin))
 
         self.font_spin = SpinBox()
         self.font_spin.setRange(10, 96)
@@ -5859,7 +5860,7 @@ class EditorWindow(QMainWindow):
         self.font_spin.setFixedHeight(self._CTRL_H)
         self.font_spin.setFixedWidth(62)
         self.font_spin.valueChanged.connect(self._on_font_changed)
-        r1.addWidget(self._labeled("字号", self.font_spin))
+        r1.addWidget(self._labeled(tr("字号"), self.font_spin))
 
         self.step_spin = SpinBox()
         self.step_spin.setRange(16, 240)
@@ -5870,7 +5871,7 @@ class EditorWindow(QMainWindow):
         self.step_spin.setFixedWidth(80)
         self.step_spin.setToolTip(tr("序号圆的大小\n选中已有序号时可直接调整它的大小"))
         self.step_spin.valueChanged.connect(self._on_step_size_changed)
-        r1.addWidget(self._labeled("序号", self.step_spin))
+        r1.addWidget(self._labeled(tr("序号"), self.step_spin))
 
         # ---------- 第 2 行：编辑 / 输出 ----------
         r2 = row()
@@ -5892,15 +5893,15 @@ class EditorWindow(QMainWindow):
         act_pin.triggered.connect(self.pin_to_screen)
         act_wm = QAction(tr("水印"), self)
         act_wm.setToolTip(
-            "水印：文字与图片可各自开关（也可同时用）\n"
+            tr("水印：文字与图片可各自开关（也可同时用）\n"
             "九宫格位置或平铺、各自调不透明度、可旋转与设边距\n"
-            "还能「应用并设为默认」，之后新截图自动加")
+            "还能「应用并设为默认」，之后新截图自动加"))
         act_wm.triggered.connect(self.add_watermark)
         act_border = QAction(tr("边框"), self)
         act_border.setToolTip(
-            "加边框（对应 FSCapture 的「特效 → 边缘」）\n"
+            tr("加边框（对应 FSCapture 的「特效 → 边缘」）\n"
             "单线/双线/虚线/圆角/投影阴影/立体浮雕/边缘渐隐/拍立得白边\n"
-            "边框加在图片外面，图会变大；可 Ctrl+Z 撤销")
+            "边框加在图片外面，图会变大；可 Ctrl+Z 撤销"))
         act_border.triggered.connect(self.add_border)
         act_save = QAction(tr("保存"), self)
         act_save.setToolTip(tr("保存为文件 (Ctrl+S)"))
@@ -5909,9 +5910,9 @@ class EditorWindow(QMainWindow):
         act_close.setToolTip(tr("关闭编辑器 (Esc)"))
         act_close.triggered.connect(self.close)
 
-        undo_btn = self._icon_button("undo", "撤销 (Ctrl+Z)",
+        undo_btn = self._icon_button("undo", tr("撤销 (Ctrl+Z)"),
                                      lambda: self.canvas and self.canvas.undo())
-        redo_btn = self._icon_button("redo", "重做 (Ctrl+Y)",
+        redo_btn = self._icon_button("redo", tr("重做 (Ctrl+Y)"),
                                      lambda: self.canvas and self.canvas.redo())
         self.btn_undo, self.btn_redo = undo_btn, redo_btn
         r2.addWidget(self._group(undo_btn, redo_btn))
@@ -5967,13 +5968,13 @@ class EditorWindow(QMainWindow):
             b.clicked.connect(fn)
             return b
 
-        zoom_out = _zbtn("−", "缩小 (Ctrl+滚轮)",
+        zoom_out = _zbtn("−", tr("缩小 (Ctrl+滚轮)"),
                          lambda: self.canvas and self.canvas.set_zoom(self.canvas.zoom / 1.2))
         self.zoom_label = QLabel("100%")
         self.zoom_label.setObjectName("zoomlabel")
         self.zoom_label.setMinimumWidth(46)
         self.zoom_label.setAlignment(Qt.AlignCenter)
-        zoom_in = _zbtn("＋", "放大 (Ctrl+滚轮)",
+        zoom_in = _zbtn("＋", tr("放大 (Ctrl+滚轮)"),
                         lambda: self.canvas and self.canvas.set_zoom(self.canvas.zoom * 1.2))
         zlay.addWidget(zoom_out)
         zlay.addWidget(self.zoom_label)
@@ -5982,9 +5983,9 @@ class EditorWindow(QMainWindow):
         sep.setObjectName("zoomsep")
         sep.setFrameShape(QFrame.VLine)
         zlay.addWidget(sep)
-        zlay.addWidget(_zbtn("100%", "实际像素 (1:1)",
+        zlay.addWidget(_zbtn("100%", tr("实际像素 (1:1)"),
                              lambda: self.canvas and self.canvas.set_zoom(1.0), width=44))
-        zlay.addWidget(_zbtn("适应", "缩放以适应窗口",
+        zlay.addWidget(_zbtn(tr("适应"), tr("缩放以适应窗口"),
                              self._zoom_fit, width=44))
         sb.addPermanentWidget(zoom_group)
 
@@ -6531,8 +6532,8 @@ class PyShotApp(QObject):
                 ("手动滚动",
                  "自己用滚轮滚动，程序只负责逐帧拼接",
                  lambda: self.capture_scrolling(manual=True))]:
-            act = QAction(label, menu_scroll)
-            act.setToolTip(tip)
+            act = QAction(tr(label), menu_scroll)
+            act.setToolTip(tr(tip))
             act.triggered.connect(
                 lambda checked=False, f=fn: self._deferred(f))
             menu_scroll.addAction(act)
@@ -6595,8 +6596,6 @@ class PyShotApp(QObject):
         else:
             self.tray.setToolTip(
                 tr("PyShot 截图工具\n双击图标截图 · 右键菜单"))
-        self.tray.activated.connect(self._on_tray_activated)
-        self.tray.show()
         # 注意：启动提示不在这里弹 —— 由 notify_ready() 统一负责，
         # 否则构造托盘和 main() 会各弹一次，用户看到两个气泡。
 
@@ -6963,14 +6962,14 @@ class PyShotApp(QObject):
             self._notify(
                 tr("PyShot 热键不可用"),
                 tr("热键（{}）都被占用，请双击托盘图标截图。\n", tried) +
-                "可用环境变量 PYSHOT_HOTKEY 指定其他组合，"
-                "例如 PYSHOT_HOTKEY=ctrl+alt+j")
+                tr("可用环境变量 PYSHOT_HOTKEY 指定其他组合，"
+                   "例如 PYSHOT_HOTKEY=ctrl+alt+j"))
             return
         self._notify(
             tr("PyShot 已启动"),
             tr("按 {} 框选截图，或双击托盘图标。\n", self.hotkey_text) +
-            "右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n"
-            "找不到图标时点任务栏右侧的 ∧ 展开。")
+            tr("右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n"
+               "找不到图标时点任务栏右侧的 ∧ 展开。"))
 
     def open_image(self):
         path, _ = QFileDialog.getOpenFileName(

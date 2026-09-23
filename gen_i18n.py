@@ -18,6 +18,8 @@ CJK = re.compile(r"[\u4e00-\u9fff]")
 
 # ---------------------------------------------------------------- 繁化：短语优先
 S2T_WORDS = [
+    # 台湾用词（不只是字形）
+    ("注册", "註冊"), ("依赖", "依賴"), ("注释", "註釋"), ("内存", "記憶體"),
     ("托盘", "托盤"), ("图标", "圖示"), ("滑块", "滑桿"), ("双击", "雙擊"),
     ("锚点", "錨點"), ("快速键", "快速鍵"), ("帧", "幀"),
     ("屏幕", "螢幕"), ("鼠标", "滑鼠"), ("键盘", "鍵盤"), ("剪贴板", "剪貼簿"),
@@ -72,6 +74,46 @@ S2T_CHARS = {
     "境": "境", "变": "變", "运": "運", "对": "對", "齐": "齊", "画": "畫",
     "组": "組", "总": "總", "结": "結", "统": "統", "过": "過", "还": "還",
     "这": "這", "么": "麼", "后": "後", "里": "裡", "将": "將", "来": "來",
+    "会": "會", "赖": "賴", "录": "錄", "当": "當", "匀": "勻", "栏": "欄",
+    "侧": "側", "锁": "鎖", "钮": "鈕", "绘": "繪", "递": "遞", "骤": "驟",
+    "涂": "塗", "仅": "僅", "们": "們", "备": "備", "准": "準", "尝": "嘗",
+    "静": "靜", "轨": "軌", "径": "徑", "释": "釋", "约": "約", "钟": "鐘",
+    "导": "導", "逻": "邏", "规": "規", "则": "則", "稳": "穩", "宫": "宮",
+    "洁": "潔", "参": "參", "浅": "淺", "见": "見", "于": "於", "严": "嚴",
+    "为": "為", "乐": "樂", "书": "書", "买": "買", "乱": "亂", "争": "爭",
+    "亲": "親", "众": "眾", "优": "優", "传": "傳", "伤": "傷", "价": "價",
+    "华": "華", "单": "單", "卖": "賣", "卫": "衛", "厂": "廠", "历": "歷",
+    "压": "壓", "县": "縣", "号": "號", "听": "聽", "员": "員", "响": "響",
+    "团": "團", "园": "園", "围": "圍", "国": "國", "场": "場", "坏": "壞",
+    "块": "塊", "坚": "堅", "处": "處", "头": "頭", "夹": "夾", "学": "學",
+    "实": "實", "宝": "寶", "对": "對", "寻": "尋", "层": "層", "属": "屬",
+    "岁": "歲", "师": "師", "带": "帶", "库": "庫", "应": "應", "开": "開",
+    "异": "異", "弃": "棄", "张": "張", "归": "歸", "彻": "徹", "态": "態",
+    "总": "總", "户": "戶", "报": "報", "拟": "擬", "换": "換", "据": "據",
+    "数": "數", "断": "斷", "无": "無", "旧": "舊", "时": "時", "显": "顯",
+    "术": "術", "条": "條", "来": "來", "极": "極", "构": "構", "标": "標",
+    "样": "樣", "检": "檢", "楼": "樓", "欢": "歡", "气": "氣", "汉": "漢",
+    "没": "沒", "测": "測", "满": "滿", "灵": "靈", "点": "點", "爱": "愛",
+    "状": "狀", "独": "獨", "环": "環", "现": "現", "画": "畫", "盘": "盤",
+    "码": "碼", "确": "確", "离": "離", "种": "種", "积": "積", "称": "稱",
+    "笔": "筆", "简": "簡", "签": "簽", "类": "類", "练": "練", "组": "組",
+    "经": "經", "给": "給", "统": "統", "续": "續", "维": "維", "缩": "縮",
+    "罗": "羅", "职": "職", "联": "聯", "脑": "腦", "节": "節", "获": "獲",
+    "营": "營", "蓝": "藍", "虑": "慮", "补": "補", "装": "裝", "览": "覽",
+    "觉": "覺", "触": "觸", "认": "認", "让": "讓", "训": "訓", "议": "議",
+    "记": "記", "访": "訪", "证": "證", "评": "評", "识": "識", "诉": "訴",
+    "词": "詞", "译": "譯", "试": "試", "询": "詢", "该": "該", "语": "語",
+    "误": "誤", "说": "說", "请": "請", "读": "讀", "课": "課", "调": "調",
+    "谈": "談", "谢": "謝", "贝": "貝", "负": "負", "责": "責", "货": "貨",
+    "质": "質", "费": "費", "资": "資", "赛": "賽", "赞": "讚", "赢": "贏",
+    "赶": "趕", "趋": "趨", "转": "轉", "轮": "輪", "软": "軟", "轻": "輕",
+    "辆": "輛", "较": "較", "辅": "輔", "输": "輸", "辖": "轄", "达": "達",
+    "迁": "遷", "过": "過", "运": "運", "进": "進", "远": "遠", "违": "違",
+    "连": "連", "迟": "遲", "响": "響", "页": "頁", "项": "項", "顺": "順",
+    "须": "須", "预": "預", "领": "領", "频": "頻", "颗": "顆", "题": "題",
+    "颜": "顏", "额": "額", "风": "風", "飞": "飛", "饮": "飲", "馆": "館",
+    "马": "馬", "驾": "駕", "验": "驗", "鱼": "魚", "鸟": "鳥", "鸣": "鳴",
+    "齐": "齊", "龄": "齡", "龙": "龍",
     "time": "time", "点": "點", "击": "擊", "双": "雙", "单": "單",
     "删": "刪", "除": "除", "颜": "顏", "续": "續", "实": "實", "现": "現",
     "义": "義", "尽": "盡", "两": "兩", "样": "樣", "与": "與", "专": "專",
@@ -351,6 +393,7 @@ EN = {
     "旋转": "Rotate",
     "边距": "Margin",
     "（未选择）": "(none)",
+    "（无图片）": "(no image)",
     # ---- 滚动截图 ----
     "滚动截图准备中…": "Preparing scrolling capture…",
     "截图中…": "Capturing…",
@@ -439,6 +482,43 @@ EN = {
     "PyShot 截图工具\n{}\n双击图标截图":
         "PyShot Screen Capture\n{}\nDouble-click the icon to capture",
     "显示器 {}": "Monitor {}",
+    "水印：文字与图片可各自开关（也可同时用）\n九宫格位置或平铺、各自调不透明度、可旋转与设边距\n还能「应用并设为默认」，之后新截图自动加":
+        "Watermark: text and image can be used together\n9-grid position or tiling, separate opacity, rotation and margin\nApply and set as default to add it to new captures",
+    "加边框（对应 FSCapture 的「特效 → 边缘」）\n单线/双线/虚线/圆角/投影阴影/立体浮雕/边缘渐隐/拍立得白边\n边框加在图片外面，图会变大；可 Ctrl+Z 撤销":
+        "Border (FSCapture's Effects -> Edge)\nSolid / double / dashed / rounded / drop shadow / bevel / fade / polaroid / torn paper\nThe border goes outside the image, so the result gets bigger; Ctrl+Z to undo",
+    "序号圆的大小\n选中已有序号时可直接调整它的大小":
+        "Step-circle size\nAdjusts the selected step number directly",
+    "截取新区域\n会自动最小化编辑器，截完回到这里新增标签":
+        "Capture a new region\nThe editor is minimized and the capture is added as a tab",
+    "工具：选择": "Tool: Select",
+    " px\n滚轮/Ctrl+滚轮 缩放 · 中键拖动滚动":
+        "px\nWheel / Ctrl+wheel to zoom · middle-drag to scroll",
+    " % 图宽": "% of width",
+    "PyShot 截图工具\n双击图标截图 · 右键菜单":
+        "PyShot Screen Capture\nDouble-click to capture · right-click for the menu",
+    "右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n找不到图标时点任务栏右侧的 ∧ 展开。":
+        "Right-click the tray icon: scrolling capture / color picker / pin / exit.\nIf the icon is hidden, click the ∧ arrow near the clock.",
+    "可用环境变量 PYSHOT_HOTKEY 指定其他组合，例如 PYSHOT_HOTKEY=ctrl+alt+j":
+        "Set PYSHOT_HOTKEY to pick another combination, e.g. PYSHOT_HOTKEY=ctrl+alt+j",
+    "已拼接 ": "Stitched ",
+    " px 长图": " px",
+    " 工具": " Tool",
+    "图片 ": "Image ",
+    "滚到底会自动结束；想中途停止点控制条上的按钮。":
+        "It stops automatically at the bottom; click the button on the bar to stop early.",
+    "框选区域后点一下滚动条滑块，程序按住滑块匀速拖拽。\n远程桌面 / Citrix 里最稳：步长会实测标定":
+        "Select an area, then click the scrollbar thumb; PyShot drags it steadily.\nMost reliable in Remote Desktop / Citrix (the step size is calibrated automatically)",
+    "画面内容变化过快，无法对齐拼接。\n":
+        "The content changed too fast to align and stitch.\n",
+    "拖拽滚动条模式下最常见的原因：点在了滚动条的**轨道**上而不是**滑块**上——那样会一次翻整页，无法拼接。请重新框选并点中滑块本身。\n":
+        "Most common cause: you clicked the scrollbar *track* instead of the *thumb*, which jumps a whole page. Select again and click the thumb itself.\n",
+    "（请关闭动画/视频后重试）\n": "(close animations/videos and retry)\n",
+    "选区里似乎包含多块独立滚动的区域（例如上方列表 + 下方明细面板），它们滚动量不同，拼不到一起。\n请只框选其中一个面板（不含固定的明细面板/工具栏）后重试。\n（排查用：设环境变量 PYSHOT_SCROLL_DEBUG=1 会把每帧存到 ~/.pyshot/scroll_debug）":
+        "The selection seems to contain several independently scrolling areas, which cannot be stitched.\nPlease select only one panel (without fixed toolbars) and retry.\n(Diagnostics: set PYSHOT_SCROLL_DEBUG=1 to dump frames to ~/.pyshot/scroll_debug)",
+    "抓到的画面是空白/纯色，无法拼接。\n目标窗口（如 Citrix 虚拟桌面里的应用）可能启用了硬件加速或内容保护，系统抓屏 API 拿不到内容。\n可尝试：① 在 Citrix/远程桌面里关闭硬件加速；② 用托盘菜单的「滚动长截图（手动滚动）」；③ 把该窗口最大化或调整大小后重试。":
+        "The captured frames are blank/solid, so they cannot be stitched.\nThe target window (e.g. an app inside Citrix) may use hardware acceleration or content protection that blocks screen capture.\nTry: (1) disable hardware acceleration in Citrix, (2) use Manual scrolling capture from the tray menu, (3) maximize or resize the window and retry.",
+    "拖拽和滚轮都没能让页面滚动。\n可能原因：点击位置不在滚动区域，或该窗口不响应注入的输入。\n建议改用「滚动长截图（PageDown 自动滚动）」或「手动滚动」。":
+        "Neither dragging nor the wheel scrolled the page.\nThe click may be outside the scrollable area, or the window ignores injected input.\nTry Page Down mode or Manual scroll instead.",
 }
 
 
