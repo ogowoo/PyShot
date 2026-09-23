@@ -736,6 +736,8 @@ class PyShotApp(QObject):
     def _hook_session(self, editor):
         """编辑器内容变化时（防抖）把会话写到磁盘。"""
         editor.session_dirty.connect(self._schedule_session_save)
+        # 关窗口时**立刻**存：这时标签还在，晚了就取不到了
+        editor.closing.connect(self.save_session_now)
         for i in range(editor.tabs.count()):
             scroll = editor.tabs.widget(i)
             canvas = scroll.widget() if hasattr(scroll, "widget") else None
@@ -761,7 +763,25 @@ class PyShotApp(QObject):
                 tabs.extend(ed.session_tabs())
             except Exception:                      # noqa: BLE001
                 continue
+        if not tabs and not self.editors:
+            # 编辑器窗口都关了（不是"用户删光了标签"）—— 保留缓存，
+            # 别把上次的截图清掉，否则下次点「显示编辑器」就是空的
+            return False
         return save_session(tabs)
+
+    def _restore_into(self, editor) -> int:
+        """把会话缓存里的截图恢复到指定编辑器（已有标签则不动）。"""
+        from session import load_session, session_enabled
+        if not session_enabled() or editor.tabs.count() > 0:
+            return 0
+        try:
+            tabs = load_session()
+        except Exception:                          # noqa: BLE001
+            return 0
+        if not tabs:
+            return 0
+        editor.restore_session(tabs)
+        return len(tabs)
 
     def restore_session(self):
         """启动时恢复上次的截图（有内容才显示编辑器）。"""
@@ -792,17 +812,23 @@ class PyShotApp(QObject):
         return on
 
     def show_editor(self):
-        """显示编辑器：已有窗口就提到前台，没有就**直接开一个空白的**。
+        """显示编辑器：优先显示"有内容"的那个，空的就把上次的截图放回来。
 
         以前这里没有编辑器时会弹"打开图片"对话框，用户只是想看看编辑器却先被
-        要求选文件；现在直接给一个空白编辑器（里面有文件菜单可打开图片、
-        空状态页也有提示）。
+        要求选文件；现在直接给一个空白编辑器。
+        另外：窗口被关掉后再点这里，如果新窗口是空的，就把会话缓存里的截图
+        恢复回来 —— 否则用户会觉得"历史不见了"。
         """
         if not self.editors:
             self._create_editor()
         if not self.editors:                # 无托盘等极端情况
             return
-        ed = self.editors[-1]
+        # 有标签的窗口优先（避免只显示到最新建的空窗口）
+        with_tabs = [e for e in self.editors if e.tabs.count() > 0]
+        ed = with_tabs[-1] if with_tabs else self.editors[-1]
+        self._last_shown_editor = ed            # 便于测试断言选了哪个窗口
+        if ed.tabs.count() == 0:
+            self._restore_into(ed)          # 空窗口 → 把上次的截图放回来
         ed.show()
         ed.setWindowState(ed.windowState() & ~Qt.WindowMinimized)
         ed.raise_()

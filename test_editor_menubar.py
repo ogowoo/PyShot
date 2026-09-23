@@ -26,6 +26,16 @@ app = QApplication([])
 import main as m
 from editor import EditorWindow
 
+# 会话缓存要隔离到临时目录：show_editor 现在会恢复上次的截图，
+# 否则测试会去读用户真实的缓存、断言全乱（而且不该动用户的文件）
+import tempfile as _tempfile
+from pathlib import Path as _Path
+import session as _session
+_tmp = _Path(_tempfile.mkdtemp(prefix="pyshot_menubar_"))
+_session.SESSION_DIR = _tmp / "session"
+_session.SESSION_SETTINGS_PATH = _tmp / "settings.json"
+_session.clear_session()
+
 failures = []
 
 

@@ -803,6 +803,7 @@ class EditorWindow(QMainWindow):
 
     pin_requested = Signal(QPixmap)
     session_dirty = Signal()      # 内容变了，提示主程序缓存会话
+    closing = Signal()            # 窗口要关了：趁标签还在赶紧存一次
     capture_requested = Signal()   # 点顶栏"截图"按钮：去截下一张（会自动最小化编辑器）
 
     def __init__(self, pixmap: QPixmap | None = None, parent=None):
@@ -1223,6 +1224,18 @@ class EditorWindow(QMainWindow):
         self._update_empty_state()             # 有标签了：收起空状态、放开菜单
         self.session_dirty.emit()
         return canvas
+
+    def closeEvent(self, e):
+        """关窗口前把会话存一次。
+
+        不然窗口一关、标签就没了，之后点「显示编辑器」只能得到空白窗口 ——
+        用户会觉得"历史不见了"（就是这么被反馈的）。
+        """
+        try:
+            self.closing.emit()
+        except Exception:                          # noqa: BLE001
+            pass
+        super().closeEvent(e)
 
     def retranslate(self):
         """语言切换后刷新界面文案（画布与标注不受影响）。
