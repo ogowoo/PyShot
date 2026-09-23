@@ -560,6 +560,12 @@ EN = {
     "当前颜色": "Current color",
     "更多颜色…（系统拾色盘风格）": "More colors… (system palette)",
     "自定义…": "Custom…",
+    "基本颜色": "Basic colors",
+    "自定义颜色": "Custom colors",
+    "点这里定义一个自定义颜色…": "Click to define a custom color…",
+    "打开系统拾色器": "Open the system color picker",
+    "更多颜色…（基本颜色 + 自定义颜色）":
+        "More colors… (basic + custom)",
 }
 
 

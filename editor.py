@@ -37,51 +37,110 @@ TOOLS = [
     ("pan",       "抓手",   "拖拽移动画面（图放大后看不同位置）；任何工具下按住中键或空格也能拖"),
 ]
 
-def palette_colors() -> list:
-    """生成"系统拾色盘"风格的大调色板：色相 × 明度 + 灰阶。
+def basic_colors() -> list:
+    """Windows 拾色器风格的「基本颜色」48 色（8 列 × 6 行）。
 
-    6 行 × 14 色相（明度自上而下递减，下两行降饱和）+ 10 级灰阶 ≈ 94 色，
-    足够覆盖日常标注；要更精细的颜色用弹窗里的「自定义…」走系统拾色器。
+    前两行是经典 16 色，后面四行是它们的浅色/深色变体 —— 和系统对话框观感一致。
     """
-    out = []
-    for row in range(6):
-        v = 1.0 - row * 0.13
-        sat = 1.0 if row < 4 else 0.55
-        for col in range(14):
-            h = int(col * 359 / 14)
-            out.append(QColor.fromHsv(h, int(sat * 255),
-                                      int(max(0.15, v) * 255)).name())
-    for i in range(10):                      # 灰阶：黑 → 白
-        g = int(i * 255 / 9)
-        out.append(QColor(g, g, g).name())
-    return out
+    classic = ["#000000", "#800000", "#008000", "#808000",
+               "#000080", "#800080", "#008080", "#c0c0c0",
+               "#808080", "#ff0000", "#00ff00", "#ffff00",
+               "#0000ff", "#ff00ff", "#00ffff", "#ffffff"]
+    out = list(classic)
+    for factor, lighter in ((160, True), (130, True), (180, False), (140, False)):
+        for c in classic:
+            col = QColor(c)
+            out.append(col.lighter(factor).name() if lighter
+                       else col.darker(factor).name())
+    return out[:48]
+
+
+CUSTOM_SLOTS = 16
+
+
+def _custom_colors() -> list:
+    """读「自定义颜色」格子（最多 16 个，空的用 None 占位）。"""
+    try:
+        from i18n import get_setting
+        saved = get_setting("custom_colors", []) or []
+    except Exception:                              # noqa: BLE001
+        saved = []
+    out = [c for c in saved if isinstance(c, str) and QColor(c).isValid()]
+    return (out + [None] * CUSTOM_SLOTS)[:CUSTOM_SLOTS]
+
+
+def _remember_custom(color: QColor):
+    """把颜色记进「自定义颜色」格子（去重、最新的排前面）并持久化。"""
+    name = QColor(color).name()
+    items = [c for c in _custom_colors() if c]
+    if name in items:
+        items.remove(name)
+    items.insert(0, name)
+    try:
+        from i18n import set_setting
+        set_setting("custom_colors", items[:CUSTOM_SLOTS])
+    except Exception:                              # noqa: BLE001
+        pass
 
 
 class ColorPaletteDialog(QDialog):
-    """大调色板（仿系统拾色盘）：点一下即选中，另有「自定义…」开系统拾色器。"""
+    """颜色（仿 Windows 拾色器）：基本颜色 + 自定义颜色，两段式。
+
+    - 基本颜色：48 色 8×6 网格，点一下即选中
+    - 自定义颜色：16 个格子，记住用过的颜色（存 settings.json，重启还在）；
+      点空白格会打开系统拾色器来定义
+    """
 
     def __init__(self, parent=None, current=None):
         super().__init__(parent)
         self.setWindowTitle(tr("颜色"))
         self._color = QColor(current) if current is not None else QColor("#e53935")
-        cols = 14
         root = QVBoxLayout(self)
-        grid = QGridLayout()
-        grid.setSpacing(3)
+        root.setSpacing(6)
+
+        # ---- 基本颜色 ----
+        root.addWidget(QLabel(tr("基本颜色")))
+        basic = QGridLayout()
+        basic.setSpacing(2)
         self.buttons = []
-        for i, hexs in enumerate(palette_colors()):
+        for i, hexs in enumerate(basic_colors()):
             b = QPushButton()
             b.setObjectName("swatch")
-            b.setFixedSize(22, 22)
+            b.setFixedSize(24, 24)
             b.setStyleSheet(f"background:{hexs};")
             b.setToolTip(hexs)
             b.clicked.connect(lambda checked, c=hexs: self._choose(QColor(c)))
-            grid.addWidget(b, i // cols, i % cols)
+            basic.addWidget(b, i // 8, i % 8)
             self.buttons.append(b)
-        root.addLayout(grid)
+        root.addLayout(basic)
+
+        # ---- 自定义颜色 ----
+        root.addWidget(QLabel(tr("自定义颜色")))
+        custom = QGridLayout()
+        custom.setSpacing(2)
+        self.custom_buttons = []
+        for i, hexs in enumerate(_custom_colors()):
+            b = QPushButton()
+            b.setObjectName("swatch" if hexs else "swatchEmpty")
+            b.setFixedSize(24, 24)
+            if hexs:
+                b.setStyleSheet(f"background:{hexs};")
+                b.setToolTip(hexs)
+                b.clicked.connect(lambda checked, c=hexs: self._choose(QColor(c)))
+            else:
+                # 空白格：虚线框，点了去系统拾色器定义
+                b.setStyleSheet("background:transparent;"
+                                "border:1px dashed #5a6070;")
+                b.setToolTip(tr("点这里定义一个自定义颜色…"))
+                b.clicked.connect(self._define_custom)
+            custom.addWidget(b, i // 8, i % 8)
+            self.custom_buttons.append(b)
+        root.addLayout(custom)
+
         box = QHBoxLayout()
         box.addStretch(1)
         self.btn_custom = QPushButton(tr("自定义…"))
+        self.btn_custom.setToolTip(tr("打开系统拾色器"))
         self.btn_custom.clicked.connect(self._custom)
         box.addWidget(self.btn_custom)
         btns = QDialogButtonBox(self)
@@ -90,9 +149,14 @@ class ColorPaletteDialog(QDialog):
         box.addWidget(btns)
         root.addLayout(box)
 
+    # ---------- 交互 ----------
     def _choose(self, color: QColor):
-        self._color = color
+        self._color = QColor(color)
+        _remember_custom(self._color)              # 选过的颜色进自定义格
         self.accept()
+
+    def _define_custom(self, *args):
+        self._custom()
 
     def _custom(self):
         c = QColorDialog.getColor(self._color, self, tr("自定义颜色"))
@@ -1531,7 +1595,7 @@ class EditorWindow(QMainWindow):
         more_palette = QPushButton("▾")
         more_palette.setObjectName("swatchMore")
         more_palette.setFixedSize(18, 18)
-        more_palette.setToolTip(tr("更多颜色…（系统拾色盘风格）"))
+        more_palette.setToolTip(tr("更多颜色…（基本颜色 + 自定义颜色）"))
         more_palette.clicked.connect(self._pick_from_palette)
         grid.addWidget(more_palette, 0, 10)
         more = QPushButton("…")

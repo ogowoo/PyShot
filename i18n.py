@@ -201,3 +201,14 @@ def coverage() -> tuple:
     zh_tw = sum(1 for v in TABLE.values() if v[0])
     en = sum(1 for v in TABLE.values() if v[1])
     return total, zh_tw, en
+
+# ---------------------------------------------------------------- 通用设置项
+def get_setting(key: str, default=None):
+    """读一个设置项（存在 ~/.pyshot/settings.json，与语言共用）。"""
+    return _load_settings().get(key, default)
+
+
+def set_setting(key: str, value) -> bool:
+    data = _load_settings()
+    data[key] = value
+    return _save_settings(data)

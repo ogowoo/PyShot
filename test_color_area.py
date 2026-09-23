@@ -87,32 +87,45 @@ check("色板按钮提示是色值",
       win.color_buttons[0].toolTip().lower() == PALETTE[0].lower(),
       win.color_buttons[0].toolTip())
 
-# ---------- 4) 大调色板（系统拾色盘风格）----------
-from editor import ColorPaletteDialog, palette_colors
+# ---------- 4) 颜色弹窗：仿 Windows 拾色器（基本颜色 + 自定义颜色）----------
+from editor import (CUSTOM_SLOTS, ColorPaletteDialog, basic_colors,
+                    _custom_colors, _remember_custom)
 
-big = palette_colors()
-check("大调色板色数 >= 80（够用）", len(big) >= 80, str(len(big)))
-check("大调色板没有重复色", len(set(big)) == len(big),
-      f"{len(big)} vs {len(set(big))}")
-check("大调色板颜色都合法", all(QColor(c).isValid() for c in big))
-check("大调色板含黑白灰阶",
-      "#000000" in big and "#ffffff" in big,
-      str([c for c in big if c in ("#000000", "#ffffff")]))
+basic = basic_colors()
+check("基本颜色 48 色（8 列 × 6 行）", len(basic) == 48, str(len(basic)))
+check("基本颜色都是合法色值", all(QColor(c).isValid() for c in basic))
+check("基本颜色含经典色（黑/白/红/蓝）",
+      all(c in basic for c in ("#000000", "#ffffff", "#ff0000", "#0000ff")),
+      str(basic[:8]))
 
 pdlg = ColorPaletteDialog(None, QColor("#e53935"))
-check("弹窗列出全部颜色", len(pdlg.buttons) == len(big),
-      f"{len(pdlg.buttons)} 个色块")
-check("弹窗有「自定义…」（可开系统拾色器）",
+check("弹窗列出 48 个基本颜色格", len(pdlg.buttons) == 48,
+      f"{len(pdlg.buttons)} 个")
+check("弹窗有 16 个自定义颜色格", len(pdlg.custom_buttons) == CUSTOM_SLOTS,
+      f"{len(pdlg.custom_buttons)} 个")
+check("弹窗有「自定义…」（打开系统拾色器）",
       pdlg.btn_custom.text().startswith("自定义"), pdlg.btn_custom.text())
-target2 = big[40]
-pdlg.buttons[40].click()
-check("点弹窗色块即选中并关闭",
+
+target2 = basic[9]
+pdlg.buttons[9].click()
+check("点基本颜色即选中并关闭",
       pdlg.result() == 1
       and pdlg.selected().name().lower() == QColor(target2).name().lower(),
       f"{pdlg.selected().name()} vs {target2}")
+check("选过的颜色会记住进「自定义颜色」格",
+      (QColor(target2).name() in (_custom_colors()[0] or "")),
+      str(_custom_colors()[:3]))
 pdlg.deleteLater()
 
-check("顶栏有「更多颜色」入口（打开大调色板）",
+# 自定义颜色去重：同一个颜色再选一次不会堆两格
+_remember_custom(QColor(target2))
+check("自定义颜色不重复堆积",
+      _custom_colors().count(QColor(target2).name()) == 1,
+      str(_custom_colors()[:3]))
+check("自定义颜色最多 16 格", len(_custom_colors()) == CUSTOM_SLOTS,
+      str(len(_custom_colors())))
+
+check("顶栏有「更多颜色」入口（打开颜色弹窗）",
       any("更多颜色" in b.toolTip()
           for b in win.findChildren(type(win.color_buttons[0]))), "")
 
