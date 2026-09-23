@@ -87,6 +87,35 @@ check("色板按钮提示是色值",
       win.color_buttons[0].toolTip().lower() == PALETTE[0].lower(),
       win.color_buttons[0].toolTip())
 
+# ---------- 4) 大调色板（系统拾色盘风格）----------
+from editor import ColorPaletteDialog, palette_colors
+
+big = palette_colors()
+check("大调色板色数 >= 80（够用）", len(big) >= 80, str(len(big)))
+check("大调色板没有重复色", len(set(big)) == len(big),
+      f"{len(big)} vs {len(set(big))}")
+check("大调色板颜色都合法", all(QColor(c).isValid() for c in big))
+check("大调色板含黑白灰阶",
+      "#000000" in big and "#ffffff" in big,
+      str([c for c in big if c in ("#000000", "#ffffff")]))
+
+pdlg = ColorPaletteDialog(None, QColor("#e53935"))
+check("弹窗列出全部颜色", len(pdlg.buttons) == len(big),
+      f"{len(pdlg.buttons)} 个色块")
+check("弹窗有「自定义…」（可开系统拾色器）",
+      pdlg.btn_custom.text().startswith("自定义"), pdlg.btn_custom.text())
+target2 = big[40]
+pdlg.buttons[40].click()
+check("点弹窗色块即选中并关闭",
+      pdlg.result() == 1
+      and pdlg.selected().name().lower() == QColor(target2).name().lower(),
+      f"{pdlg.selected().name()} vs {target2}")
+pdlg.deleteLater()
+
+check("顶栏有「更多颜色」入口（打开大调色板）",
+      any("更多颜色" in b.toolTip()
+          for b in win.findChildren(type(win.color_buttons[0]))), "")
+
 print()
 if failures:
     print("失败项:", failures)

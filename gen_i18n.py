@@ -558,6 +558,8 @@ EN = {
     "PyShot 已启动（恢复了 {} 张上次的截图）":
         "PyShot started (restored {} capture(s))",
     "当前颜色": "Current color",
+    "更多颜色…（系统拾色盘风格）": "More colors… (system palette)",
+    "自定义…": "Custom…",
 }
 
 

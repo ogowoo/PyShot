@@ -77,6 +77,7 @@ TABLE = {
     "PyShot 截图工具\n双击图标截图 · 右键菜单": ("PyShot 截圖工具\n雙擊圖示截圖 · 右鍵菜單", "PyShot Screen Capture\nDouble-click to capture · right-click for the menu"),
     "热键按下：取消进行中的截图": ("快速鍵按下：取消進行中的截圖", ""),
     "已有覆盖层在运行，忽略本次触发": ("已有覆蓋層在運行，忽略本次觸发", ""),
+    "遮罩已显示；": ("遮罩已顯示；", ""),
     "跟随系统": ("跟隨系統", "Follow system"),
     "主屏": ("主屏", "Primary"),
     "（未检测到显示器）": ("（未偵測到顯示器）", "(no monitor detected)"),
@@ -90,6 +91,8 @@ TABLE = {
     "PyShot 热键不可用": ("PyShot 快速鍵不可用", "PyShot hotkeys unavailable"),
     "按 {} 框选截图，或双击托盘图标。\n": ("按 {} 框選截圖，或雙擊托盤圖示。\n", "Press {} to capture a region, or double-click the tray icon.\n"),
     "右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n找不到图标时点任务栏右侧的 ∧ 展开。": ("右鍵托盤圖示：捲動長截圖 / 螢幕取色 / 釘圖 / 結束。\n找不到圖示時點任務欄右側的 ∧ 展開。", "Right-click the tray icon: scrolling capture / color picker / pin / exit.\nIf the icon is hidden, click the ∧ arrow near the clock."),
+    "跳过保存：当前 ": ("跳過儲存：當前 ", ""),
+    " 个标签少于缓存的 ": (" 個標籤少於緩存的 ", ""),
     "区域 ": ("區域 ", ""),
     "全屏 ": ("全螢幕 ", ""),
     "热键（{}）都被占用，请双击托盘图标截图。\n": ("快速鍵（{}）都被佔用，請雙擊托盤圖示截圖。\n", "Hotkeys ({}) are all taken — double-click the tray icon to capture.\n"),
@@ -98,7 +101,13 @@ TABLE = {
     "显示器 {}": ("顯示器 {}", "Monitor {}"),
     "打开编辑器失败": ("開啟編輯器失敗", "Could not open the editor"),
     "全屏截图失败": ("全螢幕截圖失敗", "Full-screen capture failed"),
+    "底图=空": ("底圖=空", ""),
+    "底图=自检失败": ("底圖=自檢失敗", ""),
     "屏幕取色：单击复制色值    ·    Esc / 右键 取消": ("螢幕取色：單擊複製色值    ·    Esc / 右鍵 取消", "Color picker: click to copy the value    ·    Esc / right-click to cancel"),
+    "底图=": ("底圖=", ""),
+    " 平均亮度=": (" 平均亮度=", ""),
+    " 采样色数=": (" 采樣色數=", ""),
+    "（疑似纯色/拍到自己！）": ("（疑似純色/拍到自己！）", ""),
     "拖拽选择要滚动截图的区域    ·    Esc / 右键 取消": ("拖曳選擇要捲動截圖的區域    ·    Esc / 右鍵 取消", "Drag to select the area to scroll-capture    ·    Esc / right-click to cancel"),
     "蓝框内可直接点击滚动条【滑块】→ 自动开始滚动    ·    Esc 取消": ("藍框內可直接點擊捲動條【滑桿】→ 自動開始捲動    ·    Esc 取消", "Click the scrollbar thumb inside the frame to start    ·    Esc to cancel"),
     "拖拽选择截图区域    ·    Esc / 右键 取消": ("拖曳選擇截圖區域    ·    Esc / 右鍵 取消", "Drag to select a region    ·    Esc / right-click to cancel"),
@@ -129,6 +138,9 @@ TABLE = {
     "抓手": ("抓手", "Hand"),
     "拖拽移动画面（图放大后看不同位置）；任何工具下按住中键或空格也能拖": ("拖曳移動畫面（圖放大後看不同位置）；任何工具下按住中鍵或空格也能拖", "Drag to move the view (look around once zoomed in); middle-drag or hold Space works with any tool"),
     "选择颜色": ("選擇顏色", "Choose a color"),
+    "颜色": ("顏色", "Color"),
+    "自定义…": ("自定義…", "Custom…"),
+    "自定义颜色": ("自定義顏色", "Custom color…"),
     "输入文字，Enter 确认 / Esc 取消": ("輸入文字，Enter 確認 / Esc 取消", "Type text, Enter to confirm / Esc to cancel"),
     "PyShot 编辑器": ("PyShot 編輯器", "PyShot Editor"),
     "还没有图片": ("還沒有圖片", "No image yet"),
@@ -164,8 +176,7 @@ TABLE = {
     "关闭此标签 (Ctrl+W)": ("關閉此標籤 (Ctrl+W)", "Close this tab (Ctrl+W)"),
     "截图": ("截圖", "Capture"),
     "截取新区域\n会自动最小化编辑器，截完回到这里新增标签": ("截取新區域\n會自動最小化編輯器，截完回到這裡新增標籤", "Capture a new region\nThe editor is minimized and the capture is added as a tab"),
-    "颜色": ("顏色", "Color"),
-    "自定义颜色": ("自定義顏色", "Custom color…"),
+    "更多颜色…（系统拾色盘风格）": ("更多顏色…（系統拾色盤風格）", "More colors… (system palette)"),
     "序号圆的大小\n选中已有序号时可直接调整它的大小": ("序號圓的大小\n選中已有序號時可直接調整它的大小", "Step-circle size\nAdjusts the selected step number directly"),
     "撤销 (Ctrl+Z)": ("復原 (Ctrl+Z)", "Undo (Ctrl+Z)"),
     "重做 (Ctrl+Y)": ("重做 (Ctrl+Y)", "Redo (Ctrl+Y)"),
@@ -204,6 +215,7 @@ TABLE = {
     "已保存：": ("已儲存：", "Saved: "),
     "当前颜色": ("當前顏色", "Current color"),
     "已加边框：": ("已加邊框：", "Border added: "),
+    "取消": ("取消", "Cancel"),
     "截图 {}": ("截圖 {}", "Capture {}"),
     "，切回": ("，切回", ", back to "),
     "已取色": ("已取色", "Picked"),
@@ -239,7 +251,6 @@ TABLE = {
     "预览": ("預覽", "Preview"),
     "应用": ("套用", "Apply"),
     "应用并设为默认": ("套用并設為預設", "Apply and Set as Default"),
-    "取消": ("取消", "Cancel"),
     "投影浓度": ("投影濃度", "Shadow"),
     "仅供参考": ("僅供參考", "For reference only"),
     "左上": ("左上", "Top-left"),
@@ -5327,7 +5338,7 @@ from PySide6.QtCore import (QPoint, QPointF, QRect, QRectF, QSize, Qt,
                             Signal)
 from PySide6.QtGui import (QAction, QColor, QGuiApplication, QIcon, QKeySequence,
                            QPainter, QPainterPath, QPen, QPixmap)
-from PySide6.QtWidgets import (QGridLayout, QMenu, QStackedWidget, QApplication, QColorDialog, QDialog, QFileDialog,
+from PySide6.QtWidgets import (QDialogButtonBox, QGridLayout, QMenu, QStackedWidget, QApplication, QColorDialog, QDialog, QFileDialog,
                                QFrame, QHBoxLayout, QLabel, QLayout, QLineEdit,
                                QMainWindow, QMessageBox, QPushButton,
                                QScrollArea, QSizePolicy, QSpinBox, QTabBar,
@@ -5354,6 +5365,72 @@ TOOLS = [
     ("crop",      "裁剪",   "拖拽选择保留区域，Enter 应用"),
     ("pan",       "抓手",   "拖拽移动画面（图放大后看不同位置）；任何工具下按住中键或空格也能拖"),
 ]
+
+def palette_colors() -> list:
+    """生成"系统拾色盘"风格的大调色板：色相 × 明度 + 灰阶。
+
+    6 行 × 14 色相（明度自上而下递减，下两行降饱和）+ 10 级灰阶 ≈ 94 色，
+    足够覆盖日常标注；要更精细的颜色用弹窗里的「自定义…」走系统拾色器。
+    """
+    out = []
+    for row in range(6):
+        v = 1.0 - row * 0.13
+        sat = 1.0 if row < 4 else 0.55
+        for col in range(14):
+            h = int(col * 359 / 14)
+            out.append(QColor.fromHsv(h, int(sat * 255),
+                                      int(max(0.15, v) * 255)).name())
+    for i in range(10):                      # 灰阶：黑 → 白
+        g = int(i * 255 / 9)
+        out.append(QColor(g, g, g).name())
+    return out
+
+
+class ColorPaletteDialog(QDialog):
+    """大调色板（仿系统拾色盘）：点一下即选中，另有「自定义…」开系统拾色器。"""
+
+    def __init__(self, parent=None, current=None):
+        super().__init__(parent)
+        self.setWindowTitle(tr("颜色"))
+        self._color = QColor(current) if current is not None else QColor("#e53935")
+        cols = 14
+        root = QVBoxLayout(self)
+        grid = QGridLayout()
+        grid.setSpacing(3)
+        self.buttons = []
+        for i, hexs in enumerate(palette_colors()):
+            b = QPushButton()
+            b.setObjectName("swatch")
+            b.setFixedSize(22, 22)
+            b.setStyleSheet(f"background:{hexs};")
+            b.setToolTip(hexs)
+            b.clicked.connect(lambda checked, c=hexs: self._choose(QColor(c)))
+            grid.addWidget(b, i // cols, i % cols)
+            self.buttons.append(b)
+        root.addLayout(grid)
+        box = QHBoxLayout()
+        box.addStretch(1)
+        self.btn_custom = QPushButton(tr("自定义…"))
+        self.btn_custom.clicked.connect(self._custom)
+        box.addWidget(self.btn_custom)
+        btns = QDialogButtonBox(self)
+        btns.addButton(tr("取消"), QDialogButtonBox.RejectRole).clicked.connect(
+            self.reject)
+        box.addWidget(btns)
+        root.addLayout(box)
+
+    def _choose(self, color: QColor):
+        self._color = color
+        self.accept()
+
+    def _custom(self):
+        c = QColorDialog.getColor(self._color, self, tr("自定义颜色"))
+        if c.isValid():
+            self._choose(c)
+
+    def selected(self) -> QColor:
+        return QColor(self._color)
+
 
 APP_VERSION = "2.6"          # 「关于」对话框里显示的版本号
 
@@ -6779,6 +6856,12 @@ class EditorWindow(QMainWindow):
             b.clicked.connect(lambda checked, c=hexs: self.set_color(QColor(c)))
             grid.addWidget(b, i // 10, i % 10)
             self.color_buttons.append(b)
+        more_palette = QPushButton("▾")
+        more_palette.setObjectName("swatchMore")
+        more_palette.setFixedSize(18, 18)
+        more_palette.setToolTip(tr("更多颜色…（系统拾色盘风格）"))
+        more_palette.clicked.connect(self._pick_from_palette)
+        grid.addWidget(more_palette, 0, 10)
         more = QPushButton("…")
         more.setObjectName("swatchMore")
         more.setFixedSize(18, 18)
@@ -7059,6 +7142,12 @@ class EditorWindow(QMainWindow):
             self.current_color_btn.setToolTip(tr("当前颜色") + f"  {name}")
         except Exception:                          # noqa: BLE001
             pass
+
+    def _pick_from_palette(self):
+        """打开大调色板（系统拾色盘风格）。"""
+        dlg = ColorPaletteDialog(self, self._shared["color"])
+        if dlg.exec() == QDialog.Accepted:
+            self.set_color(dlg.selected())
 
     def _pick_color(self):
         current = self.canvas.color if self.canvas is not None else self._shared["color"]

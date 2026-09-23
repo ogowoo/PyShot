@@ -7,7 +7,7 @@ from PySide6.QtCore import (QPoint, QPointF, QRect, QRectF, QSize, Qt,
                             Signal)
 from PySide6.QtGui import (QAction, QColor, QGuiApplication, QIcon, QKeySequence,
                            QPainter, QPainterPath, QPen, QPixmap)
-from PySide6.QtWidgets import (QGridLayout, QMenu, QStackedWidget, QApplication, QColorDialog, QDialog, QFileDialog,
+from PySide6.QtWidgets import (QDialogButtonBox, QGridLayout, QMenu, QStackedWidget, QApplication, QColorDialog, QDialog, QFileDialog,
                                QFrame, QHBoxLayout, QLabel, QLayout, QLineEdit,
                                QMainWindow, QMessageBox, QPushButton,
                                QScrollArea, QSizePolicy, QSpinBox, QTabBar,
@@ -36,6 +36,72 @@ TOOLS = [
     ("crop",      "裁剪",   "拖拽选择保留区域，Enter 应用"),
     ("pan",       "抓手",   "拖拽移动画面（图放大后看不同位置）；任何工具下按住中键或空格也能拖"),
 ]
+
+def palette_colors() -> list:
+    """生成"系统拾色盘"风格的大调色板：色相 × 明度 + 灰阶。
+
+    6 行 × 14 色相（明度自上而下递减，下两行降饱和）+ 10 级灰阶 ≈ 94 色，
+    足够覆盖日常标注；要更精细的颜色用弹窗里的「自定义…」走系统拾色器。
+    """
+    out = []
+    for row in range(6):
+        v = 1.0 - row * 0.13
+        sat = 1.0 if row < 4 else 0.55
+        for col in range(14):
+            h = int(col * 359 / 14)
+            out.append(QColor.fromHsv(h, int(sat * 255),
+                                      int(max(0.15, v) * 255)).name())
+    for i in range(10):                      # 灰阶：黑 → 白
+        g = int(i * 255 / 9)
+        out.append(QColor(g, g, g).name())
+    return out
+
+
+class ColorPaletteDialog(QDialog):
+    """大调色板（仿系统拾色盘）：点一下即选中，另有「自定义…」开系统拾色器。"""
+
+    def __init__(self, parent=None, current=None):
+        super().__init__(parent)
+        self.setWindowTitle(tr("颜色"))
+        self._color = QColor(current) if current is not None else QColor("#e53935")
+        cols = 14
+        root = QVBoxLayout(self)
+        grid = QGridLayout()
+        grid.setSpacing(3)
+        self.buttons = []
+        for i, hexs in enumerate(palette_colors()):
+            b = QPushButton()
+            b.setObjectName("swatch")
+            b.setFixedSize(22, 22)
+            b.setStyleSheet(f"background:{hexs};")
+            b.setToolTip(hexs)
+            b.clicked.connect(lambda checked, c=hexs: self._choose(QColor(c)))
+            grid.addWidget(b, i // cols, i % cols)
+            self.buttons.append(b)
+        root.addLayout(grid)
+        box = QHBoxLayout()
+        box.addStretch(1)
+        self.btn_custom = QPushButton(tr("自定义…"))
+        self.btn_custom.clicked.connect(self._custom)
+        box.addWidget(self.btn_custom)
+        btns = QDialogButtonBox(self)
+        btns.addButton(tr("取消"), QDialogButtonBox.RejectRole).clicked.connect(
+            self.reject)
+        box.addWidget(btns)
+        root.addLayout(box)
+
+    def _choose(self, color: QColor):
+        self._color = color
+        self.accept()
+
+    def _custom(self):
+        c = QColorDialog.getColor(self._color, self, tr("自定义颜色"))
+        if c.isValid():
+            self._choose(c)
+
+    def selected(self) -> QColor:
+        return QColor(self._color)
+
 
 APP_VERSION = "2.6"          # 「关于」对话框里显示的版本号
 
@@ -1462,6 +1528,12 @@ class EditorWindow(QMainWindow):
             b.clicked.connect(lambda checked, c=hexs: self.set_color(QColor(c)))
             grid.addWidget(b, i // 10, i % 10)
             self.color_buttons.append(b)
+        more_palette = QPushButton("▾")
+        more_palette.setObjectName("swatchMore")
+        more_palette.setFixedSize(18, 18)
+        more_palette.setToolTip(tr("更多颜色…（系统拾色盘风格）"))
+        more_palette.clicked.connect(self._pick_from_palette)
+        grid.addWidget(more_palette, 0, 10)
         more = QPushButton("…")
         more.setObjectName("swatchMore")
         more.setFixedSize(18, 18)
@@ -1742,6 +1814,12 @@ class EditorWindow(QMainWindow):
             self.current_color_btn.setToolTip(tr("当前颜色") + f"  {name}")
         except Exception:                          # noqa: BLE001
             pass
+
+    def _pick_from_palette(self):
+        """打开大调色板（系统拾色盘风格）。"""
+        dlg = ColorPaletteDialog(self, self._shared["color"])
+        if dlg.exec() == QDialog.Accepted:
+            self.set_color(dlg.selected())
 
     def _pick_color(self):
         current = self.canvas.color if self.canvas is not None else self._shared["color"]
