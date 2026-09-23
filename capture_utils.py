@@ -275,3 +275,32 @@ def set_scroll_pos(hwnd: int, pos: int) -> int:
     info.nPos = int(pos)
     return int(user32.SetScrollInfo(wt.HWND(hwnd), SB_VERT,
                                     ctypes.byref(info), True))
+
+def exclude_from_capture(hwnd: int, enable: bool = True) -> bool:
+    """让某个窗口**不被屏幕抓取**（WDA_EXCLUDEFROMCAPTURE）。
+
+    用途：截图遮罩可以先 show() 出来（用户马上就看见反应），再抓屏回填底图；
+    有了这个排除，抓屏就不会把遮罩自己拍进去（否则截出来是黑的/带遮罩）。
+    enable=False 表示恢复（WDA_NONE）——抓完底图就恢复，免得遮罩在别的抓屏
+    （录屏工具、我们自己的测试）里也一并隐身。
+    Windows 10 2004+ 支持；更老的系统退回 WDA_MONITOR（拍出来是纯黑），
+    再不行返回 False，调用方就保持"先抓屏再显示"的老顺序。
+    """
+    try:
+        user32 = ctypes.windll.user32
+        WDA_EXCLUDEFROMCAPTURE = 0x00000011
+        WDA_MONITOR = 0x00000001
+        WDA_NONE = 0x00000000
+        user32.SetWindowDisplayAffinity.argtypes = [ctypes.c_void_p,
+                                                    ctypes.c_uint]
+        if not enable:
+            user32.SetWindowDisplayAffinity(ctypes.c_void_p(hwnd), WDA_NONE)
+            return True
+        if user32.SetWindowDisplayAffinity(ctypes.c_void_p(hwnd),
+                                           WDA_EXCLUDEFROMCAPTURE):
+            return True
+        if user32.SetWindowDisplayAffinity(ctypes.c_void_p(hwnd), WDA_MONITOR):
+            return False          # 拍出来会是黑的，不能用来"先显示后抓屏"
+    except Exception:             # noqa: BLE001
+        pass
+    return False

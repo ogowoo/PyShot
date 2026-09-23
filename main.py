@@ -184,7 +184,7 @@ class PyShotApp(QObject):
         self._init_hotkey()   # 先注册热键，托盘文案才知道该显示哪个按键
         self._init_tray()
         # 启动后台预热（延迟一点，不影响启动速度）
-        QTimer.singleShot(400, self._warmup)
+        QTimer.singleShot(150, self._warmup)
 
     # ---------- 全局热键 ----------
     def _init_hotkey(self):

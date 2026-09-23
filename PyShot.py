@@ -3558,6 +3558,35 @@ def set_scroll_pos(hwnd: int, pos: int) -> int:
     return int(user32.SetScrollInfo(wt.HWND(hwnd), SB_VERT,
                                     ctypes.byref(info), True))
 
+def exclude_from_capture(hwnd: int, enable: bool = True) -> bool:
+    """让某个窗口**不被屏幕抓取**（WDA_EXCLUDEFROMCAPTURE）。
+
+    用途：截图遮罩可以先 show() 出来（用户马上就看见反应），再抓屏回填底图；
+    有了这个排除，抓屏就不会把遮罩自己拍进去（否则截出来是黑的/带遮罩）。
+    enable=False 表示恢复（WDA_NONE）——抓完底图就恢复，免得遮罩在别的抓屏
+    （录屏工具、我们自己的测试）里也一并隐身。
+    Windows 10 2004+ 支持；更老的系统退回 WDA_MONITOR（拍出来是纯黑），
+    再不行返回 False，调用方就保持"先抓屏再显示"的老顺序。
+    """
+    try:
+        user32 = ctypes.windll.user32
+        WDA_EXCLUDEFROMCAPTURE = 0x00000011
+        WDA_MONITOR = 0x00000001
+        WDA_NONE = 0x00000000
+        user32.SetWindowDisplayAffinity.argtypes = [ctypes.c_void_p,
+                                                    ctypes.c_uint]
+        if not enable:
+            user32.SetWindowDisplayAffinity(ctypes.c_void_p(hwnd), WDA_NONE)
+            return True
+        if user32.SetWindowDisplayAffinity(ctypes.c_void_p(hwnd),
+                                           WDA_EXCLUDEFROMCAPTURE):
+            return True
+        if user32.SetWindowDisplayAffinity(ctypes.c_void_p(hwnd), WDA_MONITOR):
+            return False          # 拍出来会是黑的，不能用来"先显示后抓屏"
+    except Exception:             # noqa: BLE001
+        pass
+    return False
+
 
 # ========================================================================
 # 来自 pinboard.py
@@ -3850,6 +3879,13 @@ class SnipperOverlay(QWidget):
         self.setWindowOpacity(0.0)
         self.show()
         self.raise_()
+        # 让遮罩窗口不被自己抓屏拍到 —— 有了它才能"先显示遮罩、后抓底图"，
+        # 用户双击后立刻看到反应，不用等抓屏（冷启动 ~100ms/屏）。
+        try:
+
+            self._can_exclude = exclude_from_capture(int(self.winId()))
+        except Exception:                      # noqa: BLE001
+            self._can_exclude = False
         QTimer.singleShot(hold_ms, self._end_warmup)
 
     def _end_warmup(self):
@@ -3858,6 +3894,7 @@ class SnipperOverlay(QWidget):
         self.hide()
         self.setWindowOpacity(1.0)
         self.setAttribute(Qt.WA_TransparentForMouseEvents, False)
+        self._can_exclude = False      # 能否把自己排除在抓屏之外
 
     # ---------- 生命周期 ----------
     def start(self, mode: str | None = None):
@@ -3870,10 +3907,27 @@ class SnipperOverlay(QWidget):
         self._selecting = False
         self._origin = QPoint(-1, -1)
         self._current = QPoint(-1, -1)
-        # 只抓本显示器：多屏 + 混合 DPI 下，按屏抓取并按各自 dpr 裁剪才准确
-        self._bg = self.screen.grabWindow(0)
         self._geo = self.screen.geometry()
-        self._img = self._bg.toImage() if not self._bg.isNull() else None
+        # 关键：抓屏（冷启动 ~100ms/屏）以前在 show() 之前做，遮罩必须等抓完才出现，
+        # 用户就觉得"点了半天没反应"。现在改成**先把遮罩显示出来**（paintEvent 在
+        # _bg 为 None 时会画纯色遮罩），抓屏结果稍后回填。
+        # 前提：遮罩窗口已被排除在抓屏之外，老系统不支持就退回"先抓屏再显示"。
+        # 注意：预热时窗口是"全透明"的分层窗口，SetWindowDisplayAffinity 会失败，
+        # 所以这里（窗口正常不透明时）再试一次。
+        if not getattr(self, "_can_exclude", False):
+            try:
+
+                self._can_exclude = exclude_from_capture(int(self.winId()))
+            except Exception:                      # noqa: BLE001
+                self._can_exclude = False
+        deferred = bool(getattr(self, "_can_exclude", False))
+        if deferred:
+            self._bg = None
+            self._img = None
+        else:
+            # 只抓本显示器：多屏 + 混合 DPI 下，按屏抓取并按各自 dpr 裁剪才准确
+            self._bg = self.screen.grabWindow(0)
+            self._img = self._bg.toImage() if not self._bg.isNull() else None
         # 用显式几何 + show()，比 showFullScreen() 在多屏/首次显示时更可靠地铺满整屏
         self.setGeometry(self._geo)
         self.show()
@@ -3883,8 +3937,32 @@ class SnipperOverlay(QWidget):
         # 注意：这里不能用 repaint() —— 对尚未映射完成的窗口强制同步绘制后，
         # Qt 不会再补一次绘制，窗口就会"在但没画出来"（动一下鼠标才出现）。
         self.update()
+        if deferred:
+            # 遮罩已经显示了，抓底图排在 show 之后立刻做（抓完回填并重绘）
+            QTimer.singleShot(0, self._grab_background)
         for delay in (0, 60, 160):       # 多次兜底：窗口映射完成后确保绘制 + 置顶
             QTimer.singleShot(delay, self._ensure_cover)
+
+    def _grab_background(self):
+        """抓本屏底图并回填（配合"先显示遮罩、后抓屏"）。"""
+        if not self._active:
+            return
+        try:
+            self._bg = self.screen.grabWindow(0)
+            self._img = self._bg.toImage() if not self._bg.isNull() else None
+        except Exception:                          # noqa: BLE001
+            self._bg = None
+            self._img = None
+        finally:
+            # 抓完就恢复：遮罩只在"抓底图"这一瞬隐身，
+            # 免得它对录屏工具/测试也一直不可见
+            if getattr(self, "_can_exclude", False):
+                try:
+
+                    exclude_from_capture(int(self.winId()), enable=False)
+                except Exception:                  # noqa: BLE001
+                    pass
+        self.update()
 
     def finish(self):
         """结束本次截图会话：隐藏窗口但保留原生窗口，下次截图更快。"""
@@ -7192,7 +7270,7 @@ class PyShotApp(QObject):
         self._init_hotkey()   # 先注册热键，托盘文案才知道该显示哪个按键
         self._init_tray()
         # 启动后台预热（延迟一点，不影响启动速度）
-        QTimer.singleShot(400, self._warmup)
+        QTimer.singleShot(150, self._warmup)
 
     # ---------- 全局热键 ----------
     def _init_hotkey(self):
