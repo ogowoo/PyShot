@@ -8,6 +8,11 @@
 1) 全窗口的快捷键**不允许重复**（从机制上杜绝这类问题）
 2) 真的按下去，撤销/重做/保存/复制要生效
 """
+# 测试不碰用户真实的会话缓存（新建编辑器会自动恢复历史，读到真实数据会让
+# 断言全乱）。必须在导入 main/session 之前设置。
+import tempfile as _tf, os as _os
+_os.environ.setdefault("PYSHOT_SESSION_DIR",
+                       _tf.mkdtemp(prefix="pyshot_test_session_"))
 import os
 import sys
 

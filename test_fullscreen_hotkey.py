@@ -7,6 +7,11 @@
 3. 托盘"截取指定显示器"子菜单列出每块屏（含主屏标记与缩放比例）
 4. capture_fullscreen(屏) 打开编辑器且尺寸等于该屏物理像素
 """
+# 测试不碰用户真实的会话缓存（新建编辑器会自动恢复历史，读到真实数据会让
+# 断言全乱）。必须在导入 main/session 之前设置。
+import tempfile as _tf, os as _os
+_os.environ.setdefault("PYSHOT_SESSION_DIR",
+                       _tf.mkdtemp(prefix="pyshot_test_session_"))
 import os
 
 os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案

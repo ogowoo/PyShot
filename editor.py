@@ -807,6 +807,7 @@ class EditorWindow(QMainWindow):
     pin_requested = Signal(QPixmap)
     session_dirty = Signal()      # 内容变了，提示主程序缓存会话
     closing = Signal()            # 窗口要关了：趁标签还在赶紧存一次
+    tabs_closed = Signal()        # 用户主动关掉了标签（缓存可以相应减少）
     capture_requested = Signal()   # 点顶栏"截图"按钮：去截下一张（会自动最小化编辑器）
 
     def __init__(self, pixmap: QPixmap | None = None, parent=None):
@@ -1276,6 +1277,7 @@ class EditorWindow(QMainWindow):
         if page is not None:
             self._close_page(page)
 
+        self.tabs_closed.emit()
     def _close_page(self, page):
         idx = self.tabs.indexOf(page)
         if idx < 0:

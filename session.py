@@ -17,13 +17,16 @@
 为什么连图形一起存：只存拼好的图会把标注"焊死"，恢复后就没法再改了。
 """
 import json
+import os
 import shutil
 from pathlib import Path
 
 from PySide6.QtCore import QPointF, QRectF, QSize
 from PySide6.QtGui import QColor, QPixmap
 
-SESSION_DIR = Path.home() / ".pyshot" / "session"
+# 缓存目录；跑测试时用 PYSHOT_SESSION_DIR 指到临时目录，绝不碰用户真实数据
+SESSION_DIR = Path(os.environ.get("PYSHOT_SESSION_DIR") or
+                   (Path.home() / ".pyshot" / "session"))
 SESSION_SETTINGS_PATH = Path.home() / ".pyshot" / "settings.json"
 MAX_TABS = 12                       # 最多恢复这么多标签
 MAX_BYTES = 120 * 1024 * 1024       # 底图总量上限（约 120MB）

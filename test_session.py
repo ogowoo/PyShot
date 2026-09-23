@@ -6,7 +6,13 @@
 - 只保留最后一次会话；关掉开关或清除后不再恢复
 - 文件都在 ~/.pyshot/session/ 缓存里，不碰用户目录
 """
+# 测试不碰用户真实的会话缓存（新建编辑器会自动恢复历史，读到真实数据会让
+# 断言全乱）。必须在导入 main/session 之前设置。
+import tempfile as _tf, os as _os
+_os.environ.setdefault("PYSHOT_SESSION_DIR",
+                       _tf.mkdtemp(prefix="pyshot_test_session_"))
 import json
+import pathlib
 import os
 import shutil
 import sys
@@ -148,9 +154,10 @@ check("会话文件损坏时安全返回空", session.load_session() == [])
     encoding="utf-8")
 check("底图丢失时跳过该标签", session.load_session() == [])
 
-# ---------- 7) 缓存目录在用户目录下，不是工作目录 ----------
-check("缓存在 ~/.pyshot/session（不会污染当前目录）",
-      ".pyshot" in str(orig_dir) and "session" in str(orig_dir), str(orig_dir))
+# ---------- 7) 缓存目录默认在用户目录下，不是工作目录 ----------
+_src = (pathlib.Path(__file__).parent / "session.py").read_text(encoding="utf-8")
+check("默认缓存在 ~/.pyshot/session（不会污染当前目录）",
+      'Path.home() / ".pyshot" / "session"' in _src, "session.py 默认路径")
 
 session.SESSION_DIR, session.SESSION_SETTINGS_PATH = orig_dir, orig_settings
 shutil.rmtree(tmp_root, ignore_errors=True)

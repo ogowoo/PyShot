@@ -3,6 +3,11 @@
 
 本机通常只有一块屏，所以用假屏幕对象替换 QGuiApplication 来验证多屏逻辑。
 """
+# 测试不碰用户真实的会话缓存（新建编辑器会自动恢复历史，读到真实数据会让
+# 断言全乱）。必须在导入 main/session 之前设置。
+import tempfile as _tf, os as _os
+_os.environ.setdefault("PYSHOT_SESSION_DIR",
+                       _tf.mkdtemp(prefix="pyshot_test_session_"))
 import os
 import sys
 

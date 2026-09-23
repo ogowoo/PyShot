@@ -5,6 +5,11 @@
 原因：编辑器窗口关掉后 editors 就空了，再点「显示编辑器」会新建一个**空**窗口，
 而会话缓存里的截图没有被放回来。
 """
+# 测试不碰用户真实的会话缓存（新建编辑器会自动恢复历史，读到真实数据会让
+# 断言全乱）。必须在导入 main/session 之前设置。
+import tempfile as _tf, os as _os
+_os.environ.setdefault("PYSHOT_SESSION_DIR",
+                       _tf.mkdtemp(prefix="pyshot_test_session_"))
 import os
 import shutil
 import sys
@@ -94,9 +99,12 @@ check("存下来的标注也在",
 p3 = P()
 p3.open_editor(pix())                      # 有内容
 p3.show_editor()                           # 再点一次（复用它）
-p3._create_editor()                        # 人为造一个空窗口（最新的）
+# 新建编辑器现在会**自动恢复**历史（关窗口后再截图也不会丢），
+# 所以这里改为验证"新窗口也会带出历史"
+p3._create_editor()
 app.processEvents()
-check("此刻最后一个窗口是空的", p3.editors[-1].tabs.count() == 0)
+check("新窗口也会带出历史（不会得到空窗口）",
+      p3.editors[-1].tabs.count() > 0, f"{p3.editors[-1].tabs.count()} 个标签")
 with_tabs = [e for e in p3.editors if e.tabs.count() > 0]
 p3.show_editor()
 app.processEvents()
@@ -109,7 +117,8 @@ p4 = P()
 p4.open_editor(pix())
 p4.save_session_now()
 check("先有会话", session.has_session() is True)
-p4.editors[0].close_tab(0)                 # 关掉唯一标签，窗口还在
+while p4.editors[0].tabs.count() > 0:      # 关光所有标签（窗口还在）
+    p4.editors[0].close_tab(0)
 app.processEvents()
 p4.save_session_now()
 check("关光标签后缓存被清掉（窗口还在 → 是真的清空）",

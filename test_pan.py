@@ -5,6 +5,11 @@
 也就是说中键其实从来没生效过。所以这里必须**真的模拟拖动、断言滚动条动了**，
 光看代码有实现是不够的。
 """
+# 测试不碰用户真实的会话缓存（新建编辑器会自动恢复历史，读到真实数据会让
+# 断言全乱）。必须在导入 main/session 之前设置。
+import tempfile as _tf, os as _os
+_os.environ.setdefault("PYSHOT_SESSION_DIR",
+                       _tf.mkdtemp(prefix="pyshot_test_session_"))
 import os
 import sys
 

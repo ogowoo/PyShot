@@ -4,6 +4,11 @@
 历史 bug：选区松手时同时发了 captured，宿主把它当普通截图处理，
 把编辑器恢复并前置，正好盖住要滚动的区域，之后每帧都把编辑器拍进去。
 """
+# 测试不碰用户真实的会话缓存（新建编辑器会自动恢复历史，读到真实数据会让
+# 断言全乱）。必须在导入 main/session 之前设置。
+import tempfile as _tf, os as _os
+_os.environ.setdefault("PYSHOT_SESSION_DIR",
+                       _tf.mkdtemp(prefix="pyshot_test_session_"))
 import os
 
 os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案
@@ -16,6 +21,18 @@ from PySide6.QtCore import QPoint, QPointF, Qt
 from PySide6.QtGui import QColor, QMouseEvent, QPixmap
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
+
+import tempfile as _tempfile
+from pathlib import Path as _Path
+
+import session as _session
+
+# 会话缓存隔离到临时目录：新建编辑器会自动恢复上次的标签，
+# 不隔离的话这里会读到用户真实的缓存、标签计数全乱（也不该动用户数据）
+_tmp = _Path(_tempfile.mkdtemp(prefix="pyshot_scrolliso_"))
+_session.SESSION_DIR = _tmp / "session"
+_session.SESSION_SETTINGS_PATH = _tmp / "settings.json"
+_session.clear_session()
 
 from main import PyShotApp
 from snipper import SnipperOverlay

@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 """真实桌面端到端流程测试：启动 → 框选截图 → 编辑器出现（并抓屏留证）。"""
+# 测试不碰用户真实的会话缓存（新建编辑器会自动恢复历史，读到真实数据会让
+# 断言全乱）。必须在导入 main/session 之前设置。
+import tempfile as _tf, os as _os
+_os.environ.setdefault("PYSHOT_SESSION_DIR",
+                       _tf.mkdtemp(prefix="pyshot_test_session_"))
 import os
 
 os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案

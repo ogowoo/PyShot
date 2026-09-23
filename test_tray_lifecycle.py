@@ -6,6 +6,11 @@
 `show()` 和 `activated.connect` 一起从初始化里删掉了，托盘菜单本身正常，
 但图标根本不显示（用户表现为"托盘图标没了"）。用假托盘记录调用即可拦住。
 """
+# 测试不碰用户真实的会话缓存（新建编辑器会自动恢复历史，读到真实数据会让
+# 断言全乱）。必须在导入 main/session 之前设置。
+import tempfile as _tf, os as _os
+_os.environ.setdefault("PYSHOT_SESSION_DIR",
+                       _tf.mkdtemp(prefix="pyshot_test_session_"))
 import os
 import sys
 

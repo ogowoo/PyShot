@@ -4,6 +4,11 @@
 之前的 bug：托盘双击发生在 shell 原生消息回调里，窗口 show 后没有被正确绘制，
 表现为"窗口在但没有遮罩，动一下鼠标才出现"。
 """
+# 测试不碰用户真实的会话缓存（新建编辑器会自动恢复历史，读到真实数据会让
+# 断言全乱）。必须在导入 main/session 之前设置。
+import tempfile as _tf, os as _os
+_os.environ.setdefault("PYSHOT_SESSION_DIR",
+                       _tf.mkdtemp(prefix="pyshot_test_session_"))
 import os
 import sys
 

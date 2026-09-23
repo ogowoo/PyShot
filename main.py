@@ -837,7 +837,7 @@ class PyShotApp(QObject):
 
     def save_session_now(self):
         """把所有编辑器的标签写进会话缓存（用户不用手动保存）。"""
-        from session import save_session, session_enabled
+        from session import load_session, save_session, session_enabled
         if not session_enabled():
             return False
         tabs = []
@@ -849,6 +849,17 @@ class PyShotApp(QObject):
         if not tabs and not self.editors:
             # 编辑器窗口都关了（不是"用户删光了标签"）—— 保留缓存，
             # 别把上次的截图清掉，否则下次点「显示编辑器」就是空的
+            return False
+        # 保护：当前标签比缓存里还少，且少掉的那些并不是用户主动关掉的
+        # （编辑器是新建的、或标签数凭空变少），就不要覆盖缓存 ——
+        # 否则"关窗口再截图"会把历史缓存冲掉，连重启都找不回来。
+        try:
+            cached = len(load_session())
+        except Exception:                          # noqa: BLE001
+            cached = 0
+        if tabs and cached > len(tabs) and getattr(self, "_tabs_closed_by_user",
+                                                   0) == 0:
+            self._cap_log(f"跳过保存：当前 {len(tabs)} 个标签少于缓存的 {cached} 个")
             return False
         return save_session(tabs)
 
@@ -875,12 +886,12 @@ class PyShotApp(QObject):
         if not tabs:
             return 0
         editor = self._create_editor()
-        self._hook_session(editor)
-        editor.restore_session(tabs)
+        if editor.tabs.count() == 0:       # _create_editor 没恢复成（比如关掉了开关）
+            editor.restore_session(tabs)
         editor.show()
         editor.raise_()
         editor.activateWindow()
-        return len(tabs)
+        return editor.tabs.count()
 
     def toggle_restore_session(self):
         """选项：启动时是否恢复上次截图。"""
@@ -942,6 +953,13 @@ class PyShotApp(QObject):
         if hasattr(editor, "set_hotkey_hint"):
             editor.set_hotkey_hint(getattr(self, "hotkey_text", "") or "")
         self.editors.append(editor)
+        # 新建的编辑器 = "用户又把编辑器打开了"：先把上次还在的标签放回来。
+        # 关掉窗口后再截图（open_editor）走的也是这里 —— 以前只有「显示编辑器」
+        # 会恢复，于是关窗口后新截的编辑器里只剩新图，历史像是丢了。
+        try:
+            self._restore_into(editor)
+        except Exception:                          # noqa: BLE001
+            pass
         return editor
 
     def open_editor(self, pixmap: QPixmap):

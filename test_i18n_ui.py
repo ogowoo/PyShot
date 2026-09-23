@@ -5,6 +5,11 @@
 text / toolTip / windowTitle / 下拉项都收集起来，检查有没有中文字符。
 比人工找漏译可靠得多——发现漏的直接把键补进 gen_i18n.py 即可。
 """
+# 测试不碰用户真实的会话缓存（新建编辑器会自动恢复历史，读到真实数据会让
+# 断言全乱）。必须在导入 main/session 之前设置。
+import tempfile as _tf, os as _os
+_os.environ.setdefault("PYSHOT_SESSION_DIR",
+                       _tf.mkdtemp(prefix="pyshot_test_session_"))
 import os
 import re
 import sys

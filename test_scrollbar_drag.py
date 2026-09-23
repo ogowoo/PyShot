@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 """滚动条拖拽自动滚动：输入驱动、步长自校准、失败降级、选点流程。"""
+# 测试不碰用户真实的会话缓存（新建编辑器会自动恢复历史，读到真实数据会让
+# 断言全乱）。必须在导入 main/session 之前设置。
+import tempfile as _tf, os as _os
+_os.environ.setdefault("PYSHOT_SESSION_DIR",
+                       _tf.mkdtemp(prefix="pyshot_test_session_"))
 import os
 
 os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案
