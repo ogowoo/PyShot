@@ -159,6 +159,27 @@ def to_traditional(text: str) -> str:
 
 
 # ---------------------------------------------------------------- 英文
+# 只翻译用户看得见的文案；诊断日志（下面这些函数收到的字符串）不进词表。
+DIAG_FUNCS = {"_dlog", "log", "timed", "exc", "dump_env", "_cap_log",
+              "_dtimed", "print"}
+
+
+def _diag_literal_ids(tree) -> set:
+    """收集"诊断日志函数实参"里字符串常量对象的 id，用于排除。"""
+    out = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        f = node.func
+        name = getattr(f, "id", None) or getattr(f, "attr", None)
+        if name not in DIAG_FUNCS:
+            continue
+        for arg in node.args:
+            if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                out.add(id(arg))       # 注意：存的是 **AST 结点** 的 id
+    return out
+
+
 EN = {
     # ---- 托盘菜单 ----
     "区域截图": "Capture Region",
@@ -167,6 +188,34 @@ EN = {
     "截取鼠标所在的那块显示器": "Capture the monitor the mouse is on",
     "选择显示器截图": "Capture a Specific Monitor",
     "滚动长截图": "Scrolling Capture",
+    "滚动长截图（实验性）": "Scrolling Capture (experimental)",
+    "说明：实验性功能，长图可能重复、错位或拼不上":
+        "Note: experimental — the long image may repeat, misalign, or fail to "
+        "stitch",
+    "启用滚动长截图（不稳定）": "Enable Scrolling Capture (unstable)",
+    "默认关闭：这个功能还在实验阶段，长图可能重复、错位或拼不上":
+        "Off by default: this feature is still experimental — the long image "
+        "may repeat, misalign, or fail to stitch",
+    "滚动长截图（实验性功能）": "Scrolling Capture (experimental)",
+    "滚动长截图还是实验性功能，默认关闭。":
+        "Scrolling capture is still experimental and is off by default.",
+    "它靠「逐帧拼接」实现：程序自己滚动画面，再把每一帧接起来。遇到下面这些情况很容易出问题：\n· 只对普通网页/文档比较可靠；Citrix、远程桌面、Java、虚拟机里的画面经常拼不上\n· 可能拼出重复内容或错位，也可能滚到一半就停住\n· 滚动期间不要动鼠标键盘，窗口也不要移动或缩放\n\n只要一张普通截图的话，用「区域截图 / 全屏截图」就够了。确实需要长图再启用。":
+        "It works by stitching frame after frame: PyShot scrolls the view and "
+        "joins the frames back together. It goes wrong easily when:\n"
+        "· Only plain web pages/documents are fairly reliable; Citrix, Remote "
+        "Desktop, Java apps and virtual machines often fail to stitch\n"
+        "· The result may repeat content or misalign, or stop halfway\n"
+        "· Do not touch the mouse or keyboard while it scrolls, and do not move "
+        "or resize the window\n\n"
+        "If you only need a normal screenshot, Capture Region / Capture Full "
+        "Screen is enough. Enable this only when you really need a long image.",
+    "不再提示": "Don't show again",
+    "仍然启用": "Enable anyway",
+    "滚动长截图未启用": "Scrolling capture is not enabled",
+    "这是实验性功能，默认关闭。请在托盘菜单「滚动长截图（实验性）」里勾选「启用滚动长截图（不稳定）」后再用。":
+        "This is an experimental feature and is off by default. In the tray "
+        "menu, open “Scrolling Capture (experimental)” and tick “Enable "
+        "Scrolling Capture (unstable)” first.",
     "屏幕取色": "Screen Color Picker",
     "单击屏幕任意位置，把色值复制到剪贴板":
         "Click anywhere to copy its color to the clipboard",
@@ -579,14 +628,19 @@ EN = {
 
 
 def collect_strings():
-    """从源码里收集用户可见的简体文案。"""
+    """从源码里收集用户可见的简体文案。
+
+    诊断日志的文案（_dlog / _cap_log / log / print 的实参）**不算界面文案**：
+    它们是给开发者排查用的，英文界面下保持中文反而更好搜日志。
+    不排除的话，"英文覆盖率"这条质量门槛会被几十条日志文案稀释掉。
+    """
     out = []
     for name in FILES:
         path = os.path.join(HERE, name)
         if not os.path.exists(path):
             continue
         tree = ast.parse(open(path, encoding="utf-8").read())
-        skip = set()
+        skip = _diag_literal_ids(tree)
         for node in ast.walk(tree):
             if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef,
                                  ast.AsyncFunctionDef)):

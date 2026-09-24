@@ -34,8 +34,17 @@ _session.SESSION_DIR = _tmp / "session"
 _session.SESSION_SETTINGS_PATH = _tmp / "settings.json"
 _session.clear_session()
 
-from main import PyShotApp
+# 设置文件也要隔离 + 显式打开滚动长截图的开关（它默认是关的）
+import i18n as _i18n
+
+_i18n.SETTINGS_PATH = _tmp / "i18n_settings.json"
+_i18n.reset_cache()
+from i18n import set_setting as _set_setting
+
+from main import PyShotApp, SCROLL_ENABLED_KEY
 from snipper import SnipperOverlay
+
+_set_setting(SCROLL_ENABLED_KEY, True)
 
 failures = []
 

@@ -31,20 +31,27 @@ from PySide6.QtCore import (QAbstractNativeEventFilter, QObject, QPoint, QRect,
                             Qt, QTimer)
 from PySide6.QtGui import (QAction, QColor, QCursor, QGuiApplication, QIcon,
                            QPainter, QPixmap)
-from PySide6.QtWidgets import (QApplication, QFileDialog, QMenu,
-                               QSystemTrayIcon)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QFileDialog, QMenu,
+                               QMessageBox, QSystemTrayIcon)
 
 from editor import EditorWindow
 from pinboard import PinWindow
 from scroller import ScrollCapture, ScrollDriver
 from snipper import SnipperOverlay, grab_screen, grab_virtual_desktop
 from style import apply_theme, make_menu_icon
-from i18n import (AUTO, LANGUAGES, language_name, saved_language,
-                  set_language, system_language, tr)
+from i18n import (AUTO, LANGUAGES, get_setting, language_name, saved_language,
+                  set_language, set_setting, system_language, tr)
 
 WM_HOTKEY = 0x0312
 MOD_ALT, MOD_CONTROL, MOD_SHIFT, MOD_WIN, MOD_NOREPEAT = 0x1, 0x2, 0x4, 0x8, 0x4000
 HOTKEY_ID_BASE = 0x5053          # "PS"
+
+# 滚动长截图的开关（默认关闭）。
+# 这个功能对普通网页/文档还行，但遇到 Citrix、远程桌面、Java、虚拟机里的画面
+# 经常拼不上或者拼出重复内容，所以默认不开放，用户要在托盘菜单里显式启用，
+# 启用前会先弹一段说明讲清"不稳定"。
+SCROLL_ENABLED_KEY = "scroll_capture_enabled"
+SCROLL_NOTICE_KEY = "scroll_capture_notice_off"
 
 # 候选全局热键（按优先级尝试，选第一个没被占用的）。
 # 刻意避开被系统或常用软件注册的组合：
@@ -257,9 +264,32 @@ class PyShotApp(QObject):
 
         menu.addSeparator()
 
-        # ---------- 滚动长截图（收进子菜单，避免主菜单过长）----------
-        menu_scroll = QMenu(tr("滚动长截图"), menu)
+        # ---------- 滚动长截图（实验性，默认关闭）----------
+        # 功能不稳定（重复/错位/拼不上），所以默认只显示一个开关，
+        # 四种滚动方式在启用之前一律置灰，避免用户误点后拿到一张坏图。
+        scroll_on = self.scroll_enabled()
+        menu_scroll = QMenu(tr("滚动长截图（实验性）"), menu)
         menu_scroll.setIcon(make_menu_icon("scroll"))
+        # QMenu 默认不显示 action 的 tooltip，说明就等于白写
+        menu_scroll.setToolTipsVisible(True)
+
+        # 说明就写在开关这一条上（灰条，点不动），不用去别处找
+        act_scroll_note = QAction(
+            tr("说明：实验性功能，长图可能重复、错位或拼不上"), menu_scroll)
+        act_scroll_note.setEnabled(False)
+        menu_scroll.addAction(act_scroll_note)
+
+        act_scroll_on = QAction(tr("启用滚动长截图（不稳定）"), menu_scroll)
+        act_scroll_on.setCheckable(True)
+        act_scroll_on.setChecked(scroll_on)
+        act_scroll_on.setToolTip(tr("默认关闭：这个功能还在实验阶段，"
+                                    "长图可能重复、错位或拼不上"))
+        act_scroll_on.toggled.connect(self._toggle_scroll_enabled)
+        menu_scroll.addAction(act_scroll_on)
+        self.act_scroll_enable = act_scroll_on
+        menu_scroll.addSeparator()
+
+        self._scroll_actions = []
         for label, tip, fn in [
                 ("自动滚轮",
                  "框选可滚动区域，程序自己发滚轮逐屏拼接（普通网页/文档）",
@@ -276,9 +306,11 @@ class PyShotApp(QObject):
                  lambda: self.capture_scrolling(manual=True))]:
             act = QAction(tr(label), menu_scroll)
             act.setToolTip(tr(tip))
+            act.setEnabled(scroll_on)      # 没启用就点不动
             act.triggered.connect(
                 lambda checked=False, f=fn: self._deferred(f))
             menu_scroll.addAction(act)
+            self._scroll_actions.append(act)
         menu.addMenu(menu_scroll)
 
         menu.addSeparator()
@@ -725,8 +757,78 @@ class PyShotApp(QObject):
         QTimer.singleShot(280, _grab)
 
     # ---------- 滚动长截图 ----------
+    def scroll_enabled(self) -> bool:
+        """滚动长截图是否已启用（默认关闭，见 SCROLL_ENABLED_KEY）。"""
+        try:
+            return bool(get_setting(SCROLL_ENABLED_KEY, False))
+        except Exception:                    # noqa: BLE001
+            return False
+
+    def _apply_scroll_enabled(self, enabled: bool):
+        """切换四种滚动方式的可用状态（不重建菜单，避免关掉正在弹的菜单）。"""
+        for act in getattr(self, "_scroll_actions", ()):
+            act.setEnabled(enabled)
+
+    def _toggle_scroll_enabled(self, checked: bool):
+        """托盘里勾选/取消「启用滚动长截图」。
+
+        打开之前先把"不稳定"讲清楚；用户在说明里点了取消就把勾去掉。
+        """
+        if checked and not self._scroll_notice():
+            act = getattr(self, "act_scroll_enable", None)
+            if act is not None:
+                act.blockSignals(True)       # 避免 setChecked 再触发一次本函数
+                act.setChecked(False)
+                act.blockSignals(False)
+            return
+        try:
+            set_setting(SCROLL_ENABLED_KEY, bool(checked))
+        except Exception:                    # noqa: BLE001
+            pass                             # 写不进去也要让本次运行生效
+        self._apply_scroll_enabled(bool(checked))
+        self._cap_log(f"滚动长截图开关 = {bool(checked)}")
+
+    def _scroll_notice(self) -> bool:
+        """启用前的说明。返回 True = 用户确认要开。"""
+        if get_setting(SCROLL_NOTICE_KEY, False):
+            return True                      # 用户勾过"不再提示"
+        box = QMessageBox()
+        box.setWindowTitle(tr("滚动长截图（实验性功能）"))
+        box.setIcon(QMessageBox.Warning)
+        box.setText(tr("滚动长截图还是实验性功能，默认关闭。"))
+        box.setInformativeText(tr(
+            "它靠「逐帧拼接」实现：程序自己滚动画面，再把每一帧接起来。"
+            "遇到下面这些情况很容易出问题：\n"
+            "· 只对普通网页/文档比较可靠；Citrix、远程桌面、Java、"
+            "虚拟机里的画面经常拼不上\n"
+            "· 可能拼出重复内容或错位，也可能滚到一半就停住\n"
+            "· 滚动期间不要动鼠标键盘，窗口也不要移动或缩放\n\n"
+            "只要一张普通截图的话，用「区域截图 / 全屏截图」就够了。"
+            "确实需要长图再启用。"))
+        no_more = QCheckBox(tr("不再提示"))
+        box.setCheckBox(no_more)
+        yes = box.addButton(tr("仍然启用"), QMessageBox.AcceptRole)
+        box.addButton(tr("取消"), QMessageBox.RejectRole)
+        box.exec()
+        if box.clickedButton() is not yes:
+            return False
+        if no_more.isChecked():
+            try:
+                set_setting(SCROLL_NOTICE_KEY, True)
+            except Exception:                # noqa: BLE001
+                pass
+        return True
+
     def capture_scrolling(self, manual: bool = False, mode: str = "wheel"):
         """mode: wheel 滚轮 | drag 拖拽滚动条 | key 按键；manual=True 为手动模式。"""
+        if not self.scroll_enabled():
+            # 正常路径下菜单项已经置灰，这里是兜底（热键/旧调用）
+            self._notify(
+                tr("滚动长截图未启用"),
+                tr("这是实验性功能，默认关闭。请在托盘菜单"
+                   "「滚动长截图（实验性）」里勾选"
+                   "「启用滚动长截图（不稳定）」后再用。"))
+            return
         if self.snipper is not None or self.scroller is not None:
             return
         # 用 "scroll" 模式：只取选区，不会触发普通截图流程（否则编辑器会被弹到前面挡住目标）

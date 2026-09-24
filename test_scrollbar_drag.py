@@ -13,14 +13,26 @@ import sys
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import tempfile as _tempfile
+from pathlib import Path as _Path
+
 import numpy as np
 from PySide6.QtCore import QPoint, QRect, Qt, QTimer
 from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPixmap
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QSystemTrayIcon
 
-from main import PyShotApp
+# 设置文件隔离 + 显式打开滚动长截图的开关（默认是关的，否则入口会被挡住）
+import i18n as _i18n
+
+_i18n.SETTINGS_PATH = _Path(_tempfile.mkdtemp(prefix="pyshot_drag_cfg_")) / "settings.json"
+_i18n.reset_cache()
+from i18n import set_setting as _set_setting
+
+from main import PyShotApp, SCROLL_ENABLED_KEY
 from scroller import ScrollCapture, ScrollDriver, array_to_pixmap, _UNIT_DEFAULTS
+
+_set_setting(SCROLL_ENABLED_KEY, True)
 
 app = QApplication([])
 failures = []
