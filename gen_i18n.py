@@ -694,15 +694,17 @@ EN = {
         "PyShot {}\nA FastStone Capture style screenshot and annotation tool\n\n"
         "Tray menu: region / full-screen capture, scrolling capture, color picker, pin\n"
         "Editor: multi-tab annotation · watermark · borders (incl. torn paper) · 3 languages",
-    "PyShot {} — {}\n仿 FastStone Capture 的截图与标注工具\n\n托盘右键：区域截图 / 全屏截图 / 滚动长截图 / 屏幕取色 / 贴图\n编辑器：多标签标注 · 粘贴拼图 · 水印 · 加边框（含手撕纸）· 三语界面":
+    "PyShot {} — {}\n仿 FastStone Capture 的截图与标注工具\n\n托盘右键：区域截图 / 全屏截图 / 滚动长截图 / 屏幕取色 / 贴图\n编辑器：多标签标注 · 粘贴拼图 · 水印 · 加边框（含手撕纸）· 三语界面\n\n作者：{} <{}>":
         "PyShot {} — {}\nA FastStone Capture style screenshot and annotation tool\n\n"
         "Tray menu: region / full-screen capture, scrolling capture, color picker, pin\n"
-        "Editor: multi-tab annotation · paste & compose · watermark · borders (incl. torn paper) · 3 languages",
+        "Editor: multi-tab annotation · paste & compose · watermark · borders (incl. torn paper) · 3 languages\n\n"
+        "Author: {} <{}>",
     "浮动粘贴 + 编辑增强 + 启动提速":
         "floating paste + editing power-ups + faster startup",
     "工具条可滚动可收起": "scrollable / collapsible tool rail",
     "三语帮助系统": "trilingual help system",
     "截图后自动进剪贴板": "captures go straight to the clipboard",
+    "标注作者信息": "author info in About",
     "抓手": "Hand",
     "拖拽移动画面（图放大后看不同位置）；任何工具下按住中键或空格也能拖":
         "Drag to move the view (look around once zoomed in); middle-drag or hold Space works with any tool",
@@ -853,6 +855,8 @@ EN = {
         "Want to capture the editor itself? Options → Keep the editor visible while capturing.",
     "- 版本号在 version.py；托盘或编辑器「帮助 → 关于」也能看到。":
         "- The version lives in version.py; Help → About shows it too.",
+    "- 作者：{author} <{email}>。":
+        "- Author: {author} <{email}>.",
     "- 检查依赖：python PyShot.py --check-deps（单文件版缺库会自动 pip 安装）。":
         "- Check dependencies: python PyShot.py --check-deps (the single-file build auto-installs what is missing).",
     "- 设置与缓存都在 ~/.pyshot/（settings.json、session/、debug.log）。":

@@ -20,7 +20,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from version import APP_VERSION, VERSION_TITLE      # 版本号唯一来源
+from version import (APP_VERSION, AUTHOR, AUTHOR_EMAIL,  # 版本/作者唯一来源
+                     VERSION_TITLE)
 
 MODULES = [
     "i18n_data.py",
@@ -107,6 +108,7 @@ HEADER = '''# -*- coding: utf-8 -*-
 """PyShot {version} 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
 
 本版主题：{title}
+作者：{author} <{email}>
 
 这是一个自动生成的单文件版本：把多文件源码合并在一起，并在启动时自动安装
 缺失的第三方库（PySide6），因此可以直接发给别人运行::
@@ -290,7 +292,8 @@ def build(out_path: str) -> str:
 
     # PRELUDE 先输出（依赖自举要在最前面），其余保持既定依赖顺序
     order = PRELUDE + [m for m in MODULES if m not in PRELUDE]
-    parts = [HEADER.format(version=APP_VERSION, title=VERSION_TITLE)]
+    parts = [HEADER.format(version=APP_VERSION, title=VERSION_TITLE,
+                           author=AUTHOR, email=AUTHOR_EMAIL)]
     for name in order:
         path = os.path.join(HERE, name)
         if not os.path.exists(path):

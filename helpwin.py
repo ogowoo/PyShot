@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (QDialog, QDialogButtonBox, QHBoxLayout, QLabel,
 
 from help_text import HELP_INTRO, HELP_TITLE, SECTIONS
 from i18n import tr
+from version import AUTHOR, AUTHOR_EMAIL
 
 
 def _escape(text: str) -> str:
@@ -38,10 +39,11 @@ def section_html(index: int, hotkey: str = "", fullhotkey: str = "") -> str:
     body = []
     open_list = False
     for raw in lines:
-        # 先翻译再替换热键占位符（译文里同样用 {hotkey}/{fullhotkey}）
+        # 先翻译再替换占位符（译文里同样用 {hotkey}/{author} 这些）
         text = tr(raw)
         text = text.replace("{hotkey}", hotkey or "Ctrl+Alt+X")
         text = text.replace("{fullhotkey}", fullhotkey or "Ctrl+Alt+F")
+        text = text.replace("{author}", AUTHOR).replace("{email}", AUTHOR_EMAIL)
         if text.strip().startswith("- "):
             if not open_list:
                 body.append("<ul>")

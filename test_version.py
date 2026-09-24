@@ -30,7 +30,7 @@ from PySide6.QtWidgets import QApplication
 
 app = QApplication([])
 
-from version import APP_VERSION, VERSION_TITLE
+from version import APP_VERSION, AUTHOR, AUTHOR_EMAIL, VERSION_TITLE
 
 failures = []
 
@@ -114,8 +114,33 @@ if single.exists():
 else:
     print("NOTE 还没有生成 PyShot.py，跳过单文件检查")
 
-# ---------- 5) 版本相关字符串三语齐全 ----------
-# 用**当前**标题（写死旧标题的话，一发新版测试就失效了）
+# ---------- 5) 作者信息：也在 version.py 单点定义，界面能看到 ----------
+check("作者与邮箱已定义",
+      bool(AUTHOR.strip()) and "@" in AUTHOR_EMAIL and "." in AUTHOR_EMAIL,
+      f"{AUTHOR} <{AUTHOR_EMAIL}>")
+who_else = []
+for p in SOURCES:
+    text = p.read_text(encoding="utf-8")
+    for i, line in enumerate(text.splitlines(), 1):
+        if AUTHOR_EMAIL in line and "version.py" not in str(p):
+            who_else.append(f"{p.name}:{i}")
+check("**邮箱只在 version.py 定义**（别处不许再写死；帮助里用 {email} 占位符）",
+      not who_else, str(who_else))
+check("**「关于」对话框里有作者和邮箱**",
+      AUTHOR in shown.get("text", "") and AUTHOR_EMAIL in shown.get("text", ""),
+      [ln for ln in shown.get("text", "").splitlines() if "Walt" in ln][:1])
+
+# 帮助的「关于与依赖」里也写了作者（正文用 {author} 占位符，显示时从 version.py 注入）
+import help_text as _ht
+import helpwin as _hw
+
+about_idx = [i for i, (title, _l) in enumerate(_ht.SECTIONS) if "关于" in title]
+check("帮助里作者占位符被替换成真名与邮箱",
+      bool(about_idx) and AUTHOR in _hw.section_html(about_idx[0])
+      and AUTHOR_EMAIL in _hw.section_html(about_idx[0]),
+      _hw.section_html(about_idx[0])[:80] if about_idx else "没找到关于小节")
+
+# ---------- 6) 版本相关字符串三语齐全 ----------
 row = i18n.TABLE.get(VERSION_TITLE)
 check(f"版本主题已翻译：{VERSION_TITLE}",
       bool(row and row[0] and row[1]), str(row))

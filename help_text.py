@@ -5,7 +5,8 @@
   - "## xxx"  → 小标题
   - "- xxx"   → 条目
   - 其它      → 段落
-`{hotkey}` / `{fullhotkey}` 在显示时替换成当前实际生效的全局热键。
+`{hotkey}` / `{fullhotkey}` / `{author}` / `{email}` 在显示时替换成当前实际的值
+（热键来自主程序，作者来自 version.py）。
 
 **只写简体**：`gen_i18n.py` 会把这里的字符串收进词表（繁体自动转、英文手写在
 EN 字典里），所以帮助跟界面一样是三语的，不用另写两份。
@@ -74,6 +75,7 @@ SECTIONS = [
         "想截编辑器自己：选项 → 截图时不最小化编辑器。",
     ]),
     ("关于与依赖", [
+        "- 作者：{author} <{email}>。",
         "- 版本号在 version.py；托盘或编辑器「帮助 → 关于」也能看到。",
         "- 检查依赖：python PyShot.py --check-deps（单文件版缺库会自动 pip 安装）。",
         "- 设置与缓存都在 ~/.pyshot/（settings.json、session/、debug.log）。",

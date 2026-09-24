@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-"""PyShot 2.18 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
+"""PyShot 2.18.1 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
 
-本版主题：截图后自动进剪贴板
+本版主题：标注作者信息
+作者：Walt Liang <Wat.L@outlook.com>
 
 这是一个自动生成的单文件版本：把多文件源码合并在一起，并在启动时自动安装
 缺失的第三方库（PySide6），因此可以直接发给别人运行::
@@ -250,7 +251,7 @@ TABLE = {
     "宽度（像素，当前 {}）": ("寬度（像素，當前 {}）", "Width in pixels (currently {})"),
     "高度（像素，当前 {}）": ("高度（像素，當前 {}）", "Height in pixels (currently {})"),
     "已调整为 {} × {}（Ctrl+Z 可撤销）": ("已調整為 {} × {}（Ctrl+Z 可復原）", "Resized to {} × {} (Ctrl+Z to undo)"),
-    "PyShot {} — {}\n仿 FastStone Capture 的截图与标注工具\n\n托盘右键：区域截图 / 全屏截图 / 滚动长截图 / 屏幕取色 / 贴图\n编辑器：多标签标注 · 粘贴拼图 · 水印 · 加边框（含手撕纸）· 三语界面": ("PyShot {} — {}\n仿 FastStone Capture 的截圖與標注工具\n\n托盤右鍵：區域截圖 / 全螢幕截圖 / 捲動長截圖 / 螢幕取色 / 釘圖\n編輯器：多標籤標注 · 貼上拼圖 · 水印 · 加邊框（含手撕紙）· 三語介面", "PyShot {} — {}\nA FastStone Capture style screenshot and annotation tool\n\nTray menu: region / full-screen capture, scrolling capture, color picker, pin\nEditor: multi-tab annotation · paste & compose · watermark · borders (incl. torn paper) · 3 languages"),
+    "PyShot {} — {}\n仿 FastStone Capture 的截图与标注工具\n\n托盘右键：区域截图 / 全屏截图 / 滚动长截图 / 屏幕取色 / 贴图\n编辑器：多标签标注 · 粘贴拼图 · 水印 · 加边框（含手撕纸）· 三语界面\n\n作者：{} <{}>": ("PyShot {} — {}\n仿 FastStone Capture 的截圖與標注工具\n\n托盤右鍵：區域截圖 / 全螢幕截圖 / 捲動長截圖 / 螢幕取色 / 釘圖\n編輯器：多標籤標注 · 貼上拼圖 · 水印 · 加邊框（含手撕紙）· 三語介面\n\n作者：{} <{}>", "PyShot {} — {}\nA FastStone Capture style screenshot and annotation tool\n\nTray menu: region / full-screen capture, scrolling capture, color picker, pin\nEditor: multi-tab annotation · paste & compose · watermark · borders (incl. torn paper) · 3 languages\n\nAuthor: {} <{}>"),
     "关闭此标签 (Ctrl+W)": ("關閉此標籤 (Ctrl+W)", "Close this tab (Ctrl+W)"),
     "截图": ("截圖", "Capture"),
     "截取新区域\n会自动最小化编辑器，截完回到这里新增标签": ("截取新區域\n會自動最小化編輯器，截完回到這裡新增標籤", "Capture a new region\nThe editor is minimized and the capture is added as a tab"),
@@ -454,7 +455,7 @@ TABLE = {
     " 已就绪。": (" 已就绪。", ""),
     "[PyShot] pip 执行失败：": ("[PyShot] pip 執行失敗：", ""),
     "  [缺失] ": ("  [缺失] ", ""),
-    "截图后自动进剪贴板": ("截圖後自動進剪貼簿", "captures go straight to the clipboard"),
+    "标注作者信息": ("標注作者資訊", "author info in About"),
     "PyShot 使用帮助": ("PyShot 使用幫助", "PyShot Help"),
     "截图 + 标注工具，专为做操作指引/步骤说明优化。": ("截圖 + 標注工具，專為做操作指引/步驟說明優化。", "Screenshot and annotation tool, built for step-by-step guides."),
     "快速开始": ("快速開始", "Quick Start"),
@@ -505,6 +506,7 @@ TABLE = {
     "按快捷键没反应：先确认托盘图标还在（可能在任务栏右侧的 ∧ 里）；热键被别的软件占用时程序会自动换一个，启动气泡里会写当前用的是哪个。": ("按快捷鍵沒反應：先確認托盤圖示還在（可能在任務欄右側的 ∧ 裡）；快速鍵被别的軟體佔用時程序會自動換一個，啟動氣泡裡會寫當前用的是哪個。", "The hotkey does nothing: first check the tray icon is still there (it may be behind the ∧ arrow). If another app owns the hotkey, PyShot automatically picks a different one — the startup balloon says which."),
     "启动有点慢：首次启动要付一次 Qt 的初始化开销（本机实测几秒），之后就好；想看得更细，设环境变量 PYSHOT_DEBUG=1，日志里每一步都有耗时。": ("啟動有點慢：首次啟動要付一次 Qt 的初始化開銷（本機實測几秒），之後就好；想看得更細，設環境變數 PYSHOT_DEBUG=1，日志裡每一步都有耗時。", "Startup feels slow: the first launch pays a one-time Qt initialization cost (a few seconds on the test machine) and is fine afterwards. Set PYSHOT_DEBUG=1 for a log with per-step timings."),
     "想截编辑器自己：选项 → 截图时不最小化编辑器。": ("想截編輯器自己：選項 → 截圖時不最小化編輯器。", "Want to capture the editor itself? Options → Keep the editor visible while capturing."),
+    "- 作者：{author} <{email}>。": ("- 作者：{author} <{email}>。", "- Author: {author} <{email}>."),
     "- 版本号在 version.py；托盘或编辑器「帮助 → 关于」也能看到。": ("- 版本號在 version.py；托盤或編輯器「幫助 → 關於」也能看到。", "- The version lives in version.py; Help → About shows it too."),
     "- 检查依赖：python PyShot.py --check-deps（单文件版缺库会自动 pip 安装）。": ("- 檢查依賴：python PyShot.py --check-deps（單檔案版缺庫會自動 pip 安裝）。", "- Check dependencies: python PyShot.py --check-deps (the single-file build auto-installs what is missing)."),
     "- 设置与缓存都在 ~/.pyshot/（settings.json、session/、debug.log）。": ("- 設定與緩存都在 ~/.pyshot/（settings.json、session/、debug.log）。", "- Settings and cache live in ~/.pyshot/ (settings.json, session/, debug.log)."),
@@ -944,13 +946,18 @@ if not ensure_deps():
 命名：`MAJOR.MINOR[.PATCH]`，git 标签为 `v<版本>-qt`（`-qt` 表示根目录这套
 PySide6 实现，`tk_version/` 是独立的 Tkinter 版）。
 """
-APP_VERSION = "2.18"
+APP_VERSION = "2.18.1"
 
 # 这版的一句话主题（写进单文件头与「关于」对话框，便于用户确认自己拿的是哪版）
-VERSION_TITLE = "截图后自动进剪贴板"
+VERSION_TITLE = "标注作者信息"
 
 # 版本日期（本地日期，供日志/文档使用）
 VERSION_DATE = "2026-09-24"
+
+# 作者（唯一来源：关于对话框、README、单文件头、帮助里都从这里取，
+# 别再各处各写一份邮箱 —— 改一次就全对上）
+AUTHOR = "Walt Liang"
+AUTHOR_EMAIL = "Wat.L@outlook.com"
 
 __version__ = APP_VERSION      # 兼容 `mod.__version__` 这种取法
 
@@ -1403,7 +1410,8 @@ def install_excepthook():
   - "## xxx"  → 小标题
   - "- xxx"   → 条目
   - 其它      → 段落
-`{hotkey}` / `{fullhotkey}` 在显示时替换成当前实际生效的全局热键。
+`{hotkey}` / `{fullhotkey}` / `{author}` / `{email}` 在显示时替换成当前实际的值
+（热键来自主程序，作者来自 version.py）。
 
 **只写简体**：`gen_i18n.py` 会把这里的字符串收进词表（繁体自动转、英文手写在
 EN 字典里），所以帮助跟界面一样是三语的，不用另写两份。
@@ -1472,6 +1480,7 @@ SECTIONS = [
         "想截编辑器自己：选项 → 截图时不最小化编辑器。",
     ]),
     ("关于与依赖", [
+        "- 作者：{author} <{email}>。",
         "- 版本号在 version.py；托盘或编辑器「帮助 → 关于」也能看到。",
         "- 检查依赖：python PyShot.py --check-deps（单文件版缺库会自动 pip 安装）。",
         "- 设置与缓存都在 ~/.pyshot/（settings.json、session/、debug.log）。",
@@ -1501,6 +1510,7 @@ from PySide6.QtWidgets import (QDialog, QDialogButtonBox, QHBoxLayout, QLabel,
 
 
 
+
 def _escape(text: str) -> str:
     """转义 HTML，并把 `**加粗**` 变成 <b>（帮助正文里会用到）。"""
     safe = html.escape(text, quote=False)
@@ -1523,10 +1533,11 @@ def section_html(index: int, hotkey: str = "", fullhotkey: str = "") -> str:
     body = []
     open_list = False
     for raw in lines:
-        # 先翻译再替换热键占位符（译文里同样用 {hotkey}/{fullhotkey}）
+        # 先翻译再替换占位符（译文里同样用 {hotkey}/{author} 这些）
         text = tr(raw)
         text = text.replace("{hotkey}", hotkey or "Ctrl+Alt+X")
         text = text.replace("{fullhotkey}", fullhotkey or "Ctrl+Alt+F")
+        text = text.replace("{author}", AUTHOR).replace("{email}", AUTHOR_EMAIL)
         if text.strip().startswith("- "):
             if not open_list:
                 body.append("<ul>")
@@ -8840,8 +8851,9 @@ class EditorWindow(QMainWindow):
             tr("PyShot {} — {}\n"
                "仿 FastStone Capture 的截图与标注工具\n\n"
                "托盘右键：区域截图 / 全屏截图 / 滚动长截图 / 屏幕取色 / 贴图\n"
-               "编辑器：多标签标注 · 粘贴拼图 · 水印 · 加边框（含手撕纸）· 三语界面",
-               APP_VERSION, tr(VERSION_TITLE)))
+               "编辑器：多标签标注 · 粘贴拼图 · 水印 · 加边框（含手撕纸）· 三语界面\n\n"
+               "作者：{} <{}>",
+               APP_VERSION, tr(VERSION_TITLE), AUTHOR, AUTHOR_EMAIL))
 
     def _toggle_restore_session(self, on: bool):
         try:

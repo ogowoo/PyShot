@@ -70,11 +70,17 @@ check("帮助里没有漏译的界面词（标题/简介/关闭/搜索框）",
            "搜索帮助内容…（例如：拼图、滚动、快捷键）")),
       "")
 
-# 繁體不能等于简体（否则等于没翻）
-same_tw = [t for t, lines in SECTIONS for t2 in [t] + list(lines)
+# 繁體不能等于简体（否则等于没翻）。
+# 注意：个别条目繁简同形是正常的（例如"作者："），所以不能逐条要求不同；
+# 这里要求"绝大多数条目确实转换过"，并且**小节标题必须全部转换**。
+tw_same = [t2 for t, lines in SECTIONS for t2 in [t] + list(lines)
            if (i18n.TABLE.get(t2) or ("", ""))[0] == t2
            and any("\u4e00" <= ch <= "\u9fff" for ch in t2)]
-check("繁體确实转换过（不是照抄简体）", not same_tw, str(same_tw[:3]))
+total = sum(1 + len(lines) for _t, lines in SECTIONS)
+check("繁體确实转换过（多数条目与简体不同）",
+      len(tw_same) <= total * 0.2, f"{len(tw_same)}/{total} 条相同：{tw_same[:5]}")
+title_same = [t for t, _l in SECTIONS if (i18n.TABLE.get(t) or ("", ""))[0] == t]
+check("小节标题全部转成了繁體", not title_same, str(title_same))
 
 # ---------- 3) 窗口能开、内容能切 ----------
 win = EditorWindow(QPixmap(200, 150))
