@@ -107,9 +107,13 @@ def pip_install(packages, mirror: str | None = None, runner=None,
 
 
 def alert(title: str, message: str):
-    """无 GUI 可用时的提示：Windows 弹系统对话框，其他平台打印。"""
+    """无 GUI 可用时的提示：Windows 弹系统对话框，其他平台打印。
+
+    自动化测试/无人值守场景设 PYSHOT_NO_ALERT=1 就只打印 —— 否则这个模态框
+    会把测试挂在那里等人点确定。
+    """
     print(f"[PyShot] {title}：{message}")
-    if os.name == "nt":
+    if os.name == "nt" and os.environ.get("PYSHOT_NO_ALERT") != "1":
         try:
             import ctypes
             ctypes.windll.user32.MessageBoxW(None, message, title, 0x40)
@@ -125,9 +129,14 @@ def ensure_deps(requirements=None, runner=None, quiet: bool = False) -> bool:
     # 1) 程序旁边有内嵌依赖目录 → 直接用，不联网不装包
     if _use_bundled_libs():
         if not missing_packages(reqs):
+            if not quiet:
+                print("[PyShot] 依赖检查：使用程序旁边的内嵌依赖目录，无需安装。")
             return True
     missing = missing_packages(reqs)
     if not missing:
+        # 一切正常时也报一句：以前这里完全静默，用户会以为"依赖检查没了"
+        if not quiet:
+            print(f"[PyShot] 依赖检查：{', '.join(p for _, p in reqs)} 已就绪。")
         return True
     if not quiet:
         print(f"[PyShot] 缺少依赖：{', '.join(missing)}，正在自动安装（首次约需 1-3 分钟）…")

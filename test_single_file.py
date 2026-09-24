@@ -41,6 +41,41 @@ check("单文件：启动预热与延后恢复都在",
       and hasattr(mod.PyShotApp, "schedule_boot")
       and hasattr(mod.PyShotApp, "boot_restore"))
 
+# ---------- 没装 PySide6 的机器：必须走到"自动安装"，不能直接 ImportError ----------
+# 真实用户反馈过"自动检测安装依赖的功能丢了"：单文件版把依赖自举排在
+# session.py 的 `from PySide6...` 之后，没装 PySide6 的机器在那行就崩了，
+# 自动安装等于没写。这里真的跑一遍（用假 PySide6 + 假 pip，不联网不装包）。
+import subprocess
+import tempfile
+
+_fake = tempfile.mkdtemp(prefix="pyshot_noqt_")
+os.makedirs(os.path.join(_fake, "PySide6"))
+with open(os.path.join(_fake, "PySide6", "__init__.py"), "w",
+          encoding="utf-8") as f:
+    f.write("raise ImportError('PySide6 blocked by test')\n")
+# 假 pip：不真的装东西，直接成功（否则会去联网装 PySide6）
+with open(os.path.join(_fake, "pip.py"), "w", encoding="utf-8") as f:
+    f.write("import sys\nprint('[fake-pip]', ' '.join(sys.argv[1:]))\n")
+
+_env = dict(os.environ)
+_env["PYTHONPATH"] = _fake
+_env.pop("PYSHOT_SKIP_DEPS", None)
+_env["PYSHOT_NO_ALERT"] = "1"          # 别弹模态框把测试挂住
+_env["PYTHONIOENCODING"] = "utf-8"
+_proc = subprocess.run([sys.executable, TARGET], cwd=HERE, env=_env,
+                       capture_output=True, text=True, encoding="utf-8",
+                       errors="replace", timeout=180)
+_out = (_proc.stdout or "") + (_proc.stderr or "")
+check("**没装 PySide6 时会走到自动安装**（而不是 ImportError 直接死）",
+      "缺少依赖" in _out and "正在自动安装" in _out,
+      _out.strip().splitlines()[:2])
+check("自动安装没成功时给出明确提示并退出",
+      "依赖仍不可用" in _out or "依赖安装失败" in _out,
+      _out.strip().splitlines()[-2:])
+check("没有「No module named 'PySide6'」这种硬崩",
+      "No module named 'PySide6'" not in _out,
+      [ln for ln in _out.splitlines() if "PySide6" in ln][:3])
+
 # --- 依赖自举逻辑（用假 runner 验证降级尝试链） ---
 calls = []
 ok = mod.pip_install(["FakePkg"], runner=lambda cmd: (calls.append(cmd), 1)[1])

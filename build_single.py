@@ -38,6 +38,13 @@ MODULES = [
     "main.py",
 ]
 
+# 这几个模块要**排在最前面**输出（顺序也按这里来）：
+# 依赖自举必须在任何 PySide6 导入之前跑起来，否则没装 PySide6 的机器在
+# session.py 的 `from PySide6...` 处就 ImportError 了，永远走不到自动安装
+# （实测生成的单文件里 PySide6 在第 626 行、ensure_deps 在第 1196 行 —— 白写）。
+# 这三个模块本身只用标准库（i18n 里的 QLocale 是函数内导入）。
+PRELUDE = ["i18n_data.py", "i18n.py", "bootstrap.py"]
+
 LOCAL_MODULES = ("i18n_data", "i18n", "session", "diag", "bootstrap", "watermark", "border", "shapes", "style", "capture_utils",
                  "pinboard", "snipper", "scroller", "editor", "main")
 
@@ -95,11 +102,14 @@ HEADER = '''# -*- coding: utf-8 -*-
 """PyShot 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
 
 这是一个自动生成的单文件版本：把多文件源码合并在一起，并在启动时自动安装
-缺失的第三方库（PySide6 / numpy），因此可以直接发给别人运行::
+缺失的第三方库（PySide6），因此可以直接发给别人运行::
 
     python PyShot.py              # 启动后驻留托盘，按 PrintScreen 开始截图
     python PyShot.py 图片.png     # 直接编辑已有图片
     python PyShot.py --check-deps # 只检查依赖
+
+注意：依赖自举那段代码排在最前面执行（见 PRELUDE），必须在**任何 PySide6
+导入之前** —— 否则没装 PySide6 的机器会在半路 ImportError，自动安装形同虚设。
 
 生成方式：python build_single.py（请勿手工修改本文件，改动请改多文件源码）
 """
@@ -211,6 +221,56 @@ def find_collisions(modules) -> list:
     return problems
 
 
+def _top_level_qt_import_lines(tree) -> list:
+    """只找**模块顶层**（含顶层 try/if/with 里）的 PySide6 导入行号。
+
+    函数/类体内的导入不算：那些要等运行时才执行，那时候依赖已经装好了
+    （例如 i18n.system_language() 里的 `from PySide6.QtCore import QLocale`）。
+    """
+    lines = []
+
+    def visit(node):
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef,
+                                  ast.ClassDef, ast.Lambda)):
+                continue          # 函数/类体内的导入要运行时才跑，不算
+            if isinstance(child, ast.ImportFrom) \
+                    and (child.module or "").startswith("PySide6"):
+                lines.append(child.lineno)
+            elif isinstance(child, ast.Import) \
+                    and any(a.name.startswith("PySide6") for a in child.names):
+                lines.append(child.lineno)
+            visit(child)
+
+    visit(tree)
+    return lines
+
+
+def check_bootstrap_first(code: str, out_path: str):
+    """构建期自检：依赖自举的调用必须排在**任何顶层 PySide6 导入之前**。
+
+    这条一旦破坏，"没装 PySide6 的机器自动安装"就整个失效 —— 而且是静默失效：
+    多文件版照常工作，只有单文件版在别人机器上 ImportError。
+    """
+    tree = ast.parse(code, filename=out_path)
+    deps_line = None
+    for node in tree.body:
+        if isinstance(node, ast.If) and deps_line is None \
+                and "ensure_deps" in ast.unparse(node.test):
+            deps_line = node.lineno
+    qt_lines = _top_level_qt_import_lines(tree)
+    if deps_line is None:
+        raise SystemExit("合并结果里找不到 `if not ensure_deps(): ...`，"
+                         "依赖自举丢了（检查 build_single.py 的 DEPS_CALL）。")
+    first_qt = min(qt_lines) if qt_lines else None
+    if first_qt is not None and first_qt < deps_line:
+        raise SystemExit(
+            f"合并结果里 PySide6 在第 {first_qt} 行就被导入了，"
+            f"而依赖自举在第 {deps_line} 行 —— 没装 PySide6 的机器会直接 "
+            "ImportError，自动安装等于没写。\n"
+            "请把 i18n_data / i18n / bootstrap 放进 PRELUDE（见 build_single.py）。")
+
+
 def build(out_path: str) -> str:
     problems = find_collisions(MODULES)
     if problems:
@@ -220,8 +280,10 @@ def build(out_path: str) -> str:
         lines.append("请给它们改成模块内唯一的名字（例如加 _wm_ 前缀）。")
         raise SystemExit("\n".join(lines))
 
+    # PRELUDE 先输出（依赖自举要在最前面），其余保持既定依赖顺序
+    order = PRELUDE + [m for m in MODULES if m not in PRELUDE]
     parts = [HEADER]
-    for name in MODULES:
+    for name in order:
         path = os.path.join(HERE, name)
         if not os.path.exists(path):
             raise SystemExit(f"缺少源文件：{path}")
@@ -234,6 +296,7 @@ def build(out_path: str) -> str:
 
     # 合并结果必须是合法 Python（先自查，避免生成坏文件）
     ast.parse(code, filename=out_path)
+    check_bootstrap_first(code, out_path)
 
     with open(out_path, "w", encoding="utf-8", newline="\n") as f:
         f.write(code)
