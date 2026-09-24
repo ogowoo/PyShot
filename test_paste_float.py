@@ -28,7 +28,7 @@ import i18n
 i18n.SETTINGS_PATH = _tmp / "settings.json"
 i18n.reset_cache()
 
-from PySide6.QtCore import QEvent, QPoint, QPointF, Qt
+from PySide6.QtCore import QEvent, QPoint, QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QMouseEvent, QPixmap, QWheelEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
@@ -101,14 +101,43 @@ check("拖动可以移动浮动图",
 
 # ---------- 3) Ctrl+滚轮缩放浮动图（中心不动） ----------
 c0 = canvas.float_rect().center()
-s0 = canvas._float_scale
+s0 = canvas.float_scale()
 canvas.scale_float(1.15)
-check("缩放生效", abs(canvas._float_scale - s0 * 1.15) < 1e-6,
-      f"{s0:.2f} → {canvas._float_scale:.2f}")
+check("缩放生效", abs(canvas.float_scale() - s0 * 1.15) < 1e-6,
+      f"{s0:.2f} → {canvas.float_scale():.2f}")
 check("缩放以中心为锚点（不会越缩越跑）",
       abs(canvas.float_rect().center().x() - c0.x()) < 0.5
       and abs(canvas.float_rect().center().y() - c0.y()) < 0.5,
       str(canvas.float_rect().center()))
+
+# ---------- 3b) 拖角手柄改大小（Shift 等比） ----------
+check("浮动图有 8 个缩放手柄 + 1 个旋转手柄",
+      len(canvas.float_handles()) == 9, str(len(canvas.float_handles())))
+r_before = canvas.float_rect()
+h_corner = canvas.float_handles()[4]          # 右下
+canvas.resize_float_by_handle(4, h_corner + QPointF(40, 0))
+r_after = canvas.float_rect()
+check("**拖右手柄能把图拉宽**",
+      r_after.width() > r_before.width() + 30
+      and abs(r_after.left() - r_before.left()) < 0.5,
+      f"{r_before.width():.0f} → {r_after.width():.0f}")
+canvas.resize_float_by_handle(4, canvas.float_rect().bottomRight()
+                              - QPointF(0, 20))
+check("拖下边也能改高", canvas.float_rect().height() < r_after.height())
+
+# Shift 等比：拉宽时高度按原比例变
+canvas._float_rect_obj = QRectF(50, 50, 200, 100)   # 已知 2:1
+canvas._float_aspect = 2.0
+canvas.resize_float_by_handle(4, QPointF(350, 150), keep_aspect=True)
+rr = canvas.float_rect()
+check("Shift 拖角保持宽高比（2:1）",
+      abs(rr.width() / max(1.0, rr.height()) - 2.0) < 0.05,
+      f"{rr.width():.0f}x{rr.height():.0f}")
+check("拖得太小会被挡下（不会缩成一条线）",
+      canvas.resize_float_by_handle(4, canvas.float_rect().topLeft()
+                                    + QPointF(2, 2)) is False
+      or canvas.float_rect().width() >= 8,
+      str(canvas.float_rect()))
 
 # ---------- 4) 没固定之前导出也要包含它 ----------
 out = canvas.render_result()

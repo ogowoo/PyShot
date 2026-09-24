@@ -77,6 +77,9 @@ def shape_to_dict(shape) -> dict:
 
     base = {"t": type(shape).__name__, "color": shape.color.name(),
             "w": int(shape.width)}
+    # 旋转角（新字段；旧缓存里没有就当作 0，不影响读旧数据）
+    if getattr(shape, "rotation", 0.0):
+        base["rot"] = round(float(shape.rotation), 2)
     if isinstance(shape, WatermarkShape):
         base.pop("color", None)
         base.pop("w", None)
@@ -142,31 +145,44 @@ def shape_from_dict(d: dict):
                                   off)
         if t == "EllipseShape":
             r = d["rect"]
-            return EllipseShape(color, w, QRectF(*[float(v) for v in r]),
-                                bool(d.get("fill", False)))
+            return _with_rotation(EllipseShape(color, w,
+                                               QRectF(*[float(v) for v in r]),
+                                               bool(d.get("fill", False))), d)
         if t == "RectShape":
             r = d["rect"]
-            return RectShape(color, w, QRectF(*[float(v) for v in r]),
-                             bool(d.get("fill", False)))
+            return _with_rotation(RectShape(color, w,
+                                            QRectF(*[float(v) for v in r]),
+                                            bool(d.get("fill", False))), d)
         if t == "HighlightShape":
-            return HighlightShape(color, w, QRectF(*[float(v) for v in d["rect"]]))
+            return _with_rotation(HighlightShape(color, w,
+                                                 QRectF(*[float(v) for v in d["rect"]])), d)
         if t == "MosaicShape":
-            return MosaicShape(color, w, QRectF(*[float(v) for v in d["rect"]]))
+            return _with_rotation(MosaicShape(color, w,
+                                              QRectF(*[float(v) for v in d["rect"]])), d)
         if t == "ArrowShape":
-            return ArrowShape(color, w, pt(d["p1"]), pt(d["p2"]))
+            return _with_rotation(ArrowShape(color, w, pt(d["p1"]), pt(d["p2"])), d)
         if t == "LineShape":
-            return LineShape(color, w, pt(d["p1"]), pt(d["p2"]))
+            return _with_rotation(LineShape(color, w, pt(d["p1"]), pt(d["p2"])), d)
         if t == "PenShape":
-            return PenShape(color, w, [pt(p) for p in d.get("points", [])])
+            return _with_rotation(PenShape(color, w,
+                                           [pt(p) for p in d.get("points", [])]), d)
         if t == "TextShape":
-            return TextShape(color, w, pt(d["pos"]), d.get("text", ""),
-                             int(d.get("font_size", 20)))
+            return _with_rotation(TextShape(color, w, pt(d["pos"]), d.get("text", ""),
+                                            int(d.get("font_size", 20))), d)
         if t == "StepShape":
-            return StepShape(color, w, pt(d["center"]), int(d.get("number", 1)),
-                             0, float(d.get("diameter", 36)))
+            return _with_rotation(StepShape(color, w, pt(d["center"]),
+                                            int(d.get("number", 1)), 0,
+                                            float(d.get("diameter", 36))), d)
     except Exception:                              # noqa: BLE001
         return None
     return None
+
+
+def _with_rotation(shape, d: dict):
+    """把存下来的旋转角装回去（旧缓存没有 rot 字段 = 0）。"""
+    if shape is not None and d.get("rot"):
+        shape.rotation = float(d["rot"]) % 360.0
+    return shape
 
 
 # ---------------------------------------------------------------- 保存 / 读取

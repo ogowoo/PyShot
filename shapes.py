@@ -16,6 +16,9 @@ class Shape:
     def __init__(self, color: QColor, width: int):
         self.color = QColor(color)
         self.width = max(1, int(width))
+        # 旋转角度（度，顺时针）。绘制/命中/手柄都绕**外接矩形中心**旋转；
+        # 图形自身的坐标仍按"未旋转"存，这样 move_by / apply_rect 都不用改。
+        self.rotation = 0.0
 
     # --- 子类需实现 ---
     def draw(self, painter: QPainter, canvas):
@@ -29,6 +32,91 @@ class Shape:
 
     def contains(self, pos: QPointF, tol: float = 6.0) -> bool:
         return self.bounding_rect().adjusted(-tol, -tol, tol, tol).contains(pos)
+
+    # --- 旋转 ---
+    def center(self) -> QPointF:
+        return self.bounding_rect().center()
+
+    def rotate_by(self, degrees: float):
+        self.rotation = (self.rotation + float(degrees)) % 360.0
+
+    def world_to_local(self, pos: QPointF) -> QPointF:
+        """世界坐标 → 图形自身坐标（把点反向转回未旋转的位置）。"""
+        if not self.rotation:
+            return QPointF(pos)
+        c = self.center()
+        rad = math.radians(-self.rotation)
+        dx, dy = pos.x() - c.x(), pos.y() - c.y()
+        return QPointF(c.x() + dx * math.cos(rad) - dy * math.sin(rad),
+                       c.y() + dx * math.sin(rad) + dy * math.cos(rad))
+
+    def rotated_corners(self) -> list:
+        """外接矩形四角旋转后的世界坐标（左上、右上、右下、左下）。"""
+        r = self.bounding_rect()
+        pts = [r.topLeft(), r.topRight(), r.bottomRight(), r.bottomLeft()]
+        if not self.rotation:
+            return [QPointF(p) for p in pts]
+        c = r.center()
+        rad = math.radians(self.rotation)
+        out = []
+        for p in pts:
+            dx, dy = p.x() - c.x(), p.y() - c.y()
+            out.append(QPointF(c.x() + dx * math.cos(rad) - dy * math.sin(rad),
+                               c.y() + dx * math.sin(rad) + dy * math.cos(rad)))
+        return out
+
+    def rotated_handles(self) -> list:
+        """8 个缩放手柄（旋转后）+ 1 个旋转手柄；不可缩放的图形返回 []。"""
+        local = self.handles()
+        if not local:
+            return []
+        if not self.rotation:
+            pts = list(local)
+        else:
+            c = self.bounding_rect().center()
+            rad = math.radians(self.rotation)
+            pts = []
+            for p in local:
+                dx, dy = p.x() - c.x(), p.y() - c.y()
+                pts.append(QPointF(
+                    c.x() + dx * math.cos(rad) - dy * math.sin(rad),
+                    c.y() + dx * math.sin(rad) + dy * math.cos(rad)))
+        r = self.bounding_rect()
+        top_mid = QPointF((pts[0].x() + pts[2].x()) / 2.0,
+                          (pts[0].y() + pts[2].y()) / 2.0)
+        # 旋转手柄放在"上边中点再往外一点"的方向上
+        rad = math.radians(self.rotation - 90.0)
+        dist = max(18.0, r.height() * 0.12)
+        pts.append(QPointF(top_mid.x() + dist * math.cos(rad),
+                           top_mid.y() + dist * math.sin(rad)))
+        return pts
+
+    def apply_rotation_and_resize(self, index: int, pos: QPointF,
+                                  keep_aspect: bool = False):
+        """拖某个手柄：0~7 缩放、8 旋转（由画布调用）。
+
+        未旋转时行为和以前完全一致（对角固定）。旋转之后，角手柄改为
+        **以中心等比缩放**（避免坐标系斜着时"越拖越歪"）；边中手柄在图形
+        自身坐标里缩放。
+        """
+        if index == 8:                              # 旋转手柄
+            c = self.center()
+            angle = math.degrees(math.atan2(pos.y() - c.y(), pos.x() - c.x()))
+            self.rotate_by(angle - (self.rotation - 90.0))
+            return
+        if self.rotation and index in (0, 2, 4, 6):  # 旋转后角手柄：绕中心等比
+            r = self.bounding_rect()
+            c = r.center()
+            d0 = math.hypot(r.width(), r.height()) / 2.0
+            d1 = math.hypot(pos.x() - c.x(), pos.y() - c.y())
+            if d0 > 0.5 and d1 > 0.5:
+                k = d1 / d0
+                self.apply_rect(QRectF(c.x() - r.width() * k / 2.0,
+                                       c.y() - r.height() * k / 2.0,
+                                       max(4.0, r.width() * k),
+                                       max(4.0, r.height() * k)))
+            return
+        self.resize_by_handle(index, self.world_to_local(pos), keep_aspect)
 
     # --- 通用 ---
     def pen(self) -> QPen:
@@ -56,8 +144,9 @@ class Shape:
                 QPointF(x1, cy), QPointF(x1, y1), QPointF(cx, y1),
                 QPointF(x0, y1), QPointF(x0, cy)]
 
-    def resize_by_handle(self, index: int, pos: QPointF):
-        """把第 index 个句柄拖到 pos。"""
+    def resize_by_handle(self, index: int, pos: QPointF,
+                         keep_aspect: bool = False):
+        """把第 index 个句柄拖到 pos。keep_aspect=True 时角手柄保持原宽高比。"""
         r = self.bounding_rect()
         x0, y0, x1, y1 = r.left(), r.top(), r.right(), r.bottom()
         if index in (0, 1, 2):
@@ -68,6 +157,21 @@ class Shape:
             x0 = pos.x()
         elif index in (2, 3, 4):
             x1 = pos.x()
+        if keep_aspect and index in (0, 2, 4, 6) and r.height() > 0.5:
+            aspect = r.width() / r.height()
+            w, h = abs(x1 - x0), abs(y1 - y0)
+            if w / max(1e-6, h) > aspect:
+                h = w / aspect
+            else:
+                w = h * aspect
+            if index == 0:
+                x0, y0 = x1 - w, y1 - h
+            elif index == 2:
+                x1, y0 = x0 + w, y1 - h
+            elif index == 4:
+                x1, y1 = x0 + w, y0 + h
+            else:
+                x0, y1 = x1 - w, y0 + h
         new = QRectF(QPointF(min(x0, x1), min(y0, y1)),
                      QPointF(max(x0, x1), max(y0, y1)))
         self.apply_rect(new)

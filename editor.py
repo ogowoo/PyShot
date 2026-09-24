@@ -6,7 +6,7 @@ from pathlib import Path
 from PySide6.QtCore import (QPoint, QPointF, QRect, QRectF, QSize, Qt, QTimer,
                             Signal)
 from PySide6.QtGui import (QAction, QColor, QGuiApplication, QIcon, QKeySequence,
-                           QPainter, QPainterPath, QPen, QPixmap)
+                           QPainter, QPainterPath, QPen, QPixmap, QPolygonF)
 from PySide6.QtWidgets import (QDialogButtonBox, QGridLayout, QMenu, QStackedWidget, QApplication, QColorDialog, QDialog, QFileDialog,
                                QFrame, QHBoxLayout, QLabel, QLayout, QLineEdit,
                                QMainWindow, QMessageBox, QPushButton,
@@ -280,6 +280,7 @@ class Canvas(QWidget):
     escape_idle = Signal()   # Esc 按下且画布无任何待取消状态
     selection_changed = Signal(object)   # 当前选中的图形（或 None）
     float_changed = Signal()   # 浮动粘贴的开始/固定/取消（宿主据此刷新菜单）
+    context_action = Signal(str)   # 右键菜单请求：front/up/down/back/dup/rot15/rot0
 
     def __init__(self, pixmap: QPixmap, parent=None):
         super().__init__(parent)
@@ -323,9 +324,10 @@ class Canvas(QWidget):
 
         # 浮动粘贴：把新截图贴到当前图上，先摆位置再固定（Enter 固定 / Esc 取消）
         self._float_pix: QPixmap | None = None
-        self._float_pos = QPointF()
-        self._float_scale = 1.0
+        self._float_rect_obj = QRectF()       # 权威尺寸：图像物理像素下的矩形
+        self._float_aspect = 1.0              # 原始宽高比（Shift 等比时用）
         self._float_from: QPointF | None = None    # 拖动时的抓取偏移
+        self._float_handle: int | None = None      # 正在拖的缩放句柄索引
 
         self._text_edit: QLineEdit | None = None
         self._text_pos = QPointF()
@@ -480,20 +482,29 @@ class Canvas(QWidget):
         self._drag_start = pos
         self._dragging = True
 
-        # 浮动粘贴：任何工具下都能拖动它（这是"临时摆放"状态，优先于画笔工具）
+        # 浮动粘贴：任何工具下都能拖/缩它（这是"临时摆放"状态，优先于画笔工具）
         if self._float_pix is not None:
+            hit = max(6.0, 8.0 / self.zoom)      # 手柄命中范围（图像像素）
+            for i, hp in enumerate(self.float_handles()):
+                if (abs(hp.x() - pos.x()) <= hit and abs(hp.y() - pos.y()) <= hit):
+                    if i == 8:                    # 旋转手柄：浮层暂不支持旋转，忽略
+                        break
+                    self._float_handle = i
+                    self._dragging = False
+                    e.accept()
+                    return
             if self.float_rect().contains(pos):
-                self._float_from = pos - self._float_pos
+                self._float_from = pos - self._float_rect_obj.topLeft()
                 self._dragging = False
                 e.accept()
                 return
 
         if self.tool == "select":
             self._resizing = None
-            # 先看是否点在缩放句柄上（优先于选中/移动）
+            # 先看是否点在缩放/旋转句柄上（优先于选中/移动）
             if self._selected is not None:
                 hit = int(HANDLE_HIT / self.zoom) + 2
-                for i, hp in enumerate(self._selected.handles()):
+                for i, hp in enumerate(self._selected.rotated_handles()):
                     if (abs(hp.x() - pos.x()) <= hit and abs(hp.y() - pos.y()) <= hit):
                         self.push_undo()
                         self._resizing = (self._selected, i)
@@ -504,7 +515,8 @@ class Canvas(QWidget):
             self._selected = None
             self._move_snapshot = False
             for shape in reversed(self.shapes):  # 最上层优先
-                if shape.contains(pos, 6 / self.zoom):
+                # 命中判定要在图形**自身坐标**里做（旋转过的图形点不准会很难选）
+                if shape.contains(shape.world_to_local(pos), 6 / self.zoom):
                     self._selected = shape
                     self._moving = shape
                     self._move_last = pos
@@ -565,9 +577,15 @@ class Canvas(QWidget):
         if self.tool == "pick":
             self.update()  # 刷新取色放大镜
         pos = self.clamp(self.to_image(e.position()))
-        # 拖动中的浮动粘贴
+        # 拖动/缩放中的浮动粘贴
+        if self._float_pix is not None and self._float_handle is not None:
+            self.resize_float_by_handle(self._float_handle, pos,
+                                        bool(e.modifiers() & Qt.ShiftModifier))
+            self.update()
+            return
         if self._float_pix is not None and self._float_from is not None:
-            self._float_pos = pos - self._float_from
+            self._float_rect_obj = QRectF(pos - self._float_from,
+                                          self._float_rect_obj.size())
             self.update()
             return
         # 悬停在浮动图上时给"可拖动"的光标
@@ -578,7 +596,8 @@ class Canvas(QWidget):
                 return
         if self.tool == "select" and self._resizing is not None:
             shape, index = self._resizing
-            shape.resize_by_handle(index, pos)
+            shape.apply_rotation_and_resize(
+                index, pos, bool(e.modifiers() & Qt.ShiftModifier))
             self.update()
             return
         if self.tool == "select" and self._moving is not None:
@@ -628,8 +647,9 @@ class Canvas(QWidget):
         super().leaveEvent(e)
 
     def mouseReleaseEvent(self, e):
-        if self._float_from is not None:
-            self._float_from = None            # 松开：浮动图就停在当前位置
+        if self._float_from is not None or self._float_handle is not None:
+            self._float_from = None            # 松开：浮动图就停在当前位置/大小
+            self._float_handle = None
             e.accept()
             return
         if self._panning and (e.button() in (Qt.MiddleButton, Qt.LeftButton)):
@@ -669,7 +689,66 @@ class Canvas(QWidget):
         if self.tool == "crop":
             self.apply_crop()
 
+    def contextMenuEvent(self, e):
+        """右键菜单：图层顺序 / 再制 / 旋转 / 删除 / 粘贴相关。
+
+        以前画布右键没反应，只能去编辑菜单里找；做指引时这些操作很常用。
+        """
+        menu = QMenu(self)
+        has_sel = self._selected is not None and self._selected in self.shapes
+        if self._float_pix is not None:
+            menu.addAction(tr("固定粘贴的图"), self.commit_float)
+            menu.addAction(tr("取消粘贴"), self.cancel_float)
+            menu.addSeparator()
+        if has_sel:
+            menu.addAction(tr("置于顶层"),
+                           lambda: self._emit_ctx("front"))
+            menu.addAction(tr("上移一层"), lambda: self._emit_ctx("up"))
+            menu.addAction(tr("下移一层"), lambda: self._emit_ctx("down"))
+            menu.addAction(tr("置于底层"), lambda: self._emit_ctx("back"))
+            menu.addSeparator()
+            menu.addAction(tr("再制一个"), lambda: self._emit_ctx("dup"))
+            menu.addAction(tr("旋转 15°"), lambda: self._emit_ctx("rot15"))
+            menu.addAction(tr("摆正（0°）"), lambda: self._emit_ctx("rot0"))
+            menu.addSeparator()
+            menu.addAction(tr("删除"), lambda: self._emit_ctx("del"))
+        if menu.isEmpty():
+            menu.addAction(tr("撤销"), self.undo)
+            menu.addAction(tr("重做"), self.redo)
+        menu.exec(e.globalPos())
+
+    def _emit_ctx(self, what: str):
+        """画布右键菜单 → 交给宿主执行（宿主管撤销栈与状态栏提示）。"""
+        if what == "del" and self._selected is not None:
+            self.push_undo()
+            self.shapes.remove(self._selected)
+            self._selected = None
+            self.selection_changed.emit(None)
+            self.update()
+            self.shapes_changed.emit()
+            return
+        self.context_action.emit(what)
+
     def keyPressEvent(self, e):
+        # 方向键微调：选中的图形 1px，按 Shift 10px（画指引时对齐很有用）
+        step = 10.0 if (e.modifiers() & Qt.ShiftModifier) else 1.0
+        deltas = {Qt.Key_Left: (-step, 0.0), Qt.Key_Right: (step, 0.0),
+                  Qt.Key_Up: (0.0, -step), Qt.Key_Down: (0.0, step)}
+        if e.key() in deltas:
+            if self._float_pix is not None:
+                dx, dy = deltas[e.key()]
+                self._float_rect_obj.translate(dx, dy)
+                self.update()
+                e.accept()
+                return
+            if self._selected is not None and self._selected in self.shapes:
+                dx, dy = deltas[e.key()]
+                self.push_undo()               # 每次微调都能撤销
+                self._selected.move_by(dx, dy)
+                self.update()
+                self.shapes_changed.emit()
+                e.accept()
+                return
         # 浮动粘贴：Enter 固定 / Esc 取消（要排在其它 Esc 处理之前，
         # 否则会直接把编辑器关掉）
         if self._float_pix is not None:
@@ -848,22 +927,47 @@ class Canvas(QWidget):
 
     def float_rect(self) -> QRectF:
         """浮动图在"图像物理像素"坐标下的矩形。"""
-        if self._float_pix is None:
-            return QRectF()
-        w = self._float_pix.width() * self._float_scale
-        h = self._float_pix.height() * self._float_scale
-        return QRectF(self._float_pos.x(), self._float_pos.y(), w, h)
+        return QRectF(self._float_rect_obj)
 
-    def _float_anchor(self) -> QPointF:
+    def float_scale(self) -> float:
+        """当前缩放倍数（1.0 = 原始像素大小），按宽度算。"""
+        if self._float_pix is None or self._float_pix.width() <= 0:
+            return 1.0
+        return self._float_rect_obj.width() / self._float_pix.width()
+
+    def float_handles(self) -> list:
+        """浮动图的 8 个缩放手柄 + 1 个旋转手柄（最后一个是旋转）。
+
+        顺序与 Shape.handles() 一致：0左上 1上中 2右上 3右中 4右下 5下中
+        6左下 7左中；第 8 个是顶部中间的旋转手柄。
+        """
+        if self._float_pix is None:
+            return []
+        r = self._float_rect_obj
+        x0, y0, x1, y1 = r.left(), r.top(), r.right(), r.bottom()
+        cx = (x0 + x1) / 2.0
+        pts = [QPointF(x0, y0), QPointF(cx, y0), QPointF(x1, y0),
+               QPointF(x1, (y0 + y1) / 2.0), QPointF(x1, y1),
+               QPointF(cx, y1), QPointF(x0, y1), QPointF(x0, (y0 + y1) / 2.0)]
+        pts.append(QPointF(cx, y0 - max(18.0, r.height() * 0.12)))   # 旋转手柄
+        return pts
+
+    def _float_anchor(self) -> QRectF:
         """浮动图的默认落点：**当前看得见**的那块区域的中心。
 
         不能直接用整图中心：滚动长截图动辄几千像素高，图心多半在屏幕外，
         贴上去等于看不见。滚动区拿不到（未嵌入时）就退回图心。
         """
-        w = self._float_pix.width() * self._float_scale
-        h = self._float_pix.height() * self._float_scale
-        cx = self.base_pixmap.width() / 2.0
-        cy = self.base_pixmap.height() / 2.0
+        pix = self._float_pix
+        w = float(pix.width())
+        h = float(pix.height())
+        # 比底图还大就先缩到能看全（否则一贴上去半个图在画布外，很难摆）
+        bw, bh = self.base_pixmap.width(), self.base_pixmap.height()
+        if w > bw * 0.9 or h > bh * 0.9:
+            k = min(bw * 0.6 / max(1.0, w), bh * 0.6 / max(1.0, h))
+            w, h = w * k, h * k
+        cx = bw / 2.0
+        cy = bh / 2.0
         area = self._scroll_area
         try:
             if area is not None:
@@ -873,10 +977,9 @@ class Canvas(QWidget):
                 cx, cy = center_img.x(), center_img.y()
         except Exception:                          # noqa: BLE001
             pass
-        bw, bh = self.base_pixmap.width(), self.base_pixmap.height()
         x = min(max(cx - w / 2.0, 0.0), max(0.0, bw - w))
         y = min(max(cy - h / 2.0, 0.0), max(0.0, bh - h))
-        return QPointF(x, y)
+        return QRectF(x, y, w, h)
 
     def start_float(self, pixmap: QPixmap) -> bool:
         """把一张图变成"可拖动的浮动层"，等用户摆好位置再固定。
@@ -888,14 +991,10 @@ class Canvas(QWidget):
         pix = QPixmap(pixmap)
         pix.setDevicePixelRatio(1.0)      # 统一按图像物理像素处理
         self._float_pix = pix
-        self._float_scale = 1.0
-        # 比底图还大就先缩到能看全（否则一贴上去半个图在画布外，很难摆）
-        bw, bh = self.base_pixmap.width(), self.base_pixmap.height()
-        if pix.width() > bw * 0.9 or pix.height() > bh * 0.9:
-            self._float_scale = min(bw * 0.6 / max(1, pix.width()),
-                                    bh * 0.6 / max(1, pix.height()))
-        self._float_pos = self._float_anchor()
+        self._float_aspect = (pix.width() / pix.height()) if pix.height() else 1.0
+        self._float_rect_obj = self._float_anchor()
         self._float_from = None
+        self._float_handle = None
         self.setFocus(Qt.OtherFocusReason)   # 让 Enter/Esc 能直接生效
         self.float_changed.emit()
         self.update()
@@ -907,12 +1006,13 @@ class Canvas(QWidget):
             return False
         self.push_undo()                     # 底图要变了，先记一次
         p = QPainter(self.base_pixmap)
-        p.setRenderHint(QPainter.SmoothPixmapTransform, self._float_scale < 1.0)
+        p.setRenderHint(QPainter.SmoothPixmapTransform)
         p.drawPixmap(self.float_rect(), self._float_pix,
                      QRectF(self._float_pix.rect()))
         p.end()
         self._float_pix = None
         self._float_from = None
+        self._float_handle = None
         self._apply_size()
         self.shapes_changed.emit()           # 宿主据此刷新按钮/会话缓存
         self.float_changed.emit()
@@ -926,23 +1026,73 @@ class Canvas(QWidget):
             return False
         self._float_pix = None
         self._float_from = None
+        self._float_handle = None
         self.float_changed.emit()
         self.set_tool_cursor()
         self.update()
         return True
 
     def scale_float(self, factor: float) -> bool:
-        """以中心为锚点缩放浮动图（0.05×~6×）。"""
+        """以中心为锚点等比缩放浮动图（0.05×~12×）。"""
         if self._float_pix is None:
             return False
-        new_scale = min(6.0, max(0.05, self._float_scale * factor))
-        if abs(new_scale - self._float_scale) < 1e-6:
+        r = self._float_rect_obj
+        new_w = r.width() * factor
+        max_w = self._float_pix.width() * 12.0
+        min_w = max(8.0, self._float_pix.width() * 0.05)
+        new_w = min(max_w, max(min_w, new_w))
+        k = new_w / max(1.0, r.width())
+        if abs(k - 1.0) < 1e-6:
             return False
-        c = self.float_rect().center()
-        self._float_scale = new_scale
-        w = self._float_pix.width() * new_scale
-        h = self._float_pix.height() * new_scale
-        self._float_pos = QPointF(c.x() - w / 2.0, c.y() - h / 2.0)
+        c = r.center()
+        self._float_rect_obj = QRectF(c.x() - r.width() * k / 2.0,
+                                      c.y() - r.height() * k / 2.0,
+                                      r.width() * k, r.height() * k)
+        self.update()
+        return True
+
+    def resize_float_by_handle(self, index: int, pos: QPointF,
+                               keep_aspect: bool = False) -> bool:
+        """拖动某个手柄改浮动图大小（0~7 为边角，Shift 保持宽高比）。"""
+        if self._float_pix is None or not 0 <= index <= 7:
+            return False
+        r = QRectF(self._float_rect_obj)
+        x0, y0, x1, y1 = r.left(), r.top(), r.right(), r.bottom()
+        if index in (0, 1, 2):
+            y0 = pos.y()
+        elif index in (4, 5, 6):
+            y1 = pos.y()
+        if index in (0, 6, 7):
+            x0 = pos.x()
+        elif index in (2, 3, 4):
+            x1 = pos.x()
+        # 角上的手柄按 Shift 保持原比例：以"被拖的角"为基准反推另一边
+        if keep_aspect and index in (0, 2, 4, 6):
+            w = abs(x1 - x0)
+            h = abs(y1 - y0)
+            if self._float_aspect > 0:
+                if w / max(1e-6, h) > self._float_aspect:
+                    h = w / self._float_aspect
+                else:
+                    w = h * self._float_aspect
+            if index in (0, 6):
+                x0 = x1 - w if index == 0 else x0
+            if index in (0, 2):
+                y0 = y1 - h if index == 0 else y0
+            if index == 0:
+                x0, y0 = x1 - w, y1 - h
+            elif index == 2:
+                x1, y0 = x0 + w, y1 - h
+            elif index == 4:
+                x1, y1 = x0 + w, y0 + h
+            elif index == 6:
+                x0, y1 = x1 - w, y0 + h
+        new = QRectF(QPointF(min(x0, x1), min(y0, y1)),
+                     QPointF(max(x0, x1), max(y0, y1))).normalized()
+        # 太小就贴个下限，免得被拖成一条线再也抓不住
+        if new.width() < 8 or new.height() < 8:
+            return False
+        self._float_rect_obj = new
         self.update()
         return True
 
@@ -959,11 +1109,11 @@ class Canvas(QWidget):
         p.drawPixmap(QRect(0, 0, w, h), self.base_pixmap,
                      QRect(0, 0, w, h))
         for shape in self.shapes:
-            shape.draw(p, self)
+            self._draw_shape(p, shape)
         # 还没固定的浮动粘贴也算进导出结果（"看到什么就存什么"）
         if self._float_pix is not None:
             p.setRenderHint(QPainter.SmoothPixmapTransform,
-                            self._float_scale < 1.0)
+                            self.float_scale() < 1.0)
             p.drawPixmap(self.float_rect(), self._float_pix,
                          QRectF(self._float_pix.rect()))
             p.setRenderHint(QPainter.SmoothPixmapTransform, False)
@@ -972,6 +1122,24 @@ class Canvas(QWidget):
         return out
 
     # ---------- 绘制 ----------
+    def _draw_shape(self, painter: QPainter, shape):
+        """按图形自身的旋转角绘制（绕外接矩形中心转）。
+
+        旋转放在这里统一处理，各个 Shape.draw() 就不用管旋转了 ——
+        否则矩形/椭圆/箭头/画笔/文字每一种都要自己算一遍。
+        """
+        rot = float(getattr(shape, "rotation", 0.0) or 0.0)
+        if not rot:
+            shape.draw(painter, self)
+            return
+        c = shape.bounding_rect().center()
+        painter.save()
+        painter.translate(c)
+        painter.rotate(rot)
+        painter.translate(-c)
+        shape.draw(painter, self)
+        painter.restore()
+
     def paintEvent(self, e):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
@@ -992,14 +1160,13 @@ class Canvas(QWidget):
         painter.save()
         painter.scale(1.0 / self.dpr, 1.0 / self.dpr)
         for shape in self.shapes:
-            shape.draw(painter, self)
+            self._draw_shape(painter, shape)
         if self._current is not None:
-            self._current.draw(painter, self)
-        # 浮动粘贴：虚线框表示"还能拖 / 还没固定"
+            self._draw_shape(painter, self._current)
+        # 浮动粘贴：虚线框 + 8 个缩放手柄 + 1 个旋转手柄（表示"还能拖/缩"）
         if self._float_pix is not None:
             rect = self.float_rect()
-            painter.setRenderHint(QPainter.SmoothPixmapTransform,
-                                  self._float_scale < 1.0)
+            painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
             painter.drawPixmap(rect, self._float_pix,
                                QRectF(self._float_pix.rect()))
             painter.setRenderHint(QPainter.SmoothPixmapTransform, False)
@@ -1008,17 +1175,38 @@ class Canvas(QWidget):
             painter.setPen(pen)
             painter.setBrush(Qt.NoBrush)
             painter.drawRect(rect)
-        # 选中框 + 缩放句柄（细实线 + 白色句柄，现代编辑器风格）
-        if self._selected is not None and self.tool == "select":
-            rect = self._selected.bounding_rect().adjusted(-2, -2, 2, 2)
-            painter.setPen(QPen(QColor(ACCENT), 1.4 / self.zoom))
-            painter.setBrush(Qt.NoBrush)
-            painter.drawRect(rect)
             hs = HANDLE_SIZE / self.zoom
+            handles = self.float_handles()
             painter.setPen(QPen(QColor(ACCENT), 1.2 / self.zoom))
             painter.setBrush(QColor("#ffffff"))
-            for hp in self._selected.handles():
+            for hp in handles[:8]:
                 painter.drawRect(QRectF(hp.x() - hs / 2, hp.y() - hs / 2, hs, hs))
+            if len(handles) > 8:               # 旋转手柄：画个圆点 + 连接线
+                rp = handles[8]
+                top = QPointF(rect.center().x(), rect.top())
+                painter.setPen(QPen(QColor(ACCENT), 1.2 / self.zoom))
+                painter.drawLine(top, rp)
+                painter.setBrush(QColor(ACCENT))
+                painter.drawEllipse(rp, hs * 0.6, hs * 0.6)
+        # 选中框 + 缩放句柄（细实线 + 白色句柄，现代编辑器风格）
+        if self._selected is not None and self.tool == "select":
+            hs = HANDLE_SIZE / self.zoom
+            corners = self._selected.rotated_corners()
+            painter.setPen(QPen(QColor(ACCENT), 1.4 / self.zoom))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawPolygon(QPolygonF(corners))      # 跟着旋转的选中框
+            handles = self._selected.rotated_handles()
+            painter.setPen(QPen(QColor(ACCENT), 1.2 / self.zoom))
+            painter.setBrush(QColor("#ffffff"))
+            for hp in handles[:8]:
+                painter.drawRect(QRectF(hp.x() - hs / 2, hp.y() - hs / 2, hs, hs))
+            if len(handles) > 8:                         # 旋转手柄
+                top_mid = QPointF((corners[0].x() + corners[1].x()) / 2.0,
+                                  (corners[0].y() + corners[1].y()) / 2.0)
+                painter.setPen(QPen(QColor(ACCENT), 1.2 / self.zoom))
+                painter.drawLine(top_mid, handles[8])
+                painter.setBrush(QColor(ACCENT))
+                painter.drawEllipse(handles[8], hs * 0.6, hs * 0.6)
         painter.restore()
         # 裁剪遮罩
         if self.tool == "crop" and self._crop_rect is not None:
@@ -1261,6 +1449,33 @@ class EditorWindow(QMainWindow):
         self.act_paste_cancel.triggered.connect(self.discard_pasted)
         m_edit.addAction(self.act_paste_cancel)
         m_edit.addSeparator()
+        # 选中图形的层级 / 微调 / 再制（做指引时会叠好几层，顺序很要紧）
+        self.act_front = QAction(tr("置于顶层"), self)
+        self.act_front.triggered.connect(lambda: self._layer("front"))
+        m_edit.addAction(self.act_front)
+        self.act_back = QAction(tr("置于底层"), self)
+        self.act_back.triggered.connect(lambda: self._layer("back"))
+        m_edit.addAction(self.act_back)
+        self.act_up = QAction(tr("上移一层"), self)
+        self.act_up.triggered.connect(lambda: self._layer("up"))
+        m_edit.addAction(self.act_up)
+        self.act_down = QAction(tr("下移一层"), self)
+        self.act_down.triggered.connect(lambda: self._layer("down"))
+        m_edit.addAction(self.act_down)
+        self.act_dup = QAction(tr("再制一个"), self)
+        self.act_dup.setShortcut("Ctrl+D")
+        self.act_dup.setToolTip(tr("复制选中的图形/文字，向右下错开一点"))
+        self.act_dup.triggered.connect(self.duplicate_selected)
+        m_edit.addAction(self.act_dup)
+        self.act_rotate = QAction(tr("旋转 15°"), self)
+        self.act_rotate.setToolTip(
+            tr("把选中图形转 15°（拖它上面的圆形手柄可以任意角度）"))
+        self.act_rotate.triggered.connect(lambda: self.rotate_selected(15))
+        m_edit.addAction(self.act_rotate)
+        self.act_rotate0 = QAction(tr("摆正（0°）"), self)
+        self.act_rotate0.triggered.connect(lambda: self.rotate_selected(None))
+        m_edit.addAction(self.act_rotate0)
+        m_edit.addSeparator()
         self.act_m_copy = QAction(tr("复制到剪贴板"), self)
         self.act_m_copy.setShortcut("Ctrl+C")
         self.act_m_copy.triggered.connect(self.copy_to_clipboard)
@@ -1430,6 +1645,74 @@ class EditorWindow(QMainWindow):
             canvas.commit_float()
             self.statusBar().showMessage(tr("已固定粘贴的图（Ctrl+Z 可撤销）"), 4000)
 
+    # ---------- 选中图形的层级 / 再制 / 旋转 ----------
+    def _layer(self, how: str):
+        """调整选中图形的叠放顺序：front/back/up/down。"""
+        canvas = self.canvas
+        shape = canvas._selected if canvas is not None else None
+        if shape is None or shape not in canvas.shapes:
+            self.statusBar().showMessage(tr("先选一个图形（用「选择」工具点一下）"), 3000)
+            return
+        canvas.push_undo()
+        i = canvas.shapes.index(shape)
+        canvas.shapes.pop(i)
+        if how == "front":
+            canvas.shapes.append(shape)
+        elif how == "back":
+            canvas.shapes.insert(0, shape)
+        elif how == "up":
+            canvas.shapes.insert(min(len(canvas.shapes), i + 1), shape)
+        else:
+            canvas.shapes.insert(max(0, i - 1), shape)
+        canvas.update()
+        canvas.shapes_changed.emit()
+
+    def duplicate_selected(self):
+        """再制选中图形（错开 12px），新图形成为当前选中。"""
+        canvas = self.canvas
+        shape = canvas._selected if canvas is not None else None
+        if shape is None or shape not in canvas.shapes:
+            self.statusBar().showMessage(tr("先选一个图形（用「选择」工具点一下）"), 3000)
+            return
+        canvas.push_undo()
+        dup = shape.clone()
+        dup.move_by(12, 12)
+        canvas.shapes.append(dup)
+        canvas._selected = dup
+        canvas.selection_changed.emit(dup)
+        canvas.update()
+        canvas.shapes_changed.emit()
+        self.statusBar().showMessage(tr("已再制一个（Ctrl+Z 可撤销）"), 3000)
+
+    def _on_canvas_context(self, what: str):
+        """画布右键菜单的动作分发。"""
+        if what in ("front", "up", "down", "back"):
+            self._layer(what)
+        elif what == "dup":
+            self.duplicate_selected()
+        elif what == "rot15":
+            self.rotate_selected(15)
+        elif what == "rot0":
+            self.rotate_selected(None)
+
+    def rotate_selected(self, degrees: float | None):
+        """旋转选中图形；degrees=None 表示摆正（回到 0°）。"""
+        canvas = self.canvas
+        shape = canvas._selected if canvas is not None else None
+        if shape is None or shape not in canvas.shapes:
+            self.statusBar().showMessage(tr("先选一个图形（用「选择」工具点一下）"), 3000)
+            return
+        canvas.push_undo()
+        if degrees is None:
+            shape.rotation = 0.0
+        else:
+            shape.rotate_by(degrees)
+        canvas.update()
+        canvas.shapes_changed.emit()
+        self.statusBar().showMessage(
+            tr("旋转 {:.0f}°（Ctrl+Z 可撤销）", float(getattr(shape, "rotation", 0))),
+            3000)
+
     def discard_pasted(self):
         """丢弃正在摆放的浮动粘贴。"""
         canvas = self.canvas
@@ -1555,6 +1838,7 @@ class EditorWindow(QMainWindow):
         canvas.setCursor(Qt.CrossCursor if canvas.tool != "select" else Qt.ArrowCursor)
         canvas.shapes_changed.connect(self._refresh_actions)
         canvas.float_changed.connect(self._refresh_actions)
+        canvas.context_action.connect(self._on_canvas_context)
         canvas.color_picked.connect(self._on_color_picked)
         canvas.selection_changed.connect(self._on_selection_changed)
         canvas.escape_idle.connect(self.close)  # 空闲时 Esc 关闭编辑器
@@ -2201,6 +2485,12 @@ class EditorWindow(QMainWindow):
         floating = bool(canvas and canvas.has_float())
         self.act_paste_ok.setEnabled(floating)
         self.act_paste_cancel.setEnabled(floating)
+        # 图层/再制/旋转要有选中的图形才有意义
+        has_sel = bool(canvas and canvas._selected is not None
+                       and canvas._selected in canvas.shapes)
+        for act in (self.act_front, self.act_back, self.act_up, self.act_down,
+                    self.act_dup, self.act_rotate, self.act_rotate0):
+            act.setEnabled(has_sel)
 
     def copy_to_clipboard(self):
         canvas = self.canvas

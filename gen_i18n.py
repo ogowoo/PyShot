@@ -611,6 +611,22 @@ EN = {
     "已固定粘贴的图（Ctrl+Z 可撤销）":
         "Pasted image applied (Ctrl+Z to undo)",
     "已取消粘贴": "Paste discarded",
+    "置于顶层": "Bring to Front",
+    "置于底层": "Send to Back",
+    "上移一层": "Bring Forward",
+    "下移一层": "Send Backward",
+    "再制一个": "Duplicate",
+    "复制选中的图形/文字，向右下错开一点":
+        "Copy the selected shape/text, offset slightly down-right",
+    "旋转 15°": "Rotate 15°",
+    "把选中图形转 15°（拖它上面的圆形手柄可以任意角度）":
+        "Rotate the selection by 15° (drag the round handle above it for any angle)",
+    "摆正（0°）": "Straighten (0°)",
+    "先选一个图形（用「选择」工具点一下）":
+        "Select a shape first (click it with the Select tool)",
+    "已再制一个（Ctrl+Z 可撤销）": "Duplicated (Ctrl+Z to undo)",
+    "旋转 {:.0f}°（Ctrl+Z 可撤销）": "Rotated {:.0f}° (Ctrl+Z to undo)",
+    "删除": "Delete",
     "放大": "Zoom In", "缩小": "Zoom Out", "适应窗口": "Fit to Window",
     "水印…": "Watermark…", "边框…": "Border…",
     "编辑默认水印…": "Edit Default Watermark…",
