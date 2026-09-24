@@ -15,8 +15,9 @@
   - `PATCH`：只修问题（例：v2.14.1 补埋点）
   - `MAJOR`：不兼容的大改（至今没有）
 - **改动记录**：写在 [`CHANGELOG.md`](CHANGELOG.md)——按版本倒序，每条注明"为什么改"。
-- 发布动作：改 `version.py` → 重新 `python build_single.py` → 提交
-  （`chore(release): vX.Y-qt`）→ `git tag vX.Y-qt`。
+- 发布动作：改 `version.py` → 重新 `python tools/build_single.py` → 跑
+  `python tools/run_tests.py` → 提交（`chore(release): vX.Y-qt`）→
+  `git tag vX.Y-qt` → `git push --follow-tags`。
 
 ## 提交历史
 
@@ -87,8 +88,23 @@ git add -A; git commit -m "..."   # 提交
 - `dist/`（内嵌 Python + tcl/tk，约 31MB）、`.cache/`、`__pycache__/`、测试临时图片
   **不入库**。
 - `PyShot.py`（单文件版）**是入库的** —— 它是给别人直接运行的那一份，所以每次发布
-  都要 `python build_single.py` 重新生成并一起提交（它带版本号，见「版本号」一节）。
+  都要 `python tools/build_single.py` 重新生成并一起提交（它带版本号，见「版本号」一节）。
   只为跑测试而生成的中间产物不要提交。
+
+## 目录约定
+
+```
+<根>/            运行时代码（main.py / editor.py / … —— 顶层模块导入，不挪进 src/）
+                 + PyShot.py（单文件版）
+                 + README.md / CHANGELOG.md / LICENSE / VERSIONING.md / demo.png
+tests/           全部测试（test_*.py）；用 python tools/run_tests.py 跑
+tools/           开发与诊断脚本：build_single.py、gen_i18n.py、wrap_tr.py、
+                 run_tests.py、diag_*.py、make_*.py
+tk_version/      零依赖 Tkinter 实现（独立，备用/对照）
+```
+
+测试与工具脚本自己把**项目根**加进 `sys.path`（脚本里那段 `HERE = …parent.parent…`），
+所以随便从哪个目录调用都能跑；`tools/` 里的脚本同样按"上一级 = 项目根"来定位源码与输出。
 
 ## 尚未做
 

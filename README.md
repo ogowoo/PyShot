@@ -27,7 +27,7 @@ python PyShot.py              # 单文件版（缺依赖会自动 pip 安装）
 python PyShot.py --check-deps # 只检查依赖
 ```
 
-改完源码后重新生成单文件：`python build_single.py`
+改完源码后重新生成单文件：`python tools/build_single.py`
 
 ---
 
@@ -265,38 +265,44 @@ python PyShot.py --check-deps # 只检查依赖
 
 ```
 pyshot/
-├── PyShot.py       # ★ 单文件版（build_single.py 生成，可直接分发）
-├── main.py         # 入口：托盘、全局热键（区域+全屏两组）、截图流程
-├── snipper.py      # 覆盖层：框选/取色（放大镜、尺寸、多显示器）+ grab_screen
-├── editor.py       # 编辑器：多标签页、画布、工具、导出
-├── shapes.py       # 标注图形对象
-├── scroller.py     # 滚动长截图（四种驱动 + 拼接算法）
-├── capture_utils.py# 抓屏工具：空白检测、PrintWindow 回退、原生滚动条 API
-├── style.py        # 深色主题与矢量图标
-├── watermark.py    # 水印（对照 FSCapture：文字/图片各自开关、九宫格/平铺、独立透明度）
-├── border.py       # 加边框（对照 FSCapture「特效 → 边缘」：8 种样式、图会变大）
-├── pinboard.py     # 贴图窗口
-├── bootstrap.py    # 依赖自举（缺库自动 pip 安装，多级降级 + 镜像）
-├── build_single.py # 合并成 PyShot.py
-├── tk_version/     # 零依赖 Tkinter 实现（备用/对照，含其便携版构建脚本）
-└── test_*.py       # 测试
+├── PyShot.py        # ★ 单文件版（tools/build_single.py 生成，可直接分发）
+├── main.py          # 入口：托盘、全局热键（区域+全屏两组）、截图流程
+├── snipper.py       # 覆盖层：框选/取色（放大镜、尺寸、多显示器）+ grab_screen
+├── editor.py        # 编辑器：多标签页、画布、工具、导出
+├── shapes.py        # 标注图形对象
+├── scroller.py      # 滚动长截图（四种驱动 + 拼接算法）
+├── capture_utils.py # 抓屏工具：空白检测、PrintWindow 回退、原生滚动条 API
+├── style.py         # 深色主题与矢量图标
+├── watermark.py     # 水印（对照 FSCapture：文字/图片各自开关、九宫格/平铺、独立透明度）
+├── border.py        # 加边框（对照 FSCapture「特效 → 边缘」：8 种样式、图会变大）
+├── pinboard.py      # 贴图窗口
+├── help_text.py     # 帮助正文（只写简体，繁體/英文由 i18n 词表提供）
+├── helpwin.py       # 帮助窗口（小节列表 + 搜索 + 正文，非模态）
+├── bootstrap.py     # 依赖自举（缺库自动 pip 安装，多级降级 + 镜像）
+├── version.py       # 版本号与作者（唯一来源）
+├── tests/           # 全部测试（57 个套件，见下）
+├── tools/           # 开发/诊断脚本：构建、词表生成、跑测试、抓屏诊断
+└── tk_version/      # 零依赖 Tkinter 实现（备用/对照）
 ```
+
+> 运行时代码都在**根目录**：`main.py` 里全是 `from editor import …` 这种顶层导入，
+> 而且 `python main.py` / `python PyShot.py` 是用户的常用入口，所以不挪进 `src/`。
 
 ## 测试
 
 ```powershell
-python smoke_test.py             # 核心单元测试
-python test_editor_dpi.py        # 系统缩放下"跟手"
-python test_fullscreen_hotkey.py # 全屏热键分发 + 指定显示器抓取
-python test_fullscreen_live.py   # 真进程按热键验证
-python test_multiscreen.py       # 多显示器（假屏幕）
-python test_scrollbar_drag.py    # 滚动条拖拽滚动
-python test_flow.py              # 真机端到端
+python tools/run_tests.py            # 跑全部离线套件（推荐；约 80 秒）
+python tools/run_tests.py --live     # 连需要"真实桌面已解锁"的也一起跑
+python tools/run_tests.py test_help  # 只跑名字匹配的
+python tools/run_tests.py --list     # 看看会跑哪些
 ```
+
+也可以单独跑：`python tests/test_editor_dpi.py`、`python tests/test_flow.py` 等 ——
+每个测试自己把项目根加进 `sys.path`，从哪个目录调用都行。
 
 ## 踩过的坑（都已在代码里处理）
 
-### 单文件构建（`build_single.py` 把各模块拼进同一个命名空间）
+### 单文件构建（`tools/build_single.py` 把各模块拼进同一个命名空间）
 
 1. **顶层同名会静默覆盖**：`style.py` 的图标函数 `_draw_text(p, c)` 覆盖了
    `watermark.py` 里同名的 `_draw_text(painter, settings, box)` —— 多文件版正常，
