@@ -115,6 +115,9 @@ def shape_to_dict(shape) -> dict:
         base["pos"] = pt(shape.pos)
         base["text"] = shape.text
         base["font_size"] = int(shape.font_size)
+        if getattr(shape, "family", ""):
+            base["font"] = shape.family
+        base["bold"] = bool(getattr(shape, "bold", True))
         return base
     if isinstance(shape, StepShape):
         base["center"] = pt(shape.center)
@@ -167,8 +170,10 @@ def shape_from_dict(d: dict):
             return _with_rotation(PenShape(color, w,
                                            [pt(p) for p in d.get("points", [])]), d)
         if t == "TextShape":
-            return _with_rotation(TextShape(color, w, pt(d["pos"]), d.get("text", ""),
-                                            int(d.get("font_size", 20))), d)
+            sh = TextShape(color, w, pt(d["pos"]), d.get("text", ""),
+                           int(d.get("font_size", 20)), d.get("font", ""))
+            sh.bold = bool(d.get("bold", True))
+            return _with_rotation(sh, d)
         if t == "StepShape":
             return _with_rotation(StepShape(color, w, pt(d["center"]),
                                             int(d.get("number", 1)), 0,

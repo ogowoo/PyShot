@@ -186,6 +186,9 @@ TABLE = {
     "把正在摆放的粘贴图合成进当前图（Enter）": ("把正在擺放的貼上圖合成進當前圖（Enter）", "Merge the pasted image into this one (Enter)"),
     "取消粘贴": ("取消貼上", "Discard Paste"),
     "丢掉正在摆放的粘贴图（Esc）": ("丢掉正在擺放的貼上圖（Esc）", "Throw away the pasted image (Esc)"),
+    "粘贴图外观": ("貼上圖外观", "Pasted Image Style"),
+    "加阴影": ("加陰影", "Add shadow"),
+    "加白色描边": ("加白色描邊", "Add white outline"),
     "置于顶层": ("置於顶層", "Bring to Front"),
     "置于底层": ("置於底層", "Send to Back"),
     "上移一层": ("上移一層", "Bring Forward"),
@@ -195,6 +198,10 @@ TABLE = {
     "旋转 15°": ("旋轉 15°", "Rotate 15°"),
     "把选中图形转 15°（拖它上面的圆形手柄可以任意角度）": ("把選中圖形轉 15°（拖它上面的圓形手柄可以任意角度）", "Rotate the selection by 15° (drag the round handle above it for any angle)"),
     "摆正（0°）": ("擺正（0°）", "Straighten (0°)"),
+    "修改文字…": ("修改文字…", "Edit Text…"),
+    "改选中文字的内容（也可以直接双击文字）": ("改選中文字的內容（也可以直接雙擊文字）", "Change the selected text (or just double-click the text)"),
+    "字体…": ("字體…", "Font…"),
+    "选字体/字号/粗体：选中文字就改它，否则改之后新写的文字": ("選字體/字號/粗體：選中文字就改它，否則改之後新寫的文字", "Pick family/size/bold: applies to the selected text, otherwise to text you write next"),
     "复制到剪贴板": ("複製到剪貼簿", "Copy to Clipboard"),
     "贴图到屏幕": ("釘圖到螢幕", "Pin to Screen"),
     "视图": ("視圖", "View"),
@@ -205,6 +212,14 @@ TABLE = {
     "特效": ("特效", "Effects"),
     "水印…": ("水印…", "Watermark…"),
     "边框…": ("邊框…", "Border…"),
+    "水平翻转": ("水平翻轉", "Flip Horizontally"),
+    "左右镜像（标注也跟着翻，可 Ctrl+Z 撤销）": ("左右镜像（標注也跟着翻，可 Ctrl+Z 復原）", "Mirror left-right (annotations flip too; Ctrl+Z to undo)"),
+    "垂直翻转": ("垂直翻轉", "Flip Vertically"),
+    "上下镜像（标注也跟着翻，可 Ctrl+Z 撤销）": ("上下镜像（標注也跟着翻，可 Ctrl+Z 復原）", "Mirror top-bottom (annotations flip too; Ctrl+Z to undo)"),
+    "顺时针 90°": ("順時针 90°", "Rotate 90° CW"),
+    "逆时针 90°": ("逆時针 90°", "Rotate 90° CCW"),
+    "调整尺寸…": ("調整尺寸…", "Resize…"),
+    "按像素重设整张图（含标注），可 Ctrl+Z 撤销": ("按像素重設整張圖（含標注），可 Ctrl+Z 復原", "Resize the whole image in pixels (annotations scale with it); Ctrl+Z to undo"),
     "选项": ("選項", "Options"),
     "启动时恢复上次的截图": ("啟動時恢複上次的截圖", "Restore last captures on startup"),
     "重启后自动把上次编辑的截图放回来（存在缓存里，不需要你保存）": ("重啟後自動把上次編輯的截圖放回來（存在緩存裡，不需要你儲存）", "Bring back your last captures automatically after a restart (kept in a cache — no need to save)"),
@@ -215,7 +230,13 @@ TABLE = {
     "关于 PyShot": ("關於 PyShot", "About PyShot"),
     "已粘贴到当前图：拖动摆位置 · Ctrl+滚轮缩放 · Enter 固定 · Esc 取消": ("已貼上到當前圖：拖動擺位置 · Ctrl+滾輪縮放 · Enter 固定 · Esc 取消", "Pasted onto this image: drag to place · Ctrl+wheel to scale · Enter to apply · Esc to discard"),
     "已再制一个（Ctrl+Z 可撤销）": ("已再製一個（Ctrl+Z 可復原）", "Duplicated (Ctrl+Z to undo)"),
+    "选择字体": ("選擇字體", "Choose Font"),
+    "之后的文字用这个字体": ("之後的文字用這個字體", "New text will use this font"),
     "旋转 {:.0f}°（Ctrl+Z 可撤销）": ("旋轉 {:.0f}°（Ctrl+Z 可復原）", "Rotated {:.0f}° (Ctrl+Z to undo)"),
+    "调整尺寸": ("調整尺寸", "Resize"),
+    "宽度（像素，当前 {}）": ("寬度（像素，當前 {}）", "Width in pixels (currently {})"),
+    "高度（像素，当前 {}）": ("高度（像素，當前 {}）", "Height in pixels (currently {})"),
+    "已调整为 {} × {}（Ctrl+Z 可撤销）": ("已調整為 {} × {}（Ctrl+Z 可復原）", "Resized to {} × {} (Ctrl+Z to undo)"),
     "PyShot {}\n仿 FastStone Capture 的截图与标注工具\n\n托盘右键：区域截图 / 全屏截图 / 滚动长截图 / 屏幕取色 / 贴图\n编辑器：多标签标注 · 水印 · 加边框（含手撕纸）· 三语界面": ("PyShot {}\n仿 FastStone Capture 的截圖與標注工具\n\n托盤右鍵：區域截圖 / 全螢幕截圖 / 捲動長截圖 / 螢幕取色 / 釘圖\n編輯器：多標籤標注 · 水印 · 加邊框（含手撕紙）· 三語介面", "PyShot {}\nA FastStone Capture style screenshot and annotation tool\n\nTray menu: region / full-screen capture, scrolling capture, color picker, pin\nEditor: multi-tab annotation · watermark · borders (incl. torn paper) · 3 languages"),
     "关闭此标签 (Ctrl+W)": ("關閉此標籤 (Ctrl+W)", "Close this tab (Ctrl+W)"),
     "截图": ("截圖", "Capture"),
@@ -246,9 +267,16 @@ TABLE = {
     "PNG 图片 (*.png);;JPEG 图片 (*.jpg);;BMP 图片 (*.bmp)": ("PNG 圖片 (*.png);;JPEG 圖片 (*.jpg);;BMP 圖片 (*.bmp)", "PNG image (*.png);;JPEG image (*.jpg);;BMP image (*.bmp)"),
     "基本颜色": ("基本顏色", "Basic colors"),
     "删除": ("刪除", "Delete"),
+    "直角": ("直角", "Square corners"),
+    "小圆角": ("小圓角", "Slightly rounded"),
+    "大圆角": ("大圓角", "Very rounded"),
     "已固定粘贴的图（Ctrl+Z 可撤销）": ("已固定貼上的圖（Ctrl+Z 可復原）", "Pasted image applied (Ctrl+Z to undo)"),
     "先选一个图形（用「选择」工具点一下）": ("先選一個圖形（用「選擇」工具點一下）", "Select a shape first (click it with the Select tool)"),
+    "先选一段文字（用「选择」工具点一下，或直接双击文字）": ("先選一段文字（用「選擇」工具點一下，或直接雙擊文字）", "Select a text object first (click it with Select, or double-click the text)"),
+    "已改字体（Ctrl+Z 可撤销）": ("已改字體（Ctrl+Z 可復原）", "Font changed (Ctrl+Z to undo)"),
     "已取消粘贴": ("已取消貼上", "Paste discarded"),
+    "已水平翻转（Ctrl+Z 可撤销）": ("已水平翻轉（Ctrl+Z 可復原）", "Flipped horizontally (Ctrl+Z to undo)"),
+    "已垂直翻转（Ctrl+Z 可撤销）": ("已垂直翻轉（Ctrl+Z 可復原）", "Flipped vertically (Ctrl+Z to undo)"),
     "已清除上次的截图缓存": ("已清除上次的截圖緩存", "Last-capture cache cleared"),
     "已设为默认边框，之后每次新截图会自动加": ("已設為預設邊框，之後每次新截圖會自動加", "Saved as the default border; it will be added automatically"),
     "滚轮/Ctrl+滚轮 缩放 · 中键或空格拖动查看": ("滾輪/Ctrl+滾輪 縮放 · 中鍵或空格拖動查看", "Wheel / Ctrl+wheel to zoom · middle-drag or Space to pan"),
@@ -262,6 +290,8 @@ TABLE = {
     "边框宽度为 0，未做改动": ("邊框寬度為 0，未做改動", "Border width is 0 — nothing changed"),
     "已保存：": ("已儲存：", "Saved: "),
     "点这里定义一个自定义颜色…": ("點這裡定義一個自定義顏色…", "Click to define a custom color…"),
+    "已旋转 90°（Ctrl+Z 可撤销）": ("已旋轉 90°（Ctrl+Z 可復原）", "Rotated 90° (Ctrl+Z to undo)"),
+    "已逆时针旋转 90°（Ctrl+Z 可撤销）": ("已逆時针旋轉 90°（Ctrl+Z 可復原）", "Rotated 90° counter-clockwise (Ctrl+Z to undo)"),
     "当前颜色": ("當前顏色", "Current color"),
     "已加边框：": ("已加邊框：", "Border added: "),
     "截图 {}": ("截圖 {}", "Capture {}"),
@@ -935,6 +965,9 @@ def shape_to_dict(shape) -> dict:
         base["pos"] = pt(shape.pos)
         base["text"] = shape.text
         base["font_size"] = int(shape.font_size)
+        if getattr(shape, "family", ""):
+            base["font"] = shape.family
+        base["bold"] = bool(getattr(shape, "bold", True))
         return base
     if isinstance(shape, StepShape):
         base["center"] = pt(shape.center)
@@ -985,8 +1018,10 @@ def shape_from_dict(d: dict):
             return _with_rotation(PenShape(color, w,
                                            [pt(p) for p in d.get("points", [])]), d)
         if t == "TextShape":
-            return _with_rotation(TextShape(color, w, pt(d["pos"]), d.get("text", ""),
-                                            int(d.get("font_size", 20))), d)
+            sh = TextShape(color, w, pt(d["pos"]), d.get("text", ""),
+                           int(d.get("font_size", 20)), d.get("font", ""))
+            sh.bold = bool(d.get("bold", True))
+            return _with_rotation(sh, d)
         if t == "StepShape":
             return _with_rotation(StepShape(color, w, pt(d["center"]),
                                             int(d.get("number", 1)), 0,
@@ -2614,7 +2649,8 @@ import copy
 import math
 
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt
-from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen, QPixmap
+from PySide6.QtGui import (QColor, QFont, QPainter, QPainterPath, QPen, QPixmap,
+                           QTransform)
 
 
 class Shape:
@@ -2733,6 +2769,14 @@ class Shape:
 
     def clone(self):
         return copy.deepcopy(self)
+
+    def transform(self, t: QTransform):
+        """按仿射变换搬运几何（画布翻转/旋转/改尺寸时用）。
+
+        默认实现用外接矩形：对矩形/椭圆/高亮/马赛克/序号都正确；
+        线段、画笔、文字各自覆盖（否则会被"外接框化"变形）。
+        """
+        self.apply_rect(t.mapRect(self.bounding_rect()))
 
     def translate(self, dx: float, dy: float):
         """整体平移（裁剪时使用）。默认按 move_by 处理。"""
@@ -2865,6 +2909,11 @@ class LineShape(Shape):
         self.p1 += QPointF(dx, dy)
         self.p2 += QPointF(dx, dy)
 
+    def transform(self, t: QTransform):
+        """直线/箭头：两个端点各自变换（否则 90° 旋转会被外接框压扁）。"""
+        self.p1 = t.map(self.p1)
+        self.p2 = t.map(self.p2)
+
 
 class ArrowShape(LineShape):
     """带箭头头部的直线。"""
@@ -2926,18 +2975,25 @@ class PenShape(Shape):
         d = QPointF(dx, dy)
         self.points = [p + d for p in self.points]
 
+    def transform(self, t: QTransform):
+        """画笔：每个点都跟着变换，形状不会被"外接框化"。"""
+        self.points = [t.map(p) for p in self.points]
+
 
 class TextShape(Shape):
-    def __init__(self, color, width, pos: QPointF, text: str, font_size: int):
+    def __init__(self, color, width, pos: QPointF, text: str, font_size: int,
+                 family: str = ""):
         super().__init__(color, width)
         self.pos = QPointF(pos)
         self.text = text
         self.font_size = max(8, int(font_size))
+        self.family = family or ""      # 空 = 用默认字体（微软雅黑）
+        self.bold = True
 
     def font(self) -> QFont:
-        f = QFont("Microsoft YaHei")
+        f = QFont(self.family or "Microsoft YaHei")
         f.setPixelSize(self.font_size)
-        f.setBold(True)
+        f.setBold(self.bold)
         return f
 
     def draw(self, painter, canvas):
@@ -2974,6 +3030,10 @@ class TextShape(Shape):
 
     def move_by(self, dx, dy):
         self.pos += QPointF(dx, dy)
+
+    def transform(self, t: QTransform):
+        """文字：只搬位置、不改字号（翻转/旋转画布后文字要保持原来的大小）。"""
+        self.pos = t.map(self.pos)
 
 
 def _metrics(font: QFont):
@@ -3129,6 +3189,13 @@ class WatermarkShape(Shape):
 
     def move_by(self, dx, dy):
         self.offset += QPointF(dx, dy)
+        self._bounds = None
+
+    def transform(self, t: QTransform):
+        """水印：只搬偏移位置（翻转/旋转画布不该改水印字号）。"""
+        if self.offset is None:
+            self.offset = QPointF(0.0, 0.0)
+        self.offset = t.map(self.offset)
         self._bounds = None
 
     def apply_rect(self, rect: QRectF):
@@ -6163,9 +6230,10 @@ from pathlib import Path
 from PySide6.QtCore import (QPoint, QPointF, QRect, QRectF, QSize, Qt, QTimer,
                             Signal)
 from PySide6.QtGui import (QAction, QColor, QGuiApplication, QIcon, QKeySequence,
-                           QPainter, QPainterPath, QPen, QPixmap, QPolygonF)
-from PySide6.QtWidgets import (QDialogButtonBox, QGridLayout, QMenu, QStackedWidget, QApplication, QColorDialog, QDialog, QFileDialog,
-                               QFrame, QHBoxLayout, QLabel, QLayout, QLineEdit,
+                           QPainter, QPainterPath, QPen, QPixmap, QPolygonF,
+                           QTransform)
+from PySide6.QtWidgets import (QDialogButtonBox, QFontDialog, QGridLayout, QMenu, QStackedWidget, QApplication, QColorDialog, QDialog, QFileDialog,
+                               QFrame, QHBoxLayout, QInputDialog, QLabel, QLayout, QLineEdit,
                                QMainWindow, QMessageBox, QPushButton,
                                QScrollArea, QSizePolicy, QSpinBox, QTabBar,
                                QTabWidget, QToolButton, QVBoxLayout, QWidget,
@@ -6483,9 +6551,14 @@ class Canvas(QWidget):
         self._float_aspect = 1.0              # 原始宽高比（Shift 等比时用）
         self._float_from: QPointF | None = None    # 拖动时的抓取偏移
         self._float_handle: int | None = None      # 正在拖的缩放句柄索引
+        # 粘贴图的外观（阴影/描边/圆角）——做指引时让贴上去的图"浮起来"
+        self.float_style = {"shadow": False, "stroke": False, "radius": 0,
+                            "stroke_color": "#ffffff", "stroke_width": 3}
 
         self._text_edit: QLineEdit | None = None
         self._text_pos = QPointF()
+        self._text_target = None      # 正在改的已有文字（None = 新建）
+        self.font_family = ""         # 文字字体（空 = 默认微软雅黑）
 
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.StrongFocus)
@@ -6843,6 +6916,17 @@ class Canvas(QWidget):
             return
         if self.tool == "crop":
             self.apply_crop()
+            return
+        # 双击已有文字 = 改文字（以前只能删掉重写）
+        pos = self.to_image(e.position())
+        for shape in reversed(self.shapes):
+            if isinstance(shape, TextShape) and shape.contains(
+                    shape.world_to_local(pos), 6 / self.zoom):
+                self._selected = shape
+                self.selection_changed.emit(shape)
+                self._open_text_editor(shape.pos, target=shape)
+                self.update()
+                return
 
     def contextMenuEvent(self, e):
         """右键菜单：图层顺序 / 再制 / 旋转 / 删除 / 粘贴相关。
@@ -6863,6 +6947,9 @@ class Canvas(QWidget):
             menu.addAction(tr("置于底层"), lambda: self._emit_ctx("back"))
             menu.addSeparator()
             menu.addAction(tr("再制一个"), lambda: self._emit_ctx("dup"))
+            if isinstance(self._selected, TextShape):
+                menu.addAction(tr("修改文字…"),
+                               lambda: self._emit_ctx("edit_text"))
             menu.addAction(tr("旋转 15°"), lambda: self._emit_ctx("rot15"))
             menu.addAction(tr("摆正（0°）"), lambda: self._emit_ctx("rot0"))
             menu.addSeparator()
@@ -6955,17 +7042,26 @@ class Canvas(QWidget):
         super().keyPressEvent(e)
 
     # ---------- 文字输入 ----------
-    def _open_text_editor(self, pos: QPointF):
+    def _open_text_editor(self, pos: QPointF, target=None):
+        """打开行内文字输入。target 是已有的 TextShape 时表示**改文字**。"""
         self._text_pos = pos
+        self._text_target = target
         edit = QLineEdit(self)
         edit.setPlaceholderText(tr("输入文字，Enter 确认 / Esc 取消"))
         font = edit.font()
-        font.setPixelSize(max(12, int(self.font_size * self.zoom)))
+        size = int(getattr(target, "font_size", self.font_size) or self.font_size)
+        font.setPixelSize(max(12, int(size * self.zoom)))
+        fam = getattr(target, "family", "") or getattr(self, "font_family", "")
+        if fam:
+            font.setFamily(fam)
         edit.setFont(font)
         edit.setStyleSheet(f"color: {self.color.name()}; background: rgba(255,255,255,220);"
                            "border: 1px dashed #888;")
         edit.move(int(pos.x() * self.zoom), int(pos.y() * self.zoom))
-        edit.resize(max(240, int(self.font_size * self.zoom * 12)), edit.sizeHint().height() + 6)
+        edit.resize(max(240, int(size * self.zoom * 12)), edit.sizeHint().height() + 6)
+        if target is not None:                 # 改已有的：填上原文并全选，直接就能改
+            edit.setText(str(target.text))
+            edit.selectAll()
         edit.returnPressed.connect(self._commit_text)
         edit.editingFinished.connect(self._commit_text)
         edit.show()
@@ -6985,13 +7081,33 @@ class Canvas(QWidget):
         if self._text_edit is None:
             return
         edit = self._text_edit
+        target = getattr(self, "_text_target", None)
         self._text_edit = None
+        self._text_target = None
         text = edit.text().strip()
         edit.deleteLater()
+        if target is not None:                 # 改已有文字
+            if not text:
+                self.push_undo()
+                if target in self.shapes:
+                    self.shapes.remove(target)
+                    if self._selected is target:
+                        self._selected = None
+                        self.selection_changed.emit(None)
+                self.update()
+                self.shapes_changed.emit()
+                return
+            if text != target.text:
+                self.push_undo()
+                target.text = text
+                self.update()
+                self.shapes_changed.emit()
+            return
         if text:
             self.push_undo()
             self.shapes.append(TextShape(self.color, self.pen_width, self._text_pos,
-                                         text, self.font_size))
+                                         text, self.font_size,
+                                         getattr(self, "font_family", "")))
             self.update()
             self.shapes_changed.emit()
 
@@ -7161,9 +7277,9 @@ class Canvas(QWidget):
             return False
         self.push_undo()                     # 底图要变了，先记一次
         p = QPainter(self.base_pixmap)
+        p.setRenderHint(QPainter.Antialiasing)
         p.setRenderHint(QPainter.SmoothPixmapTransform)
-        p.drawPixmap(self.float_rect(), self._float_pix,
-                     QRectF(self._float_pix.rect()))
+        self._draw_float(p)                  # 和预览用同一套画法，保证一致
         p.end()
         self._float_pix = None
         self._float_from = None
@@ -7174,6 +7290,102 @@ class Canvas(QWidget):
         self.set_tool_cursor()
         self.update()
         return True
+
+    # ---------- 画布变换：翻转 / 旋转 90° / 改尺寸 ----------
+    # 标注图形跟着一起变换（不是"烧进图里"），所以变换完还能继续编辑。
+    def _apply_canvas_transform(self, t: QTransform, new_size=None):
+        """把仿射变换同时作用到底图和所有标注上。"""
+        self.push_undo()
+        old = self.base_pixmap
+        if new_size is None:
+            new_size = old.size()
+        out = old.transformed(t, Qt.SmoothTransformation)
+        if out.size() != new_size:                 # 兜底：尺寸必须和目标一致
+            out = out.scaled(new_size, Qt.IgnoreAspectRatio,
+                             Qt.SmoothTransformation)
+        out.setDevicePixelRatio(self.dpr)
+        self.base_pixmap = out
+        for shape in self.shapes:
+            try:
+                shape.transform(t)
+            except Exception:                      # noqa: BLE001
+                pass
+        self._apply_size()
+        self._selected = None
+        self._crop_rect = None
+        self.shapes_changed.emit()
+        self.update()
+
+    def flip_horizontal(self):
+        """水平翻转（左右镜像），标注跟着翻。"""
+        t = QTransform().translate(self.base_pixmap.width(), 0).scale(-1, 1)
+        self._apply_canvas_transform(t)
+
+    def flip_vertical(self):
+        """垂直翻转（上下镜像），标注跟着翻。"""
+        t = QTransform().translate(0, self.base_pixmap.height()).scale(1, -1)
+        self._apply_canvas_transform(t)
+
+    def rotate90(self, clockwise: bool = True):
+        """顺时针/逆时针转 90°（宽高对调），标注跟着转。"""
+        w, h = self.base_pixmap.width(), self.base_pixmap.height()
+        if clockwise:
+            t = QTransform().translate(h, 0).rotate(90)
+            size = QSize(h, w)
+        else:
+            t = QTransform().translate(0, w).rotate(-90)
+            size = QSize(h, w)
+        self._apply_canvas_transform(t, new_size=size)
+
+    def scale_canvas(self, width: int, height: int):
+        """把整张图（含标注）缩放到指定像素尺寸。"""
+        w, h = self.base_pixmap.width(), self.base_pixmap.height()
+        if width < 8 or height < 8 or w < 1 or h < 1:
+            return
+        t = QTransform().scale(width / float(w), height / float(h))
+        self._apply_canvas_transform(t, new_size=QSize(int(width), int(height)))
+
+    def set_float_style(self, **kw) -> None:
+        """调粘贴图外观（shadow / stroke / radius / stroke_color）。"""
+        self.float_style.update({k: v for k, v in kw.items()
+                                 if k in self.float_style})
+        self.update()
+
+    def _float_path(self) -> QPainterPath:
+        """粘贴图的轮廓（圆角矩形或直角矩形）：阴影/裁剪/描边都用它。"""
+        path = QPainterPath()
+        r = float(self.float_style.get("radius") or 0)
+        rect = self.float_rect()
+        if r > 0:
+            r = min(r, rect.width() / 2.0, rect.height() / 2.0)
+            path.addRoundedRect(rect, r, r)
+        else:
+            path.addRect(rect)
+        return path
+
+    def _draw_float(self, painter: QPainter) -> None:
+        """把浮动图画到给定 painter（预览与合成共用，避免两处画法不一致）。"""
+        if self._float_pix is None:
+            return
+        rect = self.float_rect()
+        style = self.float_style
+        path = self._float_path()
+        if style.get("shadow"):
+            # 便宜的"软阴影"：几层逐渐变淡的偏移轮廓（做指引够用，不引入模糊库）
+            for off, alpha in ((7, 46), (5, 62), (3, 86)):
+                painter.save()
+                painter.translate(off, off)
+                painter.fillPath(path, QColor(0, 0, 0, alpha))
+                painter.restore()
+        painter.save()
+        painter.setClipPath(path)
+        painter.drawPixmap(rect, self._float_pix, QRectF(self._float_pix.rect()))
+        painter.restore()
+        if style.get("stroke"):
+            painter.setPen(QPen(QColor(style.get("stroke_color", "#ffffff")),
+                                max(1, int(style.get("stroke_width", 3)))))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawPath(path)
 
     def cancel_float(self) -> bool:
         """丢掉浮动图，底图不动。"""
@@ -7269,8 +7481,7 @@ class Canvas(QWidget):
         if self._float_pix is not None:
             p.setRenderHint(QPainter.SmoothPixmapTransform,
                             self.float_scale() < 1.0)
-            p.drawPixmap(self.float_rect(), self._float_pix,
-                         QRectF(self._float_pix.rect()))
+            self._draw_float(p)
             p.setRenderHint(QPainter.SmoothPixmapTransform, False)
         p.end()
         out.setDevicePixelRatio(self.dpr)   # 带上 dpr，显示按逻辑尺寸、像素不丢
@@ -7321,10 +7532,7 @@ class Canvas(QWidget):
         # 浮动粘贴：虚线框 + 8 个缩放手柄 + 1 个旋转手柄（表示"还能拖/缩"）
         if self._float_pix is not None:
             rect = self.float_rect()
-            painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
-            painter.drawPixmap(rect, self._float_pix,
-                               QRectF(self._float_pix.rect()))
-            painter.setRenderHint(QPainter.SmoothPixmapTransform, False)
+            self._draw_float(painter)
             pen = QPen(QColor(ACCENT), 1.6 / self.zoom)
             pen.setStyle(Qt.DashLine)
             painter.setPen(pen)
@@ -7462,7 +7670,10 @@ class EditorWindow(QMainWindow):
         self._prev_tool = "select"
         # 跨标签共享的绘制属性（切标签/新截图沿用当前工具与样式）
         self._shared = {"tool": "select", "color": QColor(PALETTE[0]),
-                        "pen_width": 3, "font_size": 20, "step_diameter": 36}
+                        "pen_width": 3, "font_size": 20, "step_diameter": 36,
+                        "float_style": {"shadow": False, "stroke": False,
+                                        "radius": 0, "stroke_color": "#ffffff",
+                                        "stroke_width": 3}}
 
         # 标签页：一次会话里的多张截图
         self.tabs = QTabWidget()
@@ -7603,6 +7814,26 @@ class EditorWindow(QMainWindow):
         self.act_paste_cancel.setToolTip(tr("丢掉正在摆放的粘贴图（Esc）"))
         self.act_paste_cancel.triggered.connect(self.discard_pasted)
         m_edit.addAction(self.act_paste_cancel)
+        # 粘贴图外观：阴影/描边/圆角（做指引时让贴上去的图"浮起来"）
+        menu_paste_style = QMenu(tr("粘贴图外观"), m_edit)
+        self.act_ps_shadow = QAction(tr("加阴影"), self)
+        self.act_ps_shadow.setCheckable(True)
+        self.act_ps_shadow.toggled.connect(
+            lambda on: self._float_style(shadow=on))
+        menu_paste_style.addAction(self.act_ps_shadow)
+        self.act_ps_stroke = QAction(tr("加白色描边"), self)
+        self.act_ps_stroke.setCheckable(True)
+        self.act_ps_stroke.toggled.connect(
+            lambda on: self._float_style(stroke=on))
+        menu_paste_style.addAction(self.act_ps_stroke)
+        menu_paste_style.addSeparator()
+        for label, radius in ((tr("直角"), 0), (tr("小圆角"), 10),
+                              (tr("大圆角"), 24)):
+            act = QAction(label, self)
+            act.triggered.connect(
+                lambda checked=False, r=radius: self._float_style(radius=r))
+            menu_paste_style.addAction(act)
+        m_edit.addMenu(menu_paste_style)
         m_edit.addSeparator()
         # 选中图形的层级 / 微调 / 再制（做指引时会叠好几层，顺序很要紧）
         self.act_front = QAction(tr("置于顶层"), self)
@@ -7631,6 +7862,17 @@ class EditorWindow(QMainWindow):
         self.act_rotate0.triggered.connect(lambda: self.rotate_selected(None))
         m_edit.addAction(self.act_rotate0)
         m_edit.addSeparator()
+        self.act_edit_text = QAction(tr("修改文字…"), self)
+        self.act_edit_text.setShortcut("F2")
+        self.act_edit_text.setToolTip(tr("改选中文字的内容（也可以直接双击文字）"))
+        self.act_edit_text.triggered.connect(self.edit_selected_text)
+        m_edit.addAction(self.act_edit_text)
+        self.act_font = QAction(tr("字体…"), self)
+        self.act_font.setToolTip(
+            tr("选字体/字号/粗体：选中文字就改它，否则改之后新写的文字"))
+        self.act_font.triggered.connect(self.choose_font)
+        m_edit.addAction(self.act_font)
+        m_edit.addSeparator()
         self.act_m_copy = QAction(tr("复制到剪贴板"), self)
         self.act_m_copy.setShortcut("Ctrl+C")
         self.act_m_copy.triggered.connect(self.copy_to_clipboard)
@@ -7658,7 +7900,8 @@ class EditorWindow(QMainWindow):
         self.act_zoom_fit.triggered.connect(self.fit_to_window)
         m_view.addAction(self.act_zoom_fit)
 
-        # ---------- 特效（和 FSCapture 一致，水印/边框都收在这里）----------
+        # ---------- 特效 ----------
+        # （画布翻转/旋转 90°/改尺寸 放在这里：都属于"整张图的变换"）
         m_fx = bar.addMenu(tr("特效"))
         self.menus["fx"] = m_fx
         self.act_m_wm = QAction(tr("水印…"), self)
@@ -7667,6 +7910,25 @@ class EditorWindow(QMainWindow):
         self.act_m_border = QAction(tr("边框…"), self)
         self.act_m_border.triggered.connect(self.add_border)
         m_fx.addAction(self.act_m_border)
+        m_fx.addSeparator()
+        self.act_flip_h = QAction(tr("水平翻转"), self)
+        self.act_flip_h.setToolTip(tr("左右镜像（标注也跟着翻，可 Ctrl+Z 撤销）"))
+        self.act_flip_h.triggered.connect(self.flip_h)
+        m_fx.addAction(self.act_flip_h)
+        self.act_flip_v = QAction(tr("垂直翻转"), self)
+        self.act_flip_v.setToolTip(tr("上下镜像（标注也跟着翻，可 Ctrl+Z 撤销）"))
+        self.act_flip_v.triggered.connect(self.flip_v)
+        m_fx.addAction(self.act_flip_v)
+        self.act_rot90 = QAction(tr("顺时针 90°"), self)
+        self.act_rot90.triggered.connect(lambda: self.rot90(True))
+        m_fx.addAction(self.act_rot90)
+        self.act_rot270 = QAction(tr("逆时针 90°"), self)
+        self.act_rot270.triggered.connect(lambda: self.rot90(False))
+        m_fx.addAction(self.act_rot270)
+        self.act_resize_img = QAction(tr("调整尺寸…"), self)
+        self.act_resize_img.setToolTip(tr("按像素重设整张图（含标注），可 Ctrl+Z 撤销"))
+        self.act_resize_img.triggered.connect(self.resize_image)
+        m_fx.addAction(self.act_resize_img)
 
         # ---------- 选项 ----------
         m_opt = bar.addMenu(tr("选项"))
@@ -7848,6 +8110,55 @@ class EditorWindow(QMainWindow):
             self.rotate_selected(15)
         elif what == "rot0":
             self.rotate_selected(None)
+        elif what == "edit_text":
+            self.edit_selected_text()
+
+    def _selected_text(self):
+        """当前选中的文字图形（没选中文字就返回 None）。"""
+        canvas = self.canvas
+        shape = canvas._selected if canvas is not None else None
+        if isinstance(shape, TextShape) and shape in canvas.shapes:
+            return shape, canvas
+        return None, canvas
+
+    def edit_selected_text(self):
+        """改选中文字的内容（等效于双击它）。"""
+        shape, canvas = self._selected_text()
+        if shape is None:
+            self.statusBar().showMessage(
+                tr("先选一段文字（用「选择」工具点一下，或直接双击文字）"), 3000)
+            return
+        canvas._open_text_editor(shape.pos, target=shape)
+
+    def choose_font(self):
+        """选字体/字号/粗体：选中文字就改它，否则作为新文字的默认。"""
+        shape, canvas = self._selected_text()
+        cur = QFont(shape.font()) if shape is not None else QFont(
+            getattr(canvas, "font_family", "") or "Microsoft YaHei")
+        if shape is None and canvas is not None:
+            cur.setPixelSize(int(canvas.font_size))
+        ok, font = QFontDialog.getFont(cur, self, tr("选择字体"))
+        if not ok:
+            return
+        family = font.family()
+        size = int(font.pixelSize()) if font.pixelSize() > 0 else int(
+            font.pointSizeF() * 1.33) or 20
+        bold = font.bold()
+        if shape is not None:
+            canvas.push_undo()
+            shape.family = family
+            shape.font_size = max(8, size)
+            shape.bold = bold
+            self.font_spin.setValue(shape.font_size)   # 让工具栏跟着变
+            canvas.update()
+            canvas.shapes_changed.emit()
+            self.statusBar().showMessage(tr("已改字体（Ctrl+Z 可撤销）"), 3000)
+            return
+        if canvas is not None:
+            canvas.font_family = family
+            canvas.font_size = max(8, size)
+        self.font_spin.setValue(max(10, min(96, size)))
+        self.statusBar().showMessage(tr("之后的文字用这个字体"), 3000)
 
     def rotate_selected(self, degrees: float | None):
         """旋转选中图形；degrees=None 表示摆正（回到 0°）。"""
@@ -7873,6 +8184,51 @@ class EditorWindow(QMainWindow):
         if canvas is not None and canvas.has_float():
             canvas.cancel_float()
             self.statusBar().showMessage(tr("已取消粘贴"), 3000)
+
+    def _float_style(self, **kw):
+        """改粘贴图外观；这次没有浮层时也记住，下次粘贴就带上。"""
+        for i in range(self.tabs.count()):
+            c = self.tabs.widget(i).widget()
+            if isinstance(c, Canvas):
+                c.set_float_style(**kw)
+        if self._shared is not None:
+            self._shared.setdefault("float_style", {}).update(kw)
+
+    # ---------- 画布变换（菜单入口）----------
+    def flip_h(self):
+        if self.canvas is not None:
+            self.canvas.flip_horizontal()
+            self.statusBar().showMessage(tr("已水平翻转（Ctrl+Z 可撤销）"), 3000)
+
+    def flip_v(self):
+        if self.canvas is not None:
+            self.canvas.flip_vertical()
+            self.statusBar().showMessage(tr("已垂直翻转（Ctrl+Z 可撤销）"), 3000)
+
+    def rot90(self, clockwise: bool = True):
+        if self.canvas is not None:
+            self.canvas.rotate90(clockwise)
+            self.statusBar().showMessage(
+                tr("已旋转 90°（Ctrl+Z 可撤销）") if clockwise
+                else tr("已逆时针旋转 90°（Ctrl+Z 可撤销）"), 3000)
+
+    def resize_image(self):
+        """调整尺寸对话框：按像素重设整张图（含标注）。"""
+        canvas = self.canvas
+        if canvas is None:
+            return
+        w, h = canvas.base_pixmap.width(), canvas.base_pixmap.height()
+        new_w, ok = QInputDialog.getInt(
+            self, tr("调整尺寸"), tr("宽度（像素，当前 {}）", w), w, 8, 20000, 1)
+        if not ok:
+            return
+        new_h, ok = QInputDialog.getInt(
+            self, tr("调整尺寸"), tr("高度（像素，当前 {}）", h), h, 8, 20000, 1)
+        if not ok:
+            return
+        canvas.scale_canvas(new_w, new_h)
+        self.statusBar().showMessage(
+            tr("已调整为 {} × {}（Ctrl+Z 可撤销）", new_w, new_h), 4000)
 
     def show_about(self):
         """关于：一句话 + 版本号 + 主要能力（三语齐全）。"""
@@ -7989,6 +8345,7 @@ class EditorWindow(QMainWindow):
         canvas.pen_width = self._shared["pen_width"]
         canvas.font_size = self._shared["font_size"]
         canvas.step_diameter = self._shared["step_diameter"]
+        canvas.set_float_style(**self._shared.get("float_style", {}))
         canvas.setCursor(Qt.CrossCursor if canvas.tool != "select" else Qt.ArrowCursor)
         canvas.shapes_changed.connect(self._refresh_actions)
         canvas.float_changed.connect(self._refresh_actions)
@@ -8108,6 +8465,7 @@ class EditorWindow(QMainWindow):
         canvas.pen_width = self._shared["pen_width"]
         canvas.font_size = self._shared["font_size"]
         canvas.step_diameter = self._shared["step_diameter"]
+        canvas.set_float_style(**self._shared.get("float_style", {}))
         canvas.setCursor(Qt.CrossCursor if canvas.tool != "select" else Qt.ArrowCursor)
         self.zoom_label.setText(f"{round(canvas.zoom * 100)}%")
         self._refresh_swatch_state()
@@ -8508,11 +8866,20 @@ class EditorWindow(QMainWindow):
                 c.pen_width = v
 
     def _on_font_changed(self, v: int):
+        """字号：作用于新文字，同时实时调整**选中的文字**（和序号大小一致的手感）。"""
         self._shared["font_size"] = v
         for i in range(self.tabs.count()):
             c = self.tabs.widget(i).widget()
             if isinstance(c, Canvas):
                 c.font_size = v
+        canvas = self.canvas
+        shape = canvas._selected if canvas is not None else None
+        if isinstance(shape, TextShape) and shape in canvas.shapes:
+            if int(shape.font_size) != int(v):
+                canvas.push_undo()
+                shape.font_size = max(8, int(v))
+                canvas.update()
+                canvas.shapes_changed.emit()
 
     def _on_step_size_changed(self, v: int):
         """序号大小：作用于新序号，同时也实时调整选中的序号。"""

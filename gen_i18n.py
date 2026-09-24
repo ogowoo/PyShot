@@ -627,6 +627,44 @@ EN = {
     "已再制一个（Ctrl+Z 可撤销）": "Duplicated (Ctrl+Z to undo)",
     "旋转 {:.0f}°（Ctrl+Z 可撤销）": "Rotated {:.0f}° (Ctrl+Z to undo)",
     "删除": "Delete",
+    "粘贴图外观": "Pasted Image Style",
+    "加阴影": "Add shadow",
+    "加白色描边": "Add white outline",
+    "直角": "Square corners",
+    "小圆角": "Slightly rounded",
+    "大圆角": "Very rounded",
+    "修改文字…": "Edit Text…",
+    "改选中文字的内容（也可以直接双击文字）":
+        "Change the selected text (or just double-click the text)",
+    "字体…": "Font…",
+    "选字体/字号/粗体：选中文字就改它，否则改之后新写的文字":
+        "Pick family/size/bold: applies to the selected text, otherwise to text you write next",
+    "选择字体": "Choose Font",
+    "先选一段文字（用「选择」工具点一下，或直接双击文字）":
+        "Select a text object first (click it with Select, or double-click the text)",
+    "已改字体（Ctrl+Z 可撤销）": "Font changed (Ctrl+Z to undo)",
+    "之后的文字用这个字体": "New text will use this font",
+    "水平翻转": "Flip Horizontally",
+    "垂直翻转": "Flip Vertically",
+    "左右镜像（标注也跟着翻，可 Ctrl+Z 撤销）":
+        "Mirror left-right (annotations flip too; Ctrl+Z to undo)",
+    "上下镜像（标注也跟着翻，可 Ctrl+Z 撤销）":
+        "Mirror top-bottom (annotations flip too; Ctrl+Z to undo)",
+    "顺时针 90°": "Rotate 90° CW",
+    "逆时针 90°": "Rotate 90° CCW",
+    "调整尺寸…": "Resize…",
+    "按像素重设整张图（含标注），可 Ctrl+Z 撤销":
+        "Resize the whole image in pixels (annotations scale with it); Ctrl+Z to undo",
+    "已水平翻转（Ctrl+Z 可撤销）": "Flipped horizontally (Ctrl+Z to undo)",
+    "已垂直翻转（Ctrl+Z 可撤销）": "Flipped vertically (Ctrl+Z to undo)",
+    "已旋转 90°（Ctrl+Z 可撤销）": "Rotated 90° (Ctrl+Z to undo)",
+    "已逆时针旋转 90°（Ctrl+Z 可撤销）":
+        "Rotated 90° counter-clockwise (Ctrl+Z to undo)",
+    "调整尺寸": "Resize",
+    "宽度（像素，当前 {}）": "Width in pixels (currently {})",
+    "高度（像素，当前 {}）": "Height in pixels (currently {})",
+    "已调整为 {} × {}（Ctrl+Z 可撤销）":
+        "Resized to {} × {} (Ctrl+Z to undo)",
     "放大": "Zoom In", "缩小": "Zoom Out", "适应窗口": "Fit to Window",
     "水印…": "Watermark…", "边框…": "Border…",
     "编辑默认水印…": "Edit Default Watermark…",

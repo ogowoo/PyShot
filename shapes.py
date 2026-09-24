@@ -7,7 +7,8 @@ import copy
 import math
 
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt
-from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen, QPixmap
+from PySide6.QtGui import (QColor, QFont, QPainter, QPainterPath, QPen, QPixmap,
+                           QTransform)
 
 
 class Shape:
@@ -126,6 +127,14 @@ class Shape:
 
     def clone(self):
         return copy.deepcopy(self)
+
+    def transform(self, t: QTransform):
+        """按仿射变换搬运几何（画布翻转/旋转/改尺寸时用）。
+
+        默认实现用外接矩形：对矩形/椭圆/高亮/马赛克/序号都正确；
+        线段、画笔、文字各自覆盖（否则会被"外接框化"变形）。
+        """
+        self.apply_rect(t.mapRect(self.bounding_rect()))
 
     def translate(self, dx: float, dy: float):
         """整体平移（裁剪时使用）。默认按 move_by 处理。"""
@@ -258,6 +267,11 @@ class LineShape(Shape):
         self.p1 += QPointF(dx, dy)
         self.p2 += QPointF(dx, dy)
 
+    def transform(self, t: QTransform):
+        """直线/箭头：两个端点各自变换（否则 90° 旋转会被外接框压扁）。"""
+        self.p1 = t.map(self.p1)
+        self.p2 = t.map(self.p2)
+
 
 class ArrowShape(LineShape):
     """带箭头头部的直线。"""
@@ -319,18 +333,25 @@ class PenShape(Shape):
         d = QPointF(dx, dy)
         self.points = [p + d for p in self.points]
 
+    def transform(self, t: QTransform):
+        """画笔：每个点都跟着变换，形状不会被"外接框化"。"""
+        self.points = [t.map(p) for p in self.points]
+
 
 class TextShape(Shape):
-    def __init__(self, color, width, pos: QPointF, text: str, font_size: int):
+    def __init__(self, color, width, pos: QPointF, text: str, font_size: int,
+                 family: str = ""):
         super().__init__(color, width)
         self.pos = QPointF(pos)
         self.text = text
         self.font_size = max(8, int(font_size))
+        self.family = family or ""      # 空 = 用默认字体（微软雅黑）
+        self.bold = True
 
     def font(self) -> QFont:
-        f = QFont("Microsoft YaHei")
+        f = QFont(self.family or "Microsoft YaHei")
         f.setPixelSize(self.font_size)
-        f.setBold(True)
+        f.setBold(self.bold)
         return f
 
     def draw(self, painter, canvas):
@@ -367,6 +388,10 @@ class TextShape(Shape):
 
     def move_by(self, dx, dy):
         self.pos += QPointF(dx, dy)
+
+    def transform(self, t: QTransform):
+        """文字：只搬位置、不改字号（翻转/旋转画布后文字要保持原来的大小）。"""
+        self.pos = t.map(self.pos)
 
 
 def _metrics(font: QFont):
@@ -522,6 +547,13 @@ class WatermarkShape(Shape):
 
     def move_by(self, dx, dy):
         self.offset += QPointF(dx, dy)
+        self._bounds = None
+
+    def transform(self, t: QTransform):
+        """水印：只搬偏移位置（翻转/旋转画布不该改水印字号）。"""
+        if self.offset is None:
+            self.offset = QPointF(0.0, 0.0)
+        self.offset = t.map(self.offset)
         self._bounds = None
 
     def apply_rect(self, rect: QRectF):
