@@ -101,7 +101,9 @@ check("文件菜单项齐全",
                                   "关闭当前标签", "退出"],
       str(items(ed.menus["file"])))
 check("编辑菜单项齐全",
-      items(ed.menus["edit"]) == ["撤销", "重做", "复制到剪贴板", "贴图到屏幕"],
+      items(ed.menus["edit"]) == ["撤销", "重做", "粘贴到当前图（浮动）",
+                                  "固定粘贴的图", "取消粘贴",
+                                  "复制到剪贴板", "贴图到屏幕"],
       str(items(ed.menus["edit"])))
 check("视图菜单项齐全",
       items(ed.menus["view"]) == ["放大", "缩小", "实际像素 (1:1)", "适应窗口"],

@@ -593,6 +593,24 @@ EN = {
     "打开图片…": "Open Image…", "打开剪贴板图片": "Open Clipboard Image",
     "关闭当前标签": "Close Tab", "退出": "Exit",
     "复制到剪贴板": "Copy to Clipboard", "贴图到屏幕": "Pin to Screen",
+    "打开剪贴板图片": "Open Clipboard Image",
+    "把剪贴板里的图片作为**新标签**打开":
+        "Open the clipboard image as a **new tab**",
+    "粘贴到当前图（浮动）": "Paste onto This Image (floating)",
+    "把剪贴板里的截图贴到当前图上：拖动摆位置、Ctrl+滚轮缩放，Enter 固定、Esc 取消":
+        "Paste the clipboard screenshot onto this image: drag to place it, "
+        "Ctrl+wheel to scale, Enter to apply, Esc to discard",
+    "固定粘贴的图": "Apply Pasted Image",
+    "把正在摆放的粘贴图合成进当前图（Enter）":
+        "Merge the pasted image into this one (Enter)",
+    "取消粘贴": "Discard Paste",
+    "丢掉正在摆放的粘贴图（Esc）": "Throw away the pasted image (Esc)",
+    "已粘贴到当前图：拖动摆位置 · Ctrl+滚轮缩放 · Enter 固定 · Esc 取消":
+        "Pasted onto this image: drag to place · Ctrl+wheel to scale · "
+        "Enter to apply · Esc to discard",
+    "已固定粘贴的图（Ctrl+Z 可撤销）":
+        "Pasted image applied (Ctrl+Z to undo)",
+    "已取消粘贴": "Paste discarded",
     "放大": "Zoom In", "缩小": "Zoom Out", "适应窗口": "Fit to Window",
     "水印…": "Watermark…", "边框…": "Border…",
     "编辑默认水印…": "Edit Default Watermark…",

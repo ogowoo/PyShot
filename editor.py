@@ -279,6 +279,7 @@ class Canvas(QWidget):
     zoom_changed = Signal(float)
     escape_idle = Signal()   # Esc 按下且画布无任何待取消状态
     selection_changed = Signal(object)   # 当前选中的图形（或 None）
+    float_changed = Signal()   # 浮动粘贴的开始/固定/取消（宿主据此刷新菜单）
 
     def __init__(self, pixmap: QPixmap, parent=None):
         super().__init__(parent)
@@ -319,6 +320,12 @@ class Canvas(QWidget):
 
         self._undo_stack: list = []
         self._redo_stack: list = []
+
+        # 浮动粘贴：把新截图贴到当前图上，先摆位置再固定（Enter 固定 / Esc 取消）
+        self._float_pix: QPixmap | None = None
+        self._float_pos = QPointF()
+        self._float_scale = 1.0
+        self._float_from: QPointF | None = None    # 拖动时的抓取偏移
 
         self._text_edit: QLineEdit | None = None
         self._text_pos = QPointF()
@@ -473,6 +480,14 @@ class Canvas(QWidget):
         self._drag_start = pos
         self._dragging = True
 
+        # 浮动粘贴：任何工具下都能拖动它（这是"临时摆放"状态，优先于画笔工具）
+        if self._float_pix is not None:
+            if self.float_rect().contains(pos):
+                self._float_from = pos - self._float_pos
+                self._dragging = False
+                e.accept()
+                return
+
         if self.tool == "select":
             self._resizing = None
             # 先看是否点在缩放句柄上（优先于选中/移动）
@@ -550,6 +565,17 @@ class Canvas(QWidget):
         if self.tool == "pick":
             self.update()  # 刷新取色放大镜
         pos = self.clamp(self.to_image(e.position()))
+        # 拖动中的浮动粘贴
+        if self._float_pix is not None and self._float_from is not None:
+            self._float_pos = pos - self._float_from
+            self.update()
+            return
+        # 悬停在浮动图上时给"可拖动"的光标
+        if self._float_pix is not None:
+            over = self.float_rect().contains(pos)
+            self.setCursor(Qt.SizeAllCursor if over else Qt.ArrowCursor)
+            if over:
+                return
         if self.tool == "select" and self._resizing is not None:
             shape, index = self._resizing
             shape.resize_by_handle(index, pos)
@@ -602,6 +628,10 @@ class Canvas(QWidget):
         super().leaveEvent(e)
 
     def mouseReleaseEvent(self, e):
+        if self._float_from is not None:
+            self._float_from = None            # 松开：浮动图就停在当前位置
+            e.accept()
+            return
         if self._panning and (e.button() in (Qt.MiddleButton, Qt.LeftButton)):
             self._pan_end()
             e.accept()
@@ -633,10 +663,24 @@ class Canvas(QWidget):
         self.update()
 
     def mouseDoubleClickEvent(self, e):
+        if self._float_pix is not None:        # 双击 = 固定（和 Enter 等价）
+            self.commit_float()
+            return
         if self.tool == "crop":
             self.apply_crop()
 
     def keyPressEvent(self, e):
+        # 浮动粘贴：Enter 固定 / Esc 取消（要排在其它 Esc 处理之前，
+        # 否则会直接把编辑器关掉）
+        if self._float_pix is not None:
+            if e.key() in (Qt.Key_Return, Qt.Key_Enter):
+                self.commit_float()
+                e.accept()
+                return
+            if e.key() == Qt.Key_Escape:
+                self.cancel_float()
+                e.accept()
+                return
         # 按住空格 = 临时抓手（和 Photoshop 一致，松开恢复原工具）
         if e.key() == Qt.Key_Space and not e.isAutoRepeat():
             self._space_pan = True
@@ -798,6 +842,110 @@ class Canvas(QWidget):
         self.update()
         self.zoom_changed.emit(self.zoom)
 
+    # ---------- 浮动粘贴（把新截图贴到当前图上编辑） ----------
+    def has_float(self) -> bool:
+        return self._float_pix is not None
+
+    def float_rect(self) -> QRectF:
+        """浮动图在"图像物理像素"坐标下的矩形。"""
+        if self._float_pix is None:
+            return QRectF()
+        w = self._float_pix.width() * self._float_scale
+        h = self._float_pix.height() * self._float_scale
+        return QRectF(self._float_pos.x(), self._float_pos.y(), w, h)
+
+    def _float_anchor(self) -> QPointF:
+        """浮动图的默认落点：**当前看得见**的那块区域的中心。
+
+        不能直接用整图中心：滚动长截图动辄几千像素高，图心多半在屏幕外，
+        贴上去等于看不见。滚动区拿不到（未嵌入时）就退回图心。
+        """
+        w = self._float_pix.width() * self._float_scale
+        h = self._float_pix.height() * self._float_scale
+        cx = self.base_pixmap.width() / 2.0
+        cy = self.base_pixmap.height() / 2.0
+        area = self._scroll_area
+        try:
+            if area is not None:
+                vp = area.viewport()
+                center_in_canvas = self.mapFrom(vp, vp.rect().center())
+                center_img = self.to_image(QPointF(center_in_canvas))
+                cx, cy = center_img.x(), center_img.y()
+        except Exception:                          # noqa: BLE001
+            pass
+        bw, bh = self.base_pixmap.width(), self.base_pixmap.height()
+        x = min(max(cx - w / 2.0, 0.0), max(0.0, bw - w))
+        y = min(max(cy - h / 2.0, 0.0), max(0.0, bh - h))
+        return QPointF(x, y)
+
+    def start_float(self, pixmap: QPixmap) -> bool:
+        """把一张图变成"可拖动的浮动层"，等用户摆好位置再固定。
+
+        贴上去先不动底图（所以不占撤销栈），Enter/双击才合成进底图。
+        """
+        if pixmap is None or pixmap.isNull() or self.base_pixmap is None:
+            return False
+        pix = QPixmap(pixmap)
+        pix.setDevicePixelRatio(1.0)      # 统一按图像物理像素处理
+        self._float_pix = pix
+        self._float_scale = 1.0
+        # 比底图还大就先缩到能看全（否则一贴上去半个图在画布外，很难摆）
+        bw, bh = self.base_pixmap.width(), self.base_pixmap.height()
+        if pix.width() > bw * 0.9 or pix.height() > bh * 0.9:
+            self._float_scale = min(bw * 0.6 / max(1, pix.width()),
+                                    bh * 0.6 / max(1, pix.height()))
+        self._float_pos = self._float_anchor()
+        self._float_from = None
+        self.setFocus(Qt.OtherFocusReason)   # 让 Enter/Esc 能直接生效
+        self.float_changed.emit()
+        self.update()
+        return True
+
+    def commit_float(self) -> bool:
+        """把浮动图合成到底图上（可撤销）。"""
+        if self._float_pix is None:
+            return False
+        self.push_undo()                     # 底图要变了，先记一次
+        p = QPainter(self.base_pixmap)
+        p.setRenderHint(QPainter.SmoothPixmapTransform, self._float_scale < 1.0)
+        p.drawPixmap(self.float_rect(), self._float_pix,
+                     QRectF(self._float_pix.rect()))
+        p.end()
+        self._float_pix = None
+        self._float_from = None
+        self._apply_size()
+        self.shapes_changed.emit()           # 宿主据此刷新按钮/会话缓存
+        self.float_changed.emit()
+        self.set_tool_cursor()
+        self.update()
+        return True
+
+    def cancel_float(self) -> bool:
+        """丢掉浮动图，底图不动。"""
+        if self._float_pix is None:
+            return False
+        self._float_pix = None
+        self._float_from = None
+        self.float_changed.emit()
+        self.set_tool_cursor()
+        self.update()
+        return True
+
+    def scale_float(self, factor: float) -> bool:
+        """以中心为锚点缩放浮动图（0.05×~6×）。"""
+        if self._float_pix is None:
+            return False
+        new_scale = min(6.0, max(0.05, self._float_scale * factor))
+        if abs(new_scale - self._float_scale) < 1e-6:
+            return False
+        c = self.float_rect().center()
+        self._float_scale = new_scale
+        w = self._float_pix.width() * new_scale
+        h = self._float_pix.height() * new_scale
+        self._float_pos = QPointF(c.x() - w / 2.0, c.y() - h / 2.0)
+        self.update()
+        return True
+
     # ---------- 导出 ----------
     def render_result(self) -> QPixmap:
         """导出为图像物理像素的完整结果（无损，不做任何缩放）。"""
@@ -812,6 +960,13 @@ class Canvas(QWidget):
                      QRect(0, 0, w, h))
         for shape in self.shapes:
             shape.draw(p, self)
+        # 还没固定的浮动粘贴也算进导出结果（"看到什么就存什么"）
+        if self._float_pix is not None:
+            p.setRenderHint(QPainter.SmoothPixmapTransform,
+                            self._float_scale < 1.0)
+            p.drawPixmap(self.float_rect(), self._float_pix,
+                         QRectF(self._float_pix.rect()))
+            p.setRenderHint(QPainter.SmoothPixmapTransform, False)
         p.end()
         out.setDevicePixelRatio(self.dpr)   # 带上 dpr，显示按逻辑尺寸、像素不丢
         return out
@@ -840,6 +995,19 @@ class Canvas(QWidget):
             shape.draw(painter, self)
         if self._current is not None:
             self._current.draw(painter, self)
+        # 浮动粘贴：虚线框表示"还能拖 / 还没固定"
+        if self._float_pix is not None:
+            rect = self.float_rect()
+            painter.setRenderHint(QPainter.SmoothPixmapTransform,
+                                  self._float_scale < 1.0)
+            painter.drawPixmap(rect, self._float_pix,
+                               QRectF(self._float_pix.rect()))
+            painter.setRenderHint(QPainter.SmoothPixmapTransform, False)
+            pen = QPen(QColor(ACCENT), 1.6 / self.zoom)
+            pen.setStyle(Qt.DashLine)
+            painter.setPen(pen)
+            painter.setBrush(Qt.NoBrush)
+            painter.drawRect(rect)
         # 选中框 + 缩放句柄（细实线 + 白色句柄，现代编辑器风格）
         if self._selected is not None and self.tool == "select":
             rect = self._selected.bounding_rect().adjusted(-2, -2, 2, 2)
@@ -1045,6 +1213,7 @@ class EditorWindow(QMainWindow):
         m_file.addAction(self.act_open_img)
         act_clip = QAction(tr("打开剪贴板图片"), self)
         act_clip.setShortcut("Ctrl+Shift+V")
+        act_clip.setToolTip(tr("把剪贴板里的图片作为**新标签**打开"))
         act_clip.triggered.connect(self.open_from_clipboard)
         m_file.addAction(act_clip)
         m_file.addSeparator()
@@ -1074,6 +1243,23 @@ class EditorWindow(QMainWindow):
         self.act_m_redo.setShortcut("Ctrl+Y")
         self.act_m_redo.triggered.connect(lambda: self.canvas and self.canvas.redo())
         m_edit.addAction(self.act_m_redo)
+        m_edit.addSeparator()
+        # 粘贴到当前图上（浮层：可拖动/缩放后再固定）——做指引时把两张截图拼一张
+        self.act_paste = QAction(tr("粘贴到当前图（浮动）"), self)
+        self.act_paste.setShortcut("Ctrl+V")
+        self.act_paste.setToolTip(
+            tr("把剪贴板里的截图贴到当前图上：拖动摆位置、Ctrl+滚轮缩放，"
+               "Enter 固定、Esc 取消"))
+        self.act_paste.triggered.connect(self.paste_onto_current)
+        m_edit.addAction(self.act_paste)
+        self.act_paste_ok = QAction(tr("固定粘贴的图"), self)
+        self.act_paste_ok.setToolTip(tr("把正在摆放的粘贴图合成进当前图（Enter）"))
+        self.act_paste_ok.triggered.connect(self.commit_pasted)
+        m_edit.addAction(self.act_paste_ok)
+        self.act_paste_cancel = QAction(tr("取消粘贴"), self)
+        self.act_paste_cancel.setToolTip(tr("丢掉正在摆放的粘贴图（Esc）"))
+        self.act_paste_cancel.triggered.connect(self.discard_pasted)
+        m_edit.addAction(self.act_paste_cancel)
         m_edit.addSeparator()
         self.act_m_copy = QAction(tr("复制到剪贴板"), self)
         self.act_m_copy.setShortcut("Ctrl+C")
@@ -1206,6 +1392,51 @@ class EditorWindow(QMainWindow):
             return
         self.add_canvas(QPixmap.fromImage(img))
 
+    def paste_onto_current(self):
+        """把剪贴板里的截图**贴到当前这张图上**（浮层，摆好位置再固定）。
+
+        和「打开剪贴板图片」（新标签）的区别：这条是"在现有图上继续拼"——
+        贴上去是一个虚线框的浮动层，可以拖着摆位置、Ctrl+滚轮缩放，
+        Enter（或双击）固定进图、Esc 丢弃；固定后 Ctrl+Z 可撤销。
+        没有打开的图时退回"新标签"，不然用户按 Ctrl+V 会以为没反应。
+        """
+        canvas = self.canvas
+        # 正在画布上输入文字时，Ctrl+V 应该粘贴**文字**，不能贴图
+        edit = getattr(canvas, "_text_edit", None) if canvas is not None else None
+        if edit is not None:
+            edit.paste()
+            return
+        img = QApplication.clipboard().image()
+        if img is None or img.isNull():
+            self.statusBar().showMessage(tr("剪贴板里没有图片"), 3000)
+            return
+        pix = QPixmap.fromImage(img)
+        if canvas is None:
+            self.add_canvas(pix)
+            return
+        # 手上还有一个没固定的：先固定它，再贴新的 —— 否则会被直接覆盖丢掉
+        if canvas.has_float():
+            canvas.commit_float()
+        canvas.start_float(pix)
+        self.statusBar().showMessage(
+            tr("已粘贴到当前图：拖动摆位置 · Ctrl+滚轮缩放 · Enter 固定 · Esc 取消"),
+            6000)
+        self._refresh_actions()
+
+    def commit_pasted(self):
+        """把正在摆放的浮动粘贴固定进图（菜单项用）。"""
+        canvas = self.canvas
+        if canvas is not None and canvas.has_float():
+            canvas.commit_float()
+            self.statusBar().showMessage(tr("已固定粘贴的图（Ctrl+Z 可撤销）"), 4000)
+
+    def discard_pasted(self):
+        """丢弃正在摆放的浮动粘贴。"""
+        canvas = self.canvas
+        if canvas is not None and canvas.has_float():
+            canvas.cancel_float()
+            self.statusBar().showMessage(tr("已取消粘贴"), 3000)
+
     def show_about(self):
         """关于：一句话 + 版本号 + 主要能力（三语齐全）。"""
         QMessageBox.about(
@@ -1323,6 +1554,7 @@ class EditorWindow(QMainWindow):
         canvas.step_diameter = self._shared["step_diameter"]
         canvas.setCursor(Qt.CrossCursor if canvas.tool != "select" else Qt.ArrowCursor)
         canvas.shapes_changed.connect(self._refresh_actions)
+        canvas.float_changed.connect(self._refresh_actions)
         canvas.color_picked.connect(self._on_color_picked)
         canvas.selection_changed.connect(self._on_selection_changed)
         canvas.escape_idle.connect(self.close)  # 空闲时 Esc 关闭编辑器
@@ -1965,6 +2197,10 @@ class EditorWindow(QMainWindow):
         self.act_undo.setEnabled(bool(canvas and canvas._undo_stack))
         self.act_redo.setEnabled(bool(canvas and canvas._redo_stack))
         self.act_crop_ok.setEnabled(bool(canvas and canvas.tool == "crop"))
+        # 浮动粘贴的两个动作只在真的有个浮动图时才可用
+        floating = bool(canvas and canvas.has_float())
+        self.act_paste_ok.setEnabled(floating)
+        self.act_paste_cancel.setEnabled(floating)
 
     def copy_to_clipboard(self):
         canvas = self.canvas
@@ -2075,6 +2311,14 @@ class EditorWindow(QMainWindow):
         super().keyPressEvent(e)
 
     def wheelEvent(self, e):
+        # 正在摆放浮动粘贴时，Ctrl+滚轮改缩放浮层（比画布缩放更常用；
+        # 想缩放画布先 Enter/Esc 结束摆放）
+        if (e.modifiers() & Qt.ControlModifier and self.canvas is not None
+                and self.canvas.has_float()):
+            factor = 1.15 if e.angleDelta().y() > 0 else 1 / 1.15
+            self.canvas.scale_float(factor)
+            e.accept()
+            return
         if e.modifiers() & Qt.ControlModifier and self.canvas is not None:
             delta = e.angleDelta().y()
             factor = 1.15 if delta > 0 else 1 / 1.15
