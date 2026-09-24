@@ -689,6 +689,15 @@ EN = {
     "px\n滚轮/Ctrl+滚轮 缩放 · 中键或空格拖动查看":
         "px\nWheel / Ctrl+wheel to zoom · middle-drag or Space to pan",
     "启动时恢复上次的截图": "Restore last captures on startup",
+    "截图时不最小化编辑器": "Keep the editor visible while capturing",
+    "打开后截图时编辑器留在原地，方便截编辑器自己；平时关着（截图时自动让位，免得被拍进图里）":
+        "When on, the editor stays where it is while you capture — handy for "
+        "capturing the editor itself. Keep it off normally, so the editor gets "
+        "out of the way instead of appearing in your screenshot",
+    "已开启：截图时编辑器留在原地（方便截编辑器自己）":
+        "On: the editor stays visible while capturing (good for capturing the editor)",
+    "已关闭：截图时编辑器自动最小化让位":
+        "Off: the editor minimizes itself while capturing",
     "重启后自动把上次编辑的截图放回来（存在缓存里，不需要你保存）":
         "Bring back your last captures automatically after a restart (kept in a cache — no need to save)",
     "清除上次的截图缓存": "Clear last-capture cache",

@@ -35,7 +35,7 @@ from PySide6.QtGui import (QAction, QColor, QCursor, QFontMetrics,
 from PySide6.QtWidgets import (QApplication, QCheckBox, QFileDialog, QLabel,
                                QMenu, QMessageBox, QSystemTrayIcon)
 
-from editor import EditorWindow
+from editor import KEEP_EDITOR_SETTING, EditorWindow
 from pinboard import PinWindow
 from scroller import ScrollCapture, ScrollDriver
 from snipper import SnipperOverlay, grab_screen, grab_virtual_desktop
@@ -53,6 +53,8 @@ HOTKEY_ID_BASE = 0x5053          # "PS"
 # 启用前会先弹一段说明讲清"不稳定"。
 SCROLL_ENABLED_KEY = "scroll_capture_enabled"
 SCROLL_NOTICE_KEY = "scroll_capture_notice_off"
+# 「截图时不最小化编辑器」的设置键在 editor.py（KEEP_EDITOR_SETTING），
+# 主程序与编辑器菜单共用同一个键，避免两处各写一份字符串而对不上。
 
 # 进程开始的时刻：日志里用来报"启动到就绪共多久"
 _PROC_T0 = time.perf_counter()
@@ -772,8 +774,26 @@ class PyShotApp(QObject):
             self._start_scrolling(region, mode=mode)
 
     # ---------- 截图会话：截图时最小化编辑器，结束后恢复 ----------
+    def keep_editor_on_capture(self) -> bool:
+        """截图时是否**不要**最小化编辑器（想截编辑器本身时要打开）。
+
+        设置键与编辑器「选项 → 截图时不最小化编辑器」共用（见 editor.py）。
+        """
+        try:
+            return bool(get_setting(KEEP_EDITOR_SETTING, False))
+        except Exception:                          # noqa: BLE001
+            return False
+
     def _prepare_capture(self):
-        """开始截图前把编辑器最小化，免得自己被拍进图里。"""
+        """开始截图前把编辑器最小化，免得自己被拍进图里。
+
+        例外：用户勾了「截图时不最小化编辑器」就原地保留 —— 想截编辑器
+        本身（写文档/做教程）时必须这样，否则一按截图它就自己缩下去了。
+        """
+        if self.keep_editor_on_capture():
+            self._minimized_by_capture = []
+            self._cap_log("截图·保留编辑器", "已开启「截图时不最小化编辑器」")
+            return
         self._minimized_by_capture = [
             ed for ed in list(self.editors)
             if ed.isVisible() and not ed.isMinimized()

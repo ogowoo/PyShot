@@ -22,6 +22,18 @@ from style import ACCENT, SpinBox, make_icon, make_tool_icon
 from watermark import WatermarkDialog, load_default, save_default
 from i18n import tr
 
+# 「截图时不最小化编辑器」的设置键（主程序截图时读同一个键）
+KEEP_EDITOR_SETTING = "capture_keep_editor"
+
+
+def keep_editor_on_capture() -> bool:
+    """当前是否要求"截图时不要最小化编辑器"（默认 False = 自动让位）。"""
+    try:
+        from i18n import get_setting
+        return bool(get_setting(KEEP_EDITOR_SETTING, False))
+    except Exception:                              # noqa: BLE001
+        return False
+
 TOOLS = [
     ("select",    "选择",   "选择并移动已有标注（Delete 删除）"),
     ("rect",      "矩形",   "拖拽画矩形，Shift 画正方形"),
@@ -1805,6 +1817,17 @@ class EditorWindow(QMainWindow):
         self.act_restore.toggled.connect(self._toggle_restore_session)
         m_opt.addAction(self.act_restore)
         m_opt.addSeparator()
+        # 想截编辑器本身（写文档/做教程）时必须打开这条：否则一按截图，
+        # 编辑器自己就最小化让位了，截不到它。
+        self.act_keep_editor = QAction(tr("截图时不最小化编辑器"), self)
+        self.act_keep_editor.setCheckable(True)
+        self.act_keep_editor.setChecked(keep_editor_on_capture())
+        self.act_keep_editor.setToolTip(
+            tr("打开后截图时编辑器留在原地，方便截编辑器自己；"
+               "平时关着（截图时自动让位，免得被拍进图里）"))
+        self.act_keep_editor.toggled.connect(self._toggle_keep_editor)
+        m_opt.addAction(self.act_keep_editor)
+        m_opt.addSeparator()
         self.act_clear_session = QAction(tr("清除上次的截图缓存"), self)
         self.act_clear_session.triggered.connect(self._clear_session_cache)
         m_opt.addAction(self.act_clear_session)
@@ -2106,6 +2129,17 @@ class EditorWindow(QMainWindow):
                 clear_session()
         except Exception:                          # noqa: BLE001
             pass
+
+    def _toggle_keep_editor(self, on: bool):
+        """「截图时不最小化编辑器」开关：存进设置，主程序截图时读它。"""
+        try:
+            from i18n import set_setting
+            set_setting(KEEP_EDITOR_SETTING, bool(on))
+        except Exception:                          # noqa: BLE001
+            pass
+        self.statusBar().showMessage(
+            tr("已开启：截图时编辑器留在原地（方便截编辑器自己）") if on
+            else tr("已关闭：截图时编辑器自动最小化让位"), 4000)
 
     def _clear_session_cache(self):
         """手动清掉上次的截图缓存（不影响当前打开的标签）。"""
