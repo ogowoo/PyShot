@@ -58,12 +58,15 @@ git worktree add ../pyshot-tk v2.0.3-tk    # 检出 Tkinter 版（另开目录�
 - **不入库**：`dist/`（内嵌 Python + tcl/tk，约 31MB，用 `python build_portable.py` 重建）、
   `.cache/`（下载的嵌入式 Python 压缩包）、`__pycache__/`、测试临时图片
 - **换行**：`.gitattributes` 声明 `eol=lf`；`*.bat` 保持 CRLF
-- **身份**：本仓库使用本地身份 `PyShot <pyshot@localhost>`（未改全局配置）。
+- **身份**：本仓库使用本地身份 `OgOwoo <ogowoo@gmail.com>`（未改全局配置）。
   需要换成你自己的：
   ```powershell
   git config user.name  "你的名字"
   git config user.email "你的邮箱"
   ```
+  注：程序界面「关于」里显示的作者是 `Walt Liang <Wat.L@outlook.com>`（见 `version.py`
+  的 `AUTHOR`/`AUTHOR_EMAIL`）—— 那是**软件作者署名**，与这里的 git 提交身份是两回事，
+  想统一改任一处都可以。
 
 ## 常用操作
 
@@ -89,9 +92,10 @@ git add -A; git commit -m "..."   # 提交
 
 ## 尚未做
 
-- 没有配置远程仓库（`git remote`）——需要的话：
+- **远程仓库**：本地已就绪（身份、许可、标签都在），随时可推：
   ```powershell
   git remote add origin <仓库地址>
   git push -u origin main --tags
   ```
-- 没有 LICENSE 文件。若要开源，建议补一个（MIT 最省事）。
+  有 `gh` CLI 的话更省事：`gh repo create PyShot --public --source . --push`。
+- 许可：已补 [MIT](LICENSE)（2026，Walt Liang (OgOwoo)）。

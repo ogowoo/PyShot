@@ -13,6 +13,7 @@ FSCapture 风格的 Windows 截图与标注工具，专为**做操作指引/步�
 
 > 零依赖的 Tkinter 实现保留在 [`tk_version/`](tk_version/README-tk.md)（备用/对照）。
 > 版本控制与提交历史见 [VERSIONING.md](VERSIONING.md)。
+> 许可：[MIT](LICENSE)（可自由使用、修改、再分发）。
 
 ---
 
