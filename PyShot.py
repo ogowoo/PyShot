@@ -57,6 +57,11 @@ TABLE = {
     "所有显示器拼成一张": ("所有顯示器拼成一張", "All Monitors as One Image"),
     "把每块显示器按逻辑位置拼成一张长图": ("把每塊顯示器按邏輯位置拼成一張長圖", "Stitch every monitor into a single image"),
     "总耗时 ": ("總耗時 ", ""),
+    "工具：选择": ("工具：選擇", "Tool: Select"),
+    "耗时 ": ("耗時 ", ""),
+    " ms（一次性）": (" ms（一次性）", ""),
+    " 张，耗时 ": (" 張，耗時 ", ""),
+    "从进程开始到就绪 ": ("从進程開始到就绪 ", ""),
     "滚动长截图开关 = ": ("捲動長截圖開關 = ", ""),
     "滚动长截图（实验性功能）": ("捲動長截圖（實驗性功能）", "Scrolling Capture (experimental)"),
     "滚动长截图还是实验性功能，默认关闭。": ("捲動長截圖還是實驗性功能，預設關閉。", "Scrolling capture is still experimental and is off by default."),
@@ -83,7 +88,9 @@ TABLE = {
     "跟随系统": ("跟隨系統", "Follow system"),
     "主屏": ("主屏", "Primary"),
     "（未检测到显示器）": ("（未偵測到顯示器）", "(no monitor detected)"),
-    "耗时 ": ("耗時 ", ""),
+    "PyShot 截图工具": ("PyShot 截圖工具", "PyShot Screen Capture"),
+    "单击不截图：双击托盘图标开始截图（也可以按 {}）": ("單擊不截圖：雙擊托盤圖示開始截圖（也可以按 {}）", "A single click does not capture — double-click the tray icon to start (or press {})"),
+    "单击不截图：双击托盘图标开始截图": ("單擊不截圖：雙擊托盤圖示開始截圖", "A single click does not capture — double-click the tray icon to start"),
     " 块屏，耗时 ": (" 塊屏，耗時 ", ""),
     "全屏截图完成": ("全螢幕截圖完成", "Full-screen capture done"),
     "滚动长截图未启用": ("捲動長截圖未啟用", "Scrolling capture is not enabled"),
@@ -99,6 +106,7 @@ TABLE = {
     "右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n找不到图标时点任务栏右侧的 ∧ 展开。": ("右鍵托盤圖示：捲動長截圖 / 螢幕取色 / 釘圖 / 結束。\n找不到圖示時點任務欄右側的 ∧ 展開。", "Right-click the tray icon: scrolling capture / color picker / pin / exit.\nIf the icon is hidden, click the ∧ arrow near the clock."),
     "跳过保存：当前 ": ("跳過儲存：當前 ", ""),
     " 个标签少于缓存的 ": (" 個標籤少於緩存的 ", ""),
+    "启动·托盘就绪": ("啟動·托盤就绪", ""),
     "区域 ": ("區域 ", ""),
     "全屏 ": ("全螢幕 ", ""),
     " 排队 ": (" 排队 ", ""),
@@ -107,6 +115,8 @@ TABLE = {
     "热键（{}）都被占用，请双击托盘图标截图。\n": ("快速鍵（{}）都被佔用，請雙擊托盤圖示截圖。\n", "Hotkeys ({}) are all taken — double-click the tray icon to capture.\n"),
     "可用环境变量 PYSHOT_HOTKEY 指定其他组合，例如 PYSHOT_HOTKEY=ctrl+alt+j": ("可用環境變數 PYSHOT_HOTKEY 指定其他組合，例如 PYSHOT_HOTKEY=ctrl+alt+j", "Set PYSHOT_HOTKEY to pick another combination, e.g. PYSHOT_HOTKEY=ctrl+alt+j"),
     "PyShot 已启动（恢复了 {} 张上次的截图）": ("PyShot 已啟動（恢複了 {} 張上次的截圖）", "PyShot started (restored {} capture(s))"),
+    "从进程开始 ": ("从進程開始 ", ""),
+    " ms（热键=": (" ms（快速鍵=", ""),
     "显示器 {}": ("顯示器 {}", "Monitor {}"),
     "打开编辑器失败": ("開啟編輯器失敗", "Could not open the editor"),
     "全屏截图失败": ("全螢幕截圖失敗", "Full-screen capture failed"),
@@ -204,7 +214,6 @@ TABLE = {
     "保存为文件 (Ctrl+S)": ("儲存為檔案 (Ctrl+S)", "Save to a file (Ctrl+S)"),
     "关闭": ("關閉", "Close"),
     "关闭编辑器 (Esc)": ("關閉編輯器 (Esc)", "Close the editor (Esc)"),
-    "工具：选择": ("工具：選擇", "Tool: Select"),
     "缩小 (Ctrl+滚轮)": ("縮小 (Ctrl+滾輪)", "Zoom out (Ctrl+wheel)"),
     "放大 (Ctrl+滚轮)": ("放大 (Ctrl+滾輪)", "Zoom in (Ctrl+wheel)"),
     "截取新区域{}\n会自动最小化编辑器，截完回到这里新增标签": ("截取新區域{}\n會自動最小化編輯器，截完回到這裡新增標籤", "Capture a new region{}\nThe editor is minimized; new captures are added as tabs"),
@@ -8132,6 +8141,11 @@ SCROLL_NOTICE_KEY = "scroll_capture_notice_off"
 # 进程开始的时刻：日志里用来报"启动到就绪共多久"
 _PROC_T0 = time.perf_counter()
 
+# 托盘图标"认双击"的时间窗口（毫秒）。
+# Windows 只在系统"双击速度"范围内才发 DoubleClick，手慢一点就只有两次
+# Trigger —— 设得比系统默认（约 500ms）宽一点，避免"第一次双击没反应"。
+TRAY_CLICK_WINDOW_MS = 700
+
 # 候选全局热键（按优先级尝试，选第一个没被占用的）。
 # 刻意避开被系统或常用软件注册的组合：
 #   PrintScreen / Win+Shift+S  → Windows 11 截图工具
@@ -8266,6 +8280,15 @@ class PyShotApp(QObject):
         self._hotkeys: dict = {}
         self._scroll_mode: str | None = None   # None / "wheel" / "drag" / "key" / "manual"
         self._pending_scroll_region = None
+
+        # 托盘单击/双击去抖：见 _on_tray_activated()。
+        # 窗口设得比系统默认双击间隔（约 500ms）宽一点，手慢的双击也能认出来。
+        self._tray_click_timer = QTimer(self)
+        self._tray_click_timer.setSingleShot(True)
+        self._tray_click_timer.setInterval(TRAY_CLICK_WINDOW_MS)
+        self._tray_click_timer.timeout.connect(self._tray_single_click_hint)
+        self._tray_click_fired_at = 0.0        # 上次真的触发截图的时间（防余波）
+        self._tray_hint_at = 0.0               # 上次弹"单击不截图"提示的时间（限流）
 
         self._init_hotkey()   # 先注册热键，托盘文案才知道该显示哪个按键
         self._init_tray()
@@ -8625,13 +8648,53 @@ class PyShotApp(QObject):
         self.menu_screens.addAction(act_all)
 
     def _on_tray_activated(self, reason):
+        """托盘图标被左键点了：**单击/双击都按"双击"来判**，带一个去抖窗口。
+
+        为什么不能只听 DoubleClick：Windows 的托盘区是否把两次点击合成
+        DoubleClick，取决于系统"双击速度"设置。手慢一点（或系统设得快）时
+        只会发两次 Trigger、**永远不发 DoubleClick** —— 用户表现为
+        "双击托盘图标第一次没反应"（实测日志里就是 Trigger、Trigger）。
+        所以这里自己认双击：窗口内第二次点击就算双击，单击什么都不做。
+        """
         try:
 
             log("托盘事件", f"reason={reason}")
         except Exception:                          # noqa: BLE001
             pass
-        if reason == QSystemTrayIcon.DoubleClick:
+        if reason not in (QSystemTrayIcon.Trigger, QSystemTrayIcon.DoubleClick):
+            return
+        now = time.perf_counter()
+        if self._tray_click_fired_at and now - self._tray_click_fired_at < 0.35:
+            return                    # 刚触发过：忽略快速双击多出来的余波事件
+        if self._tray_click_timer.isActive():
+            self._tray_click_timer.stop()
+            self._tray_click_fired_at = now
+            try:
+
+                log("托盘事件", "判定为双击 → 区域截图")
+            except Exception:                      # noqa: BLE001
+                pass
             self._deferred(self.capture_region)
+        else:
+            self._tray_click_timer.start()         # 单击：窗口到期后什么都不做
+
+    def _tray_single_click_hint(self):
+        """单击（没能构成双击）时给个提示。
+
+        有些情况下用户"双击了却什么都没发生"：比如托盘图标刚出现时，
+        第一次点击会被任务栏/通知区域吃掉，程序只收到一个 Trigger。
+        这里给一句明确的反馈，总比"点了没反应"好。限流 15 秒一次。
+        """
+        now = time.perf_counter()
+        if now - self._tray_hint_at < 15.0:
+            return
+        self._tray_hint_at = now
+        if self.hotkey_text:
+            self._notify(tr("PyShot 截图工具"),
+                         tr("单击不截图：双击托盘图标开始截图（也可以按 {}）",
+                            self.hotkey_text))
+        else:
+            self._notify(tr("PyShot 截图工具"), tr("单击不截图：双击托盘图标开始截图"))
 
     # ---------- 覆盖层复用与预热 ----------
     def _cap_log(self, *parts):

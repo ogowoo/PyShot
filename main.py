@@ -57,6 +57,11 @@ SCROLL_NOTICE_KEY = "scroll_capture_notice_off"
 # 进程开始的时刻：日志里用来报"启动到就绪共多久"
 _PROC_T0 = time.perf_counter()
 
+# 托盘图标"认双击"的时间窗口（毫秒）。
+# Windows 只在系统"双击速度"范围内才发 DoubleClick，手慢一点就只有两次
+# Trigger —— 设得比系统默认（约 500ms）宽一点，避免"第一次双击没反应"。
+TRAY_CLICK_WINDOW_MS = 700
+
 # 候选全局热键（按优先级尝试，选第一个没被占用的）。
 # 刻意避开被系统或常用软件注册的组合：
 #   PrintScreen / Win+Shift+S  → Windows 11 截图工具
@@ -191,6 +196,15 @@ class PyShotApp(QObject):
         self._hotkeys: dict = {}
         self._scroll_mode: str | None = None   # None / "wheel" / "drag" / "key" / "manual"
         self._pending_scroll_region = None
+
+        # 托盘单击/双击去抖：见 _on_tray_activated()。
+        # 窗口设得比系统默认双击间隔（约 500ms）宽一点，手慢的双击也能认出来。
+        self._tray_click_timer = QTimer(self)
+        self._tray_click_timer.setSingleShot(True)
+        self._tray_click_timer.setInterval(TRAY_CLICK_WINDOW_MS)
+        self._tray_click_timer.timeout.connect(self._tray_single_click_hint)
+        self._tray_click_fired_at = 0.0        # 上次真的触发截图的时间（防余波）
+        self._tray_hint_at = 0.0               # 上次弹"单击不截图"提示的时间（限流）
 
         self._init_hotkey()   # 先注册热键，托盘文案才知道该显示哪个按键
         self._init_tray()
@@ -550,13 +564,53 @@ class PyShotApp(QObject):
         self.menu_screens.addAction(act_all)
 
     def _on_tray_activated(self, reason):
+        """托盘图标被左键点了：**单击/双击都按"双击"来判**，带一个去抖窗口。
+
+        为什么不能只听 DoubleClick：Windows 的托盘区是否把两次点击合成
+        DoubleClick，取决于系统"双击速度"设置。手慢一点（或系统设得快）时
+        只会发两次 Trigger、**永远不发 DoubleClick** —— 用户表现为
+        "双击托盘图标第一次没反应"（实测日志里就是 Trigger、Trigger）。
+        所以这里自己认双击：窗口内第二次点击就算双击，单击什么都不做。
+        """
         try:
             from diag import log
             log("托盘事件", f"reason={reason}")
         except Exception:                          # noqa: BLE001
             pass
-        if reason == QSystemTrayIcon.DoubleClick:
+        if reason not in (QSystemTrayIcon.Trigger, QSystemTrayIcon.DoubleClick):
+            return
+        now = time.perf_counter()
+        if self._tray_click_fired_at and now - self._tray_click_fired_at < 0.35:
+            return                    # 刚触发过：忽略快速双击多出来的余波事件
+        if self._tray_click_timer.isActive():
+            self._tray_click_timer.stop()
+            self._tray_click_fired_at = now
+            try:
+                from diag import log
+                log("托盘事件", "判定为双击 → 区域截图")
+            except Exception:                      # noqa: BLE001
+                pass
             self._deferred(self.capture_region)
+        else:
+            self._tray_click_timer.start()         # 单击：窗口到期后什么都不做
+
+    def _tray_single_click_hint(self):
+        """单击（没能构成双击）时给个提示。
+
+        有些情况下用户"双击了却什么都没发生"：比如托盘图标刚出现时，
+        第一次点击会被任务栏/通知区域吃掉，程序只收到一个 Trigger。
+        这里给一句明确的反馈，总比"点了没反应"好。限流 15 秒一次。
+        """
+        now = time.perf_counter()
+        if now - self._tray_hint_at < 15.0:
+            return
+        self._tray_hint_at = now
+        if self.hotkey_text:
+            self._notify(tr("PyShot 截图工具"),
+                         tr("单击不截图：双击托盘图标开始截图（也可以按 {}）",
+                            self.hotkey_text))
+        else:
+            self._notify(tr("PyShot 截图工具"), tr("单击不截图：双击托盘图标开始截图"))
 
     # ---------- 覆盖层复用与预热 ----------
     def _cap_log(self, *parts):

@@ -258,6 +258,11 @@ EN = {
     "PyShot 已启动": "PyShot started",
     "PyShot 截图工具": "PyShot Screen Capture",
     "双击图标截图": "Double-click the icon to capture",
+    "单击不截图：双击托盘图标开始截图（也可以按 {}）":
+        "A single click does not capture — double-click the tray icon to start "
+        "(or press {})",
+    "单击不截图：双击托盘图标开始截图":
+        "A single click does not capture — double-click the tray icon to start",
     "全屏截图完成": "Full-screen capture done",
     "滚动截图完成": "Scrolling capture done",
     "滚动截图失败": "Scrolling capture failed",
