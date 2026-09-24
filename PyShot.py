@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""PyShot 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
+"""PyShot 2.16 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
+
+本版主题：浮动粘贴 + 编辑增强 + 启动提速
 
 这是一个自动生成的单文件版本：把多文件源码合并在一起，并在启动时自动安装
 缺失的第三方库（PySide6），因此可以直接发给别人运行::
@@ -11,7 +13,8 @@
 注意：依赖自举那段代码排在最前面执行（见 PRELUDE），必须在**任何 PySide6
 导入之前** —— 否则没装 PySide6 的机器会在半路 ImportError，自动安装形同虚设。
 
-生成方式：python build_single.py（请勿手工修改本文件，改动请改多文件源码）
+版本号只在 version.py 里定义；生成方式：python build_single.py
+（请勿手工修改本文件，改动请改多文件源码）
 """
 
 
@@ -118,7 +121,7 @@ TABLE = {
     "热键（{}）都被占用，请双击托盘图标截图。\n": ("快速鍵（{}）都被佔用，請雙擊托盤圖示截圖。\n", "Hotkeys ({}) are all taken — double-click the tray icon to capture.\n"),
     "可用环境变量 PYSHOT_HOTKEY 指定其他组合，例如 PYSHOT_HOTKEY=ctrl+alt+j": ("可用環境變數 PYSHOT_HOTKEY 指定其他組合，例如 PYSHOT_HOTKEY=ctrl+alt+j", "Set PYSHOT_HOTKEY to pick another combination, e.g. PYSHOT_HOTKEY=ctrl+alt+j"),
     "PyShot 已启动（恢复了 {} 张上次的截图）": ("PyShot 已啟動（恢複了 {} 張上次的截圖）", "PyShot started (restored {} capture(s))"),
-    "从进程开始 ": ("从進程開始 ", ""),
+    " · 从进程开始 ": (" · 从進程開始 ", ""),
     " ms（热键=": (" ms（快速鍵=", ""),
     "显示器 {}": ("顯示器 {}", "Monitor {}"),
     "打开编辑器失败": ("開啟編輯器失敗", "Could not open the editor"),
@@ -239,7 +242,7 @@ TABLE = {
     "宽度（像素，当前 {}）": ("寬度（像素，當前 {}）", "Width in pixels (currently {})"),
     "高度（像素，当前 {}）": ("高度（像素，當前 {}）", "Height in pixels (currently {})"),
     "已调整为 {} × {}（Ctrl+Z 可撤销）": ("已調整為 {} × {}（Ctrl+Z 可復原）", "Resized to {} × {} (Ctrl+Z to undo)"),
-    "PyShot {}\n仿 FastStone Capture 的截图与标注工具\n\n托盘右键：区域截图 / 全屏截图 / 滚动长截图 / 屏幕取色 / 贴图\n编辑器：多标签标注 · 水印 · 加边框（含手撕纸）· 三语界面": ("PyShot {}\n仿 FastStone Capture 的截圖與標注工具\n\n托盤右鍵：區域截圖 / 全螢幕截圖 / 捲動長截圖 / 螢幕取色 / 釘圖\n編輯器：多標籤標注 · 水印 · 加邊框（含手撕紙）· 三語介面", "PyShot {}\nA FastStone Capture style screenshot and annotation tool\n\nTray menu: region / full-screen capture, scrolling capture, color picker, pin\nEditor: multi-tab annotation · watermark · borders (incl. torn paper) · 3 languages"),
+    "PyShot {} — {}\n仿 FastStone Capture 的截图与标注工具\n\n托盘右键：区域截图 / 全屏截图 / 滚动长截图 / 屏幕取色 / 贴图\n编辑器：多标签标注 · 粘贴拼图 · 水印 · 加边框（含手撕纸）· 三语界面": ("PyShot {} — {}\n仿 FastStone Capture 的截圖與標注工具\n\n托盤右鍵：區域截圖 / 全螢幕截圖 / 捲動長截圖 / 螢幕取色 / 釘圖\n編輯器：多標籤標注 · 貼上拼圖 · 水印 · 加邊框（含手撕紙）· 三語介面", "PyShot {} — {}\nA FastStone Capture style screenshot and annotation tool\n\nTray menu: region / full-screen capture, scrolling capture, color picker, pin\nEditor: multi-tab annotation · paste & compose · watermark · borders (incl. torn paper) · 3 languages"),
     "关闭此标签 (Ctrl+W)": ("關閉此標籤 (Ctrl+W)", "Close this tab (Ctrl+W)"),
     "截图": ("截圖", "Capture"),
     "截取新区域\n会自动最小化编辑器，截完回到这里新增标签": ("截取新區域\n會自動最小化編輯器，截完回到這裡新增標籤", "Capture a new region\nThe editor is minimized and the capture is added as a tab"),
@@ -405,7 +408,7 @@ TABLE = {
     "没有抓到任何内容": ("沒有抓到任何內容", "Nothing was captured"),
     "手动": ("手動", "Manual"),
     "滚动": ("捲動", "Scroll"),
-    "抓到的画面是空白/纯色，无法拼接。\n目标窗口（Citrix / 远程桌面 / Java 应用）多半在用硬件加速或内容保护，GDI 抓屏拿不到内容。按顺序试：\n① Citrix Workspace：关掉「使用硬件加速进行图形处理」；服务端策略把「视频编解码压缩」设为不使用\n② Java 应用：启动参数加 -Dsun.java2d.d3d=false -Dsun.java2d.opengl=false -Dsun.java2d.noddraw=true（强制走 GDI 绘制）\n③ 托盘菜单用「滚动长截图（手动滚动）」：你自己滚，程序只拼帧\n④ 把窗口最大化或调整大小后重试": ("抓到的畫面是空白/純色，無法拼接。\n目標窗口（Citrix / 遠端桌面 / Java 套用）多半在用硬體加速或內容保護，GDI 抓屏拿不到內容。按順序試：\n① Citrix Workspace：關掉「使用硬體加速進行圖形處理」；服務端策略把「影片編解碼壓縮」設為不使用\n② Java 套用：啟動參數加 -Dsun.java2d.d3d=false -Dsun.java2d.opengl=false -Dsun.java2d.noddraw=true（强製走 GDI 繪製）\n③ 托盤菜單用「捲動長截圖（手動捲動）」：你自己滾，程序只拼幀\n④ 把窗口最大化或調整大小後重試", "The captured frames are blank/solid and cannot be stitched.\nThe target window (Citrix / Remote Desktop / a Java app) is probably using hardware acceleration or content protection, which blocks GDI screen capture. Try, in order:\n(1) Citrix Workspace: turn off 'Use hardware acceleration for graphics'; on the server set video-codec compression to 'Do not use video codec'\n(2) Java apps: add -Dsun.java2d.d3d=false -Dsun.java2d.opengl=false -Dsun.java2d.noddraw=true to force GDI rendering\n(3) Tray menu -> Manual scrolling capture: you scroll, PyShot just stitches\n(4) Maximize or resize the window and retry"),
+    "抓到的画面是空白/纯色，无法拼接。\n目标窗口（Citrix / 远程桌面 / Java 应用）多半在用硬件加速或内容保护，GDI 抓屏拿不到内容。按顺序试：\n① Citrix Workspace：关掉「使用硬件加速进行图形处理」；服务端策略把「视频编解码压缩」设为不使用\n② Java 应用：启动参数加 -Dsun.java2d.d3d=false -Dsun.java2d.opengl=false -Dsun.java2d.noddraw=true（强制走 GDI 绘制）\n③ 托盘菜单用「滚动长截图（手动滚动）」：你自己滚，程序只拼帧\n④ 把窗口最大化或调整大小后重试": ("抓到的畫面是空白/純色，無法拼接。\n目標窗口（Citrix / 遠端桌面 / Java 套用）多半在用硬體加速或內容保護，GDI 抓屏拿不到內容。按順序試：\n① Citrix Workspace：關掉「使用硬體加速進行圖形處理」；服務端策略把「影片編解碼壓縮」設為不使用\n② Java 套用：啟動參數加 -Dsun.java2d.d3d=false -Dsun.java2d.opengl=false -Dsun.java2d.noddraw=true（強製走 GDI 繪製）\n③ 托盤菜單用「捲動長截圖（手動捲動）」：你自己滾，程序只拼幀\n④ 把窗口最大化或調整大小後重試", "The captured frames are blank/solid and cannot be stitched.\nThe target window (Citrix / Remote Desktop / a Java app) is probably using hardware acceleration or content protection, which blocks GDI screen capture. Try, in order:\n(1) Citrix Workspace: turn off 'Use hardware acceleration for graphics'; on the server set video-codec compression to 'Do not use video codec'\n(2) Java apps: add -Dsun.java2d.d3d=false -Dsun.java2d.opengl=false -Dsun.java2d.noddraw=true to force GDI rendering\n(3) Tray menu -> Manual scrolling capture: you scroll, PyShot just stitches\n(4) Maximize or resize the window and retry"),
     "抓帧尺寸发生变化，已停止（请确保窗口未移动/缩放）": ("抓幀尺寸发生變化，已停止（請確保窗口未移動/縮放）", "The captured area changed size; stopped (keep the window fixed)"),
     " 累计高度 ": (" 累计高度 ", ""),
     "画面内容变化过快，无法对齐拼接。\n": ("畫面內容變化過快，無法對齊拼接。\n", "The content changed too fast to align and stitch.\n"),
@@ -423,9 +426,9 @@ TABLE = {
     "复制图片": ("複製圖片", "Copy image"),
     "重置大小 / 透明度": ("重置大小 / 透明度", "Reset size / opacity"),
     "关闭 (Esc)": ("關閉 (Esc)", "Close (Esc)"),
-    "PyShot 依赖检查：": ("PyShot 依賴檢查：", "PyShot dependency check:"),
     "PyShot 依赖安装失败": ("PyShot 依賴安裝失敗", "PyShot dependency installation failed"),
     "PyShot 依赖仍不可用": ("PyShot 依賴仍不可用", "PyShot dependencies are still unavailable"),
+    " 依赖检查：": (" 依賴檢查：", ""),
     "  内嵌依赖目录: 无（将使用系统环境或自动安装）": ("  內嵌依賴目錄: 無（將使用系統環境或自動安裝）", ""),
     "  解释器: ": ("  解釋器: ", ""),
     "[PyShot] 缺少依赖：": ("[PyShot] 缺少依賴：", ""),
@@ -437,6 +440,7 @@ TABLE = {
     " 已就绪。": (" 已就绪。", ""),
     "[PyShot] pip 执行失败：": ("[PyShot] pip 執行失敗：", ""),
     "  [缺失] ": ("  [缺失] ", ""),
+    "浮动粘贴 + 编辑增强 + 启动提速": ("浮動貼上 + 編輯增強 + 啟動提速", "floating paste + editing power-ups + faster startup"),
 }
 
 
@@ -680,6 +684,10 @@ import sys
 from pathlib import Path
 
 
+# 版本号：必须**模块顶层**导入。写成函数内的 `from version import ...` 会被
+# 单文件合并删掉，只剩一个空 try 块 → 构建出语法错误（这个坑踩过一次）。
+
+
 # (导入名, pip 安装名)
 # 只依赖 PySide6：拼接/图像统计都用纯 Python 实现了，不再需要 numpy。
 REQUIRED_PACKAGES = [
@@ -826,7 +834,7 @@ def ensure_deps(requirements=None, runner=None, quiet: bool = False) -> bool:
 def deps_report() -> str:
     """依赖状态文本，供 --check-deps 使用。"""
     import importlib
-    lines = ["PyShot 依赖检查："]
+    lines = [f"PyShot {APP_VERSION} 依赖检查："]
     bundled = bundled_libs()
     if bundled is not None:
         lines.append(f"  内嵌依赖目录: {bundled}")
@@ -849,6 +857,30 @@ def deps_report() -> str:
 # 依赖自举：在任何 PySide6 导入之前完成检查与安装
 if not ensure_deps():
     raise SystemExit(1)
+
+
+# ========================================================================
+# 来自 version.py
+# ========================================================================
+# -*- coding: utf-8 -*-
+"""版本号**只在这里定义**（其他地方一律 import，别再各写一份）。
+
+以前 `editor.py` 里写死 `APP_VERSION = "2.6"`，而 git 里程碑标签已经到
+`v2.15-qt` —— 两处各写一份，就必然会飘。现在统一从这里取，
+`build_single.py` 生成单文件时也读它写进文件头。
+
+命名：`MAJOR.MINOR[.PATCH]`，git 标签为 `v<版本>-qt`（`-qt` 表示根目录这套
+PySide6 实现，`tk_version/` 是独立的 Tkinter 版）。
+"""
+APP_VERSION = "2.16"
+
+# 这版的一句话主题（写进单文件头与「关于」对话框，便于用户确认自己拿的是哪版）
+VERSION_TITLE = "浮动粘贴 + 编辑增强 + 启动提速"
+
+# 版本日期（本地日期，供日志/文档使用）
+VERSION_DATE = "2026-09-24"
+
+__version__ = APP_VERSION      # 兼容 `mod.__version__` 这种取法
 
 
 # ========================================================================
@@ -6406,7 +6438,7 @@ class ColorPaletteDialog(QDialog):
         return QColor(self._color)
 
 
-APP_VERSION = "2.6"          # 「关于」对话框里显示的版本号
+
 
 # 色板：两行 20 色（红橙黄绿青蓝紫 + 灰阶），常用色一眼可选
 PALETTE = ["#e53935", "#fb8c00", "#fdd835", "#43a047", "#00acc1",
@@ -8340,11 +8372,11 @@ class EditorWindow(QMainWindow):
         """关于：一句话 + 版本号 + 主要能力（三语齐全）。"""
         QMessageBox.about(
             self, tr("关于 PyShot"),
-            tr("PyShot {}\n"
+            tr("PyShot {} — {}\n"
                "仿 FastStone Capture 的截图与标注工具\n\n"
                "托盘右键：区域截图 / 全屏截图 / 滚动长截图 / 屏幕取色 / 贴图\n"
-               "编辑器：多标签标注 · 水印 · 加边框（含手撕纸）· 三语界面",
-               APP_VERSION))
+               "编辑器：多标签标注 · 粘贴拼图 · 水印 · 加边框（含手撕纸）· 三语界面",
+               APP_VERSION, tr(VERSION_TITLE)))
 
     def _toggle_restore_session(self, on: bool):
         try:
@@ -9294,6 +9326,7 @@ from PySide6.QtGui import (QAction, QColor, QCursor, QFontMetrics,
                            QGuiApplication, QIcon, QPainter, QPixmap)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QFileDialog, QLabel,
                                QMenu, QMessageBox, QSystemTrayIcon)
+
 
 
 
@@ -10593,7 +10626,8 @@ def main():
         _cap = getattr(core, "_cap_log", None)
         if _cap:
             _cap("启动·托盘就绪",
-                 f"从进程开始 {(time.perf_counter()-_PROC_T0)*1000:.0f} ms"
+                 f"PyShot {APP_VERSION} · 从进程开始 "
+                 f"{(time.perf_counter()-_PROC_T0)*1000:.0f} ms"
                  f"（热键={core.hotkey_text or '无'}）")
         core.schedule_boot()
 

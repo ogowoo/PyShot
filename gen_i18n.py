@@ -13,7 +13,8 @@ import re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FILES = ["main.py", "snipper.py", "editor.py", "border.py", "watermark.py",
-         "scroller.py", "pinboard.py", "bootstrap.py"]
+         "scroller.py", "pinboard.py", "bootstrap.py",
+         "version.py"]      # 版本主题等也在这里，别漏（否则英文界面会蹦中文）
 CJK = re.compile(r"[\u4e00-\u9fff]")
 
 # ---------------------------------------------------------------- 繁化：短语优先
@@ -80,6 +81,7 @@ S2T_CHARS = {
     "静": "靜", "轨": "軌", "径": "徑", "释": "釋", "约": "約", "钟": "鐘",
     "导": "導", "逻": "邏", "规": "規", "则": "則", "稳": "穩", "宫": "宮",
     "洁": "潔", "参": "參", "浅": "淺", "见": "見", "于": "於", "严": "嚴",
+    "强": "強", "壮": "壯", "构": "構", "妇": "婦", "岗": "崗", "屿": "嶼",
     "为": "為", "乐": "樂", "书": "書", "买": "買", "乱": "亂", "争": "爭",
     "亲": "親", "众": "眾", "优": "優", "传": "傳", "伤": "傷", "价": "價",
     "华": "華", "单": "單", "卖": "賣", "卫": "衛", "厂": "廠", "历": "歷",
@@ -683,6 +685,12 @@ EN = {
         "PyShot {}\nA FastStone Capture style screenshot and annotation tool\n\n"
         "Tray menu: region / full-screen capture, scrolling capture, color picker, pin\n"
         "Editor: multi-tab annotation · watermark · borders (incl. torn paper) · 3 languages",
+    "PyShot {} — {}\n仿 FastStone Capture 的截图与标注工具\n\n托盘右键：区域截图 / 全屏截图 / 滚动长截图 / 屏幕取色 / 贴图\n编辑器：多标签标注 · 粘贴拼图 · 水印 · 加边框（含手撕纸）· 三语界面":
+        "PyShot {} — {}\nA FastStone Capture style screenshot and annotation tool\n\n"
+        "Tray menu: region / full-screen capture, scrolling capture, color picker, pin\n"
+        "Editor: multi-tab annotation · paste & compose · watermark · borders (incl. torn paper) · 3 languages",
+    "浮动粘贴 + 编辑增强 + 启动提速":
+        "floating paste + editing power-ups + faster startup",
     "抓手": "Hand",
     "拖拽移动画面（图放大后看不同位置）；任何工具下按住中键或空格也能拖":
         "Drag to move the view (look around once zoomed in); middle-drag or hold Space works with any tool",

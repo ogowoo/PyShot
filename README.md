@@ -1,8 +1,11 @@
 # PyShot —— 截图 + 标注工具（PySide6 主线）
 
+**当前版本 v2.16-qt**（版本号只在 [`version.py`](version.py) 定义；改动记录见
+[CHANGELOG.md](CHANGELOG.md)）。
+
 FSCapture 风格的 Windows 截图与标注工具，专为**做操作指引/步骤说明**优化。
 支持区域截图、**全屏截图（可选显示器）**、滚动长截图、取色、贴图，
-以及带**多标签页**的标注编辑器。
+以及带**多标签页**的标注编辑器（可把多张截图粘贴拼到一张图上编辑）。
 
 > 零依赖的 Tkinter 实现保留在 [`tk_version/`](tk_version/README-tk.md)（备用/对照）。
 > 版本控制与提交历史见 [VERSIONING.md](VERSIONING.md)。

@@ -14,7 +14,11 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+
 from i18n import tr
+# 版本号：必须**模块顶层**导入。写成函数内的 `from version import ...` 会被
+# 单文件合并删掉，只剩一个空 try 块 → 构建出语法错误（这个坑踩过一次）。
+from version import APP_VERSION
 
 # (导入名, pip 安装名)
 # 只依赖 PySide6：拼接/图像统计都用纯 Python 实现了，不再需要 numpy。
@@ -162,7 +166,7 @@ def ensure_deps(requirements=None, runner=None, quiet: bool = False) -> bool:
 def deps_report() -> str:
     """依赖状态文本，供 --check-deps 使用。"""
     import importlib
-    lines = ["PyShot 依赖检查："]
+    lines = [f"PyShot {APP_VERSION} 依赖检查："]
     bundled = bundled_libs()
     if bundled is not None:
         lines.append(f"  内嵌依赖目录: {bundled}")

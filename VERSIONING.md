@@ -2,6 +2,21 @@
 
 本目录是 git 仓库（分支 `main`），仓库只放**源码**，构建产物不入库。
 
+## 版本号
+
+- **唯一定义处**：[`version.py`](version.py) 里的 `APP_VERSION`
+  （`editor.py` 的「关于」、启动日志、`--check-deps`、单文件版文件头都从它取）。
+  以前 `editor.py` 里写死 `APP_VERSION = "2.6"` 而标签已经到 `v2.15` —— 两处各写一份
+  必然会飘，所以统一了。有测试（`test_version.py`）盯着"只有一个地方定义"。
+- **格式**：`MAJOR.MINOR[.PATCH]`；git 标签为 `v<版本>-qt`。
+- **什么时候加位**：
+  - `MINOR`：加了用户能感知的功能（例：v2.16 的浮动粘贴）
+  - `PATCH`：只修问题（例：v2.14.1 补埋点）
+  - `MAJOR`：不兼容的大改（至今没有）
+- **改动记录**：写在 [`CHANGELOG.md`](CHANGELOG.md)——按版本倒序，每条注明"为什么改"。
+- 发布动作：改 `version.py` → 重新 `python build_single.py` → 提交
+  （`chore(release): vX.Y-qt`）→ `git tag vX.Y-qt`。
+
 ## 提交历史
 
 ```
@@ -22,7 +37,8 @@ f3aaec7 feat(snipper): 全屏截图覆盖层
 
 | 标签 | 内容 |
 |---|---|
-| `v2.0-tk` | 当前主线：零第三方依赖（tkinter + ctypes），便携版 31MB |
+| `v2.16-qt` | 当前主线：浮动粘贴拼图 + 编辑增强 + 启动提速（详见 CHANGELOG.md） |
+| `v2.0-tk` | 零第三方依赖版（tkinter + ctypes），便携版 31MB，代码在 `tk_version/` |
 | `v1.0-qt` | 早期 PySide6 版（代码在 `legacy_qt/`，含水印对话框、贴图板） |
 
 取回旧版代码：

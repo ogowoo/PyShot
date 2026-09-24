@@ -217,7 +217,9 @@ try:
                   text[:40])
         if lang == "zh_CN":
             check("简体「关于」正常", "截图" in text, text[:40])
-        check(f"「关于」含版本号（{lang}）", "2." in text, text[:40])
+        from version import APP_VERSION as _VER
+        check(f"「关于」显示的就是当前版本 {_VER}（{lang}）",
+              _VER in text, text[:48])
 finally:
     QMessageBox.about = _orig_about
     i18n.set_language("zh_CN", persist=False)

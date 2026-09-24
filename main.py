@@ -36,6 +36,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QFileDialog, QLabel,
                                QMenu, QMessageBox, QSystemTrayIcon)
 
 from editor import KEEP_EDITOR_SETTING, EditorWindow
+from version import APP_VERSION
 from pinboard import PinWindow
 from scroller import ScrollCapture, ScrollDriver
 from snipper import SnipperOverlay, grab_screen, grab_virtual_desktop
@@ -1335,7 +1336,8 @@ def main():
         _cap = getattr(core, "_cap_log", None)
         if _cap:
             _cap("启动·托盘就绪",
-                 f"从进程开始 {(time.perf_counter()-_PROC_T0)*1000:.0f} ms"
+                 f"PyShot {APP_VERSION} · 从进程开始 "
+                 f"{(time.perf_counter()-_PROC_T0)*1000:.0f} ms"
                  f"（热键={core.hotkey_text or '无'}）")
         core.schedule_boot()
 

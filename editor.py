@@ -180,7 +180,7 @@ class ColorPaletteDialog(QDialog):
         return QColor(self._color)
 
 
-APP_VERSION = "2.6"          # 「关于」对话框里显示的版本号
+from version import APP_VERSION, VERSION_TITLE
 
 # 色板：两行 20 色（红橙黄绿青蓝紫 + 灰阶），常用色一眼可选
 PALETTE = ["#e53935", "#fb8c00", "#fdd835", "#43a047", "#00acc1",
@@ -2115,11 +2115,11 @@ class EditorWindow(QMainWindow):
         """关于：一句话 + 版本号 + 主要能力（三语齐全）。"""
         QMessageBox.about(
             self, tr("关于 PyShot"),
-            tr("PyShot {}\n"
+            tr("PyShot {} — {}\n"
                "仿 FastStone Capture 的截图与标注工具\n\n"
                "托盘右键：区域截图 / 全屏截图 / 滚动长截图 / 屏幕取色 / 贴图\n"
-               "编辑器：多标签标注 · 水印 · 加边框（含手撕纸）· 三语界面",
-               APP_VERSION))
+               "编辑器：多标签标注 · 粘贴拼图 · 水印 · 加边框（含手撕纸）· 三语界面",
+               APP_VERSION, tr(VERSION_TITLE)))
 
     def _toggle_restore_session(self, on: bool):
         try:
