@@ -35,7 +35,8 @@ from PySide6.QtGui import (QAction, QColor, QCursor, QFontMetrics,
 from PySide6.QtWidgets import (QApplication, QCheckBox, QFileDialog, QLabel,
                                QMenu, QMessageBox, QSystemTrayIcon)
 
-from editor import KEEP_EDITOR_SETTING, EditorWindow
+from editor import (AUTO_COPY_SETTING, KEEP_EDITOR_SETTING, EditorWindow,
+                    auto_copy_on_capture)
 from version import APP_VERSION
 from pinboard import PinWindow
 from scroller import ScrollCapture, ScrollDriver
@@ -868,6 +869,7 @@ class PyShotApp(QObject):
         if self._scroll_mode:      # 滚动截图的选区，不是要编辑的截图
             self._scroll_mode = None
             return
+        self.auto_copy(pixmap)     # 选项：截完立刻进剪贴板
 
         # 等覆盖层彻底关闭再开编辑器，否则置顶的覆盖层可能压在编辑器上面；
         # 并且把异常显式暴露出来，避免"截图后什么都没发生"这种静默失败。
@@ -882,6 +884,29 @@ class PyShotApp(QObject):
                 self._finish_capture_session()
 
         QTimer.singleShot(120, _open)
+
+    def auto_copy(self, pixmap: QPixmap) -> bool:
+        """按选项把刚截到的图放进剪贴板（默认开）。
+
+        只在这里（截图/滚动截图完成）调用 —— 用「打开图片编辑」打开已有文件时
+        **不能**顺手覆盖掉用户的剪贴板。
+        """
+        if not auto_copy_on_capture():
+            return False
+        try:
+            QApplication.clipboard().setPixmap(pixmap)
+        except Exception as exc:                   # noqa: BLE001
+            self._cap_log("截图·复制剪贴板失败", repr(exc))
+            return False
+        self._cap_log("截图·已复制到剪贴板", f"{pixmap.width()}x{pixmap.height()}")
+        # 状态栏提一句（不弹气泡，免得每次截图都打扰）
+        for ed in getattr(self, "editors", []):
+            try:
+                ed.statusBar().showMessage(
+                    tr("已复制到剪贴板（选项里可关）"), 4000)
+            except Exception:                      # noqa: BLE001
+                pass
+        return True
 
     def capture_fullscreen(self, screen=None):
         """全屏截图。
@@ -1047,6 +1072,7 @@ class PyShotApp(QObject):
     def _on_scroll_finished(self, pixmap: QPixmap):
         self.scroller = None
         self._notify(tr("滚动截图完成"), f"已拼接 {pixmap.height()} px 长图")
+        self.auto_copy(pixmap)     # 滚动拼接的结果同样按选项进剪贴板
         self.open_editor(pixmap)
         self._finish_capture_session()
 

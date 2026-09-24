@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""PyShot 2.17 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
+"""PyShot 2.18 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
 
-本版主题：三语帮助系统
+本版主题：截图后自动进剪贴板
 
 这是一个自动生成的单文件版本：把多文件源码合并在一起，并在启动时自动安装
 缺失的第三方库（PySide6），因此可以直接发给别人运行::
@@ -120,6 +120,7 @@ TABLE = {
     " 排队 ": (" 排队 ", ""),
     "ms，实际等了 ": ("ms，實際等了 ", ""),
     " 耗时 ": (" 耗時 ", ""),
+    "已复制到剪贴板（选项里可关）": ("已複製到剪貼簿（選項裡可關）", "Copied to the clipboard (can be turned off in Options)"),
     "热键（{}）都被占用，请双击托盘图标截图。\n": ("快速鍵（{}）都被佔用，請雙擊托盤圖示截圖。\n", "Hotkeys ({}) are all taken — double-click the tray icon to capture.\n"),
     "可用环境变量 PYSHOT_HOTKEY 指定其他组合，例如 PYSHOT_HOTKEY=ctrl+alt+j": ("可用環境變數 PYSHOT_HOTKEY 指定其他組合，例如 PYSHOT_HOTKEY=ctrl+alt+j", "Set PYSHOT_HOTKEY to pick another combination, e.g. PYSHOT_HOTKEY=ctrl+alt+j"),
     "PyShot 已启动（恢复了 {} 张上次的截图）": ("PyShot 已啟動（恢複了 {} 張上次的截圖）", "PyShot started (restored {} capture(s))"),
@@ -232,6 +233,8 @@ TABLE = {
     "重启后自动把上次编辑的截图放回来（存在缓存里，不需要你保存）": ("重啟後自動把上次編輯的截圖放回來（存在緩存裡，不需要你儲存）", "Bring back your last captures automatically after a restart (kept in a cache — no need to save)"),
     "截图时不最小化编辑器": ("截圖時不最小化編輯器", "Keep the editor visible while capturing"),
     "打开后截图时编辑器留在原地，方便截编辑器自己；平时关着（截图时自动让位，免得被拍进图里）": ("開啟後截圖時編輯器留在原地，方便截編輯器自己；平時關着（截圖時自動讓位，免得被拍進圖裡）", "When on, the editor stays where it is while you capture — handy for capturing the editor itself. Keep it off normally, so the editor gets out of the way instead of appearing in your screenshot"),
+    "截图后自动复制到剪贴板": ("截圖後自動複製到剪貼簿", "Copy to clipboard after capturing"),
+    "截图完成后立刻把这张图放进剪贴板（标注后的版本仍可用 Ctrl+C 复制）": ("截圖完成後立刻把這張圖放進剪貼簿（標注後的版本仍可用 Ctrl+C 複製）", "Put the captured image on the clipboard right away (annotate it and use Ctrl+C later if you want the annotated version instead)"),
     "清除上次的截图缓存": ("清除上次的截圖緩存", "Clear last-capture cache"),
     "编辑默认水印…": ("編輯預設水印…", "Edit Default Watermark…"),
     "编辑默认边框…": ("編輯預設邊框…", "Edit Default Border…"),
@@ -289,6 +292,8 @@ TABLE = {
     "已垂直翻转（Ctrl+Z 可撤销）": ("已垂直翻轉（Ctrl+Z 可復原）", "Flipped vertically (Ctrl+Z to undo)"),
     "已开启：截图时编辑器留在原地（方便截编辑器自己）": ("已開啟：截圖時編輯器留在原地（方便截編輯器自己）", "On: the editor stays visible while capturing (good for capturing the editor)"),
     "已关闭：截图时编辑器自动最小化让位": ("已關閉：截圖時編輯器自動最小化讓位", "Off: the editor minimizes itself while capturing"),
+    "已开启：截图完成后自动复制到剪贴板": ("已開啟：截圖完成後自動複製到剪貼簿", "On: captures go to the clipboard automatically"),
+    "已关闭：截图后不再自动复制（需要时按 Ctrl+C）": ("已關閉：截圖後不再自動複製（需要時按 Ctrl+C）", "Off: captures no longer go to the clipboard (press Ctrl+C when you need it)"),
     "已收起左侧工具条（工具快捷键仍可用；想恢复：视图菜单）": ("已收起左側工具條（工具快捷鍵仍可用；想恢複：視圖菜單）", "Tool rail hidden (shortcuts still work; bring it back from the View menu)"),
     "已显示左侧工具条": ("已顯示左側工具條", "Tool rail shown"),
     "已清除上次的截图缓存": ("已清除上次的截圖緩存", "Last-capture cache cleared"),
@@ -449,7 +454,7 @@ TABLE = {
     " 已就绪。": (" 已就绪。", ""),
     "[PyShot] pip 执行失败：": ("[PyShot] pip 執行失敗：", ""),
     "  [缺失] ": ("  [缺失] ", ""),
-    "三语帮助系统": ("三語幫助系統", "trilingual help system"),
+    "截图后自动进剪贴板": ("截圖後自動進剪貼簿", "captures go straight to the clipboard"),
     "PyShot 使用帮助": ("PyShot 使用幫助", "PyShot Help"),
     "截图 + 标注工具，专为做操作指引/步骤说明优化。": ("截圖 + 標注工具，專為做操作指引/步驟說明優化。", "Screenshot and annotation tool, built for step-by-step guides."),
     "快速开始": ("快速開始", "Quick Start"),
@@ -491,6 +496,7 @@ TABLE = {
     "- 特效 → 边框：单线 / 双线 / 虚线 / 圆角 / 投影 / 立体浮雕 / 边缘渐隐 / 拍立得 / 手撕纸。": ("- 特效 → 邊框：單線 / 雙線 / 虛線 / 圓角 / 投影 / 立體浮雕 / 邊缘漸隱 / 拍立得 / 手撕紙。", "- Effects → Border: solid / double / dashed / rounded / drop shadow / bevel / fade edges / polaroid / torn paper."),
     "- 两个对话框里都能「应用并设为默认」，之后每次新截图自动加上。": ("- 兩個對話框裡都能「套用并設為預設」，之後每次新截圖自動加上。", "- Both dialogs offer Apply and Set as Default, so new captures get it automatically."),
     "- Ctrl+S 保存成 PNG / JPG / BMP；Ctrl+C 复制到剪贴板。": ("- Ctrl+S 儲存成 PNG / JPG / BMP；Ctrl+C 複製到剪貼簿。", "- Ctrl+S saves as PNG / JPG / BMP; Ctrl+C copies to the clipboard."),
+    "- 截图完成后会**自动复制到剪贴板**（默认开，选项里可关），截完直接粘到聊天/文档里。": ("- 截圖完成後會**自動複製到剪貼簿**（預設開，選項裡可關），截完直接粘到聊天/文档裡。", "- Every capture is **copied to the clipboard automatically** (on by default; turn it off in Options), so you can paste it straight away."),
     "- 编辑 → 贴图到屏幕：把结果钉在屏幕最上层，方便照着做。": ("- 編輯 → 釘圖到螢幕：把結果钉在螢幕最上層，方便照着做。", "- Edit → Pin to Screen: keeps the result on top of everything while you follow it."),
     "- 关掉编辑器也不怕：默认会记住上次的截图（选项 → 启动时恢复上次的截图）。": ("- 關掉編輯器也不怕：預設會記住上次的截圖（選項 → 啟動時恢複上次的截圖）。", "- Closing the editor is safe: your last captures are remembered (Options → Restore last captures on startup)."),
     "- 多标签：一次会话里的多张截图各占一个标签，Ctrl+W 关掉当前标签。": ("- 多標籤：一次會话裡的多張截圖各占一個標籤，Ctrl+W 關掉當前標籤。", "- Multiple tabs: each capture of a session gets a tab; Ctrl+W closes the current one."),
@@ -938,10 +944,10 @@ if not ensure_deps():
 命名：`MAJOR.MINOR[.PATCH]`，git 标签为 `v<版本>-qt`（`-qt` 表示根目录这套
 PySide6 实现，`tk_version/` 是独立的 Tkinter 版）。
 """
-APP_VERSION = "2.17"
+APP_VERSION = "2.18"
 
 # 这版的一句话主题（写进单文件头与「关于」对话框，便于用户确认自己拿的是哪版）
-VERSION_TITLE = "三语帮助系统"
+VERSION_TITLE = "截图后自动进剪贴板"
 
 # 版本日期（本地日期，供日志/文档使用）
 VERSION_DATE = "2026-09-24"
@@ -1453,6 +1459,7 @@ SECTIONS = [
     ]),
     ("保存、复制与贴图", [
         "- Ctrl+S 保存成 PNG / JPG / BMP；Ctrl+C 复制到剪贴板。",
+        "- 截图完成后会**自动复制到剪贴板**（默认开，选项里可关），截完直接粘到聊天/文档里。",
         "- 编辑 → 贴图到屏幕：把结果钉在屏幕最上层，方便照着做。",
         "- 关掉编辑器也不怕：默认会记住上次的截图（选项 → 启动时恢复上次的截图）。",
         "- 多标签：一次会话里的多张截图各占一个标签，Ctrl+W 关掉当前标签。",
@@ -6659,6 +6666,17 @@ from PySide6.QtWidgets import (QDialogButtonBox, QFontDialog, QGridLayout, QMenu
 
 # 「截图时不最小化编辑器」的设置键（主程序截图时读同一个键）
 KEEP_EDITOR_SETTING = "capture_keep_editor"
+# 「截图后自动复制到剪贴板」的设置键（主程序与编辑器菜单共用）
+AUTO_COPY_SETTING = "capture_auto_copy"
+
+
+def auto_copy_on_capture() -> bool:
+    """截图后是否自动把图放进剪贴板（默认开：截完就能直接粘到别处）。"""
+    try:
+
+        return bool(get_setting(AUTO_COPY_SETTING, True))
+    except Exception:                              # noqa: BLE001
+        return True
 
 
 def keep_editor_on_capture() -> bool:
@@ -8492,6 +8510,14 @@ class EditorWindow(QMainWindow):
                "平时关着（截图时自动让位，免得被拍进图里）"))
         self.act_keep_editor.toggled.connect(self._toggle_keep_editor)
         m_opt.addAction(self.act_keep_editor)
+        # 截图后自动复制到剪贴板：截完直接粘到聊天/文档里，不用再按 Ctrl+C
+        self.act_auto_copy = QAction(tr("截图后自动复制到剪贴板"), self)
+        self.act_auto_copy.setCheckable(True)
+        self.act_auto_copy.setChecked(auto_copy_on_capture())
+        self.act_auto_copy.setToolTip(
+            tr("截图完成后立刻把这张图放进剪贴板（标注后的版本仍可用 Ctrl+C 复制）"))
+        self.act_auto_copy.toggled.connect(self._toggle_auto_copy)
+        m_opt.addAction(self.act_auto_copy)
         m_opt.addSeparator()
         self.act_clear_session = QAction(tr("清除上次的截图缓存"), self)
         self.act_clear_session.triggered.connect(self._clear_session_cache)
@@ -8836,6 +8862,17 @@ class EditorWindow(QMainWindow):
         self.statusBar().showMessage(
             tr("已开启：截图时编辑器留在原地（方便截编辑器自己）") if on
             else tr("已关闭：截图时编辑器自动最小化让位"), 4000)
+
+    def _toggle_auto_copy(self, on: bool):
+        """「截图后自动复制到剪贴板」开关：存进设置，主程序截图完成时读它。"""
+        try:
+
+            set_setting(AUTO_COPY_SETTING, bool(on))
+        except Exception:                          # noqa: BLE001
+            pass
+        self.statusBar().showMessage(
+            tr("已开启：截图完成后自动复制到剪贴板") if on
+            else tr("已关闭：截图后不再自动复制（需要时按 Ctrl+C）"), 4000)
 
     def set_rail_visible(self, on: bool, persist: bool = True):
         """显示/收起左侧工具条（收起后画布更宽，工具快捷键照旧可用）。"""
@@ -10647,6 +10684,7 @@ class PyShotApp(QObject):
         if self._scroll_mode:      # 滚动截图的选区，不是要编辑的截图
             self._scroll_mode = None
             return
+        self.auto_copy(pixmap)     # 选项：截完立刻进剪贴板
 
         # 等覆盖层彻底关闭再开编辑器，否则置顶的覆盖层可能压在编辑器上面；
         # 并且把异常显式暴露出来，避免"截图后什么都没发生"这种静默失败。
@@ -10661,6 +10699,29 @@ class PyShotApp(QObject):
                 self._finish_capture_session()
 
         QTimer.singleShot(120, _open)
+
+    def auto_copy(self, pixmap: QPixmap) -> bool:
+        """按选项把刚截到的图放进剪贴板（默认开）。
+
+        只在这里（截图/滚动截图完成）调用 —— 用「打开图片编辑」打开已有文件时
+        **不能**顺手覆盖掉用户的剪贴板。
+        """
+        if not auto_copy_on_capture():
+            return False
+        try:
+            QApplication.clipboard().setPixmap(pixmap)
+        except Exception as exc:                   # noqa: BLE001
+            self._cap_log("截图·复制剪贴板失败", repr(exc))
+            return False
+        self._cap_log("截图·已复制到剪贴板", f"{pixmap.width()}x{pixmap.height()}")
+        # 状态栏提一句（不弹气泡，免得每次截图都打扰）
+        for ed in getattr(self, "editors", []):
+            try:
+                ed.statusBar().showMessage(
+                    tr("已复制到剪贴板（选项里可关）"), 4000)
+            except Exception:                      # noqa: BLE001
+                pass
+        return True
 
     def capture_fullscreen(self, screen=None):
         """全屏截图。
@@ -10826,6 +10887,7 @@ class PyShotApp(QObject):
     def _on_scroll_finished(self, pixmap: QPixmap):
         self.scroller = None
         self._notify(tr("滚动截图完成"), f"已拼接 {pixmap.height()} px 长图")
+        self.auto_copy(pixmap)     # 滚动拼接的结果同样按选项进剪贴板
         self.open_editor(pixmap)
         self._finish_capture_session()
 

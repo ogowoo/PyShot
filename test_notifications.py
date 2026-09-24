@@ -78,12 +78,18 @@ core.pin_clipboard()
 check("剪贴板无图时只提示一条", len(messages) == 1,
       f"实际 {len(messages)} 条: {[m[0] for m in messages]}")
 
-# 5) 静态检查：主程序里只允许 _notify 内部出现一处 showMessage
+# 5) 静态检查：主程序里只允许 _notify 内部出现一处**托盘气泡**调用
+#    （编辑器状态栏的 showMessage 是另一回事，不该算进来）
+import re
+
 src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "main.py"),
            encoding="utf-8").read()
-count = src.count(".showMessage(")
-check("主程序只有一处 showMessage 调用点（都在 _notify 内）", count == 1,
+count = len(re.findall(r"\btray\.showMessage\(", src))
+check("主程序只有一处托盘气泡调用点（都在 _notify 内）", count == 1,
       f"实际 {count} 处")
+check("确实没有别的气泡通道（QSystemTrayIcon.showMessage 只出现在 _notify 里）",
+      len(re.findall(r"QSystemTrayIcon\.showMessage\(", src)) == 0,
+      str(re.findall(r"QSystemTrayIcon\.showMessage\(", src)))
 
 check("没有绕过 _notify 的气泡调用", len(_tray_calls) == 0)
 core.shutdown()

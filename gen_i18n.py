@@ -702,6 +702,7 @@ EN = {
         "floating paste + editing power-ups + faster startup",
     "工具条可滚动可收起": "scrollable / collapsible tool rail",
     "三语帮助系统": "trilingual help system",
+    "截图后自动进剪贴板": "captures go straight to the clipboard",
     "抓手": "Hand",
     "拖拽移动画面（图放大后看不同位置）；任何工具下按住中键或空格也能拖":
         "Drag to move the view (look around once zoomed in); middle-drag or hold Space works with any tool",
@@ -709,6 +710,16 @@ EN = {
         "px\nWheel / Ctrl+wheel to zoom · middle-drag or Space to pan",
     "启动时恢复上次的截图": "Restore last captures on startup",
     "截图时不最小化编辑器": "Keep the editor visible while capturing",
+    "截图后自动复制到剪贴板": "Copy to clipboard after capturing",
+    "截图完成后立刻把这张图放进剪贴板（标注后的版本仍可用 Ctrl+C 复制）":
+        "Put the captured image on the clipboard right away (annotate it and use "
+        "Ctrl+C later if you want the annotated version instead)",
+    "已开启：截图完成后自动复制到剪贴板":
+        "On: captures go to the clipboard automatically",
+    "已关闭：截图后不再自动复制（需要时按 Ctrl+C）":
+        "Off: captures no longer go to the clipboard (press Ctrl+C when you need it)",
+    "已复制到剪贴板（选项里可关）":
+        "Copied to the clipboard (can be turned off in Options)",
     "打开后截图时编辑器留在原地，方便截编辑器自己；平时关着（截图时自动让位，免得被拍进图里）":
         "When on, the editor stays where it is while you capture — handy for "
         "capturing the editor itself. Keep it off normally, so the editor gets "
@@ -816,6 +827,9 @@ EN = {
         "- Both dialogs offer Apply and Set as Default, so new captures get it automatically.",
     "- Ctrl+S 保存成 PNG / JPG / BMP；Ctrl+C 复制到剪贴板。":
         "- Ctrl+S saves as PNG / JPG / BMP; Ctrl+C copies to the clipboard.",
+    "- 截图完成后会**自动复制到剪贴板**（默认开，选项里可关），截完直接粘到聊天/文档里。":
+        "- Every capture is **copied to the clipboard automatically** (on by default; "
+        "turn it off in Options), so you can paste it straight away.",
     "- 编辑 → 贴图到屏幕：把结果钉在屏幕最上层，方便照着做。":
         "- Edit → Pin to Screen: keeps the result on top of everything while you follow it.",
     "- 关掉编辑器也不怕：默认会记住上次的截图（选项 → 启动时恢复上次的截图）。":

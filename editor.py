@@ -24,6 +24,17 @@ from i18n import tr
 
 # 「截图时不最小化编辑器」的设置键（主程序截图时读同一个键）
 KEEP_EDITOR_SETTING = "capture_keep_editor"
+# 「截图后自动复制到剪贴板」的设置键（主程序与编辑器菜单共用）
+AUTO_COPY_SETTING = "capture_auto_copy"
+
+
+def auto_copy_on_capture() -> bool:
+    """截图后是否自动把图放进剪贴板（默认开：截完就能直接粘到别处）。"""
+    try:
+        from i18n import get_setting
+        return bool(get_setting(AUTO_COPY_SETTING, True))
+    except Exception:                              # noqa: BLE001
+        return True
 
 
 def keep_editor_on_capture() -> bool:
@@ -1857,6 +1868,14 @@ class EditorWindow(QMainWindow):
                "平时关着（截图时自动让位，免得被拍进图里）"))
         self.act_keep_editor.toggled.connect(self._toggle_keep_editor)
         m_opt.addAction(self.act_keep_editor)
+        # 截图后自动复制到剪贴板：截完直接粘到聊天/文档里，不用再按 Ctrl+C
+        self.act_auto_copy = QAction(tr("截图后自动复制到剪贴板"), self)
+        self.act_auto_copy.setCheckable(True)
+        self.act_auto_copy.setChecked(auto_copy_on_capture())
+        self.act_auto_copy.setToolTip(
+            tr("截图完成后立刻把这张图放进剪贴板（标注后的版本仍可用 Ctrl+C 复制）"))
+        self.act_auto_copy.toggled.connect(self._toggle_auto_copy)
+        m_opt.addAction(self.act_auto_copy)
         m_opt.addSeparator()
         self.act_clear_session = QAction(tr("清除上次的截图缓存"), self)
         self.act_clear_session.triggered.connect(self._clear_session_cache)
@@ -2202,6 +2221,17 @@ class EditorWindow(QMainWindow):
         self.statusBar().showMessage(
             tr("已开启：截图时编辑器留在原地（方便截编辑器自己）") if on
             else tr("已关闭：截图时编辑器自动最小化让位"), 4000)
+
+    def _toggle_auto_copy(self, on: bool):
+        """「截图后自动复制到剪贴板」开关：存进设置，主程序截图完成时读它。"""
+        try:
+            from i18n import set_setting
+            set_setting(AUTO_COPY_SETTING, bool(on))
+        except Exception:                          # noqa: BLE001
+            pass
+        self.statusBar().showMessage(
+            tr("已开启：截图完成后自动复制到剪贴板") if on
+            else tr("已关闭：截图后不再自动复制（需要时按 Ctrl+C）"), 4000)
 
     def set_rail_visible(self, on: bool, persist: bool = True):
         """显示/收起左侧工具条（收起后画布更宽，工具快捷键照旧可用）。"""
