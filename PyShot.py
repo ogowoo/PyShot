@@ -228,7 +228,7 @@ TABLE = {
     "编辑默认边框…": ("編輯預設邊框…", "Edit Default Border…"),
     "帮助": ("幫助", "Help"),
     "关于 PyShot": ("關於 PyShot", "About PyShot"),
-    "已粘贴到当前图：拖动摆位置 · Ctrl+滚轮缩放 · Enter 固定 · Esc 取消": ("已貼上到當前圖：拖動擺位置 · Ctrl+滾輪縮放 · Enter 固定 · Esc 取消", "Pasted onto this image: drag to place · Ctrl+wheel to scale · Enter to apply · Esc to discard"),
+    "已粘贴到当前图：拖动摆位置 · 拖手柄缩放、拖上方圆点旋转 · Enter 固定 · Esc 取消": ("已貼上到當前圖：拖動擺位置 · 拖手柄縮放、拖上方圓點旋轉 · Enter 固定 · Esc 取消", "Pasted onto this image: drag to place · drag the handles to scale, the dot above to rotate · Enter to apply · Esc to discard"),
     "已再制一个（Ctrl+Z 可撤销）": ("已再製一個（Ctrl+Z 可復原）", "Duplicated (Ctrl+Z to undo)"),
     "选择字体": ("選擇字體", "Choose Font"),
     "之后的文字用这个字体": ("之後的文字用這個字體", "New text will use this font"),
@@ -6549,8 +6549,9 @@ class Canvas(QWidget):
         self._float_pix: QPixmap | None = None
         self._float_rect_obj = QRectF()       # 权威尺寸：图像物理像素下的矩形
         self._float_aspect = 1.0              # 原始宽高比（Shift 等比时用）
+        self._float_angle = 0.0               # 浮层旋转角（度，顺时针）
         self._float_from: QPointF | None = None    # 拖动时的抓取偏移
-        self._float_handle: int | None = None      # 正在拖的缩放句柄索引
+        self._float_handle: int | None = None      # 正在拖的句柄索引（8 = 旋转）
         # 粘贴图的外观（阴影/描边/圆角）——做指引时让贴上去的图"浮起来"
         self.float_style = {"shadow": False, "stroke": False, "radius": 0,
                             "stroke_color": "#ffffff", "stroke_width": 3}
@@ -6710,19 +6711,18 @@ class Canvas(QWidget):
         self._drag_start = pos
         self._dragging = True
 
-        # 浮动粘贴：任何工具下都能拖/缩它（这是"临时摆放"状态，优先于画笔工具）
+        # 浮动粘贴：任何工具下都能拖/缩/转它（临时摆放状态，优先于画笔工具）
         if self._float_pix is not None:
-            hit = max(6.0, 8.0 / self.zoom)      # 手柄命中范围（图像像素）
+            hit = max(8.0, (HANDLE_HIT + 2) / max(0.2, self.zoom))
             for i, hp in enumerate(self.float_handles()):
                 if (abs(hp.x() - pos.x()) <= hit and abs(hp.y() - pos.y()) <= hit):
-                    if i == 8:                    # 旋转手柄：浮层暂不支持旋转，忽略
-                        break
-                    self._float_handle = i
+                    self._float_handle = i        # 0~7 缩放，8 = 旋转
+                    self._float_from = None
                     self._dragging = False
                     e.accept()
                     return
-            if self.float_rect().contains(pos):
-                self._float_from = pos - self._float_rect_obj.topLeft()
+            if self.float_rect().contains(self.float_local(pos)):
+                self._float_from = self.float_local(pos) - self._float_rect_obj.topLeft()
                 self._dragging = False
                 e.accept()
                 return
@@ -6805,20 +6805,36 @@ class Canvas(QWidget):
         if self.tool == "pick":
             self.update()  # 刷新取色放大镜
         pos = self.clamp(self.to_image(e.position()))
-        # 拖动/缩放中的浮动粘贴
+        # 拖动/缩放/旋转中的浮动粘贴
         if self._float_pix is not None and self._float_handle is not None:
-            self.resize_float_by_handle(self._float_handle, pos,
-                                        bool(e.modifiers() & Qt.ShiftModifier))
+            if self._float_handle == 8:
+                self.rotate_float_to(pos)
+            elif self._float_angle:
+                # 转过之后：角手柄绕中心等比缩放，边的靠自身坐标处理
+                c = self._float_rect_obj.center()
+                if self._float_handle in (0, 2, 4, 6):
+                    d0 = math.hypot(self._float_rect_obj.width(),
+                                    self._float_rect_obj.height()) / 2.0
+                    d1 = math.hypot(pos.x() - c.x(), pos.y() - c.y())
+                    if d0 > 0.5 and d1 > 0.5:
+                        self.scale_float(d1 / d0)
+                else:
+                    self.resize_float_by_handle(self._float_handle,
+                                                self.float_local(pos),
+                                                bool(e.modifiers() & Qt.ShiftModifier))
+            else:
+                self.resize_float_by_handle(self._float_handle, pos,
+                                            bool(e.modifiers() & Qt.ShiftModifier))
             self.update()
             return
         if self._float_pix is not None and self._float_from is not None:
-            self._float_rect_obj = QRectF(pos - self._float_from,
-                                          self._float_rect_obj.size())
+            top_left = self.float_local(pos) - self._float_from
+            self._float_rect_obj = QRectF(top_left, self._float_rect_obj.size())
             self.update()
             return
         # 悬停在浮动图上时给"可拖动"的光标
         if self._float_pix is not None:
-            over = self.float_rect().contains(pos)
+            over = self.float_rect().contains(self.float_local(pos))
             self.setCursor(Qt.SizeAllCursor if over else Qt.ArrowCursor)
             if over:
                 return
@@ -7210,18 +7226,55 @@ class Canvas(QWidget):
         """浮动图的 8 个缩放手柄 + 1 个旋转手柄（最后一个是旋转）。
 
         顺序与 Shape.handles() 一致：0左上 1上中 2右上 3右中 4右下 5下中
-        6左下 7左中；第 8 个是顶部中间的旋转手柄。
+        6左下 7左中；第 8 个是顶边外侧的旋转手柄。**都跟着旋转角走**。
         """
         if self._float_pix is None:
             return []
         r = self._float_rect_obj
         x0, y0, x1, y1 = r.left(), r.top(), r.right(), r.bottom()
         cx = (x0 + x1) / 2.0
-        pts = [QPointF(x0, y0), QPointF(cx, y0), QPointF(x1, y0),
-               QPointF(x1, (y0 + y1) / 2.0), QPointF(x1, y1),
-               QPointF(cx, y1), QPointF(x0, y1), QPointF(x0, (y0 + y1) / 2.0)]
-        pts.append(QPointF(cx, y0 - max(18.0, r.height() * 0.12)))   # 旋转手柄
+        local = [QPointF(x0, y0), QPointF(cx, y0), QPointF(x1, y0),
+                 QPointF(x1, (y0 + y1) / 2.0), QPointF(x1, y1),
+                 QPointF(cx, y1), QPointF(x0, y1), QPointF(x0, (y0 + y1) / 2.0)]
+        c = r.center()
+        rad = math.radians(self._float_angle)
+        pts = []
+        for p in local:
+            if not self._float_angle:
+                pts.append(QPointF(p))
+                continue
+            dx, dy = p.x() - c.x(), p.y() - c.y()
+            pts.append(QPointF(c.x() + dx * math.cos(rad) - dy * math.sin(rad),
+                               c.y() + dx * math.sin(rad) + dy * math.cos(rad)))
+        # 旋转手柄：从"旋转后的上边中点"再往外一点
+        top_mid = QPointF((pts[0].x() + pts[2].x()) / 2.0,
+                          (pts[0].y() + pts[2].y()) / 2.0)
+        dist = max(18.0, r.height() * 0.12)
+        pts.append(QPointF(top_mid.x() + math.sin(rad) * dist,
+                           top_mid.y() - math.cos(rad) * dist))
         return pts
+
+    def float_local(self, pos: QPointF) -> QPointF:
+        """世界坐标 → 浮层自身坐标（把点按旋转角反向转回来）。"""
+        if not self._float_angle:
+            return QPointF(pos)
+        c = self._float_rect_obj.center()
+        rad = math.radians(-self._float_angle)
+        dx, dy = pos.x() - c.x(), pos.y() - c.y()
+        return QPointF(c.x() + dx * math.cos(rad) - dy * math.sin(rad),
+                       c.y() + dx * math.sin(rad) + dy * math.cos(rad))
+
+    def rotate_float_to(self, pos: QPointF) -> bool:
+        """把旋转手柄拖到 pos：让浮层的"上边"朝向这个方向。"""
+        if self._float_pix is None:
+            return False
+        c = self._float_rect_obj.center()
+        dx, dy = pos.x() - c.x(), pos.y() - c.y()
+        if abs(dx) < 0.5 and abs(dy) < 0.5:
+            return False
+        self._float_angle = math.degrees(math.atan2(dx, -dy)) % 360.0
+        self.update()
+        return True
 
     def _float_anchor(self) -> QRectF:
         """浮动图的默认落点：**当前看得见**的那块区域的中心。
@@ -7264,6 +7317,7 @@ class Canvas(QWidget):
         self._float_pix = pix
         self._float_aspect = (pix.width() / pix.height()) if pix.height() else 1.0
         self._float_rect_obj = self._float_anchor()
+        self._float_angle = 0.0
         self._float_from = None
         self._float_handle = None
         self.setFocus(Qt.OtherFocusReason)   # 让 Enter/Esc 能直接生效
@@ -7369,6 +7423,12 @@ class Canvas(QWidget):
             return
         rect = self.float_rect()
         style = self.float_style
+        painter.save()
+        if self._float_angle:                  # 绕中心旋转后再画
+            c = rect.center()
+            painter.translate(c)
+            painter.rotate(self._float_angle)
+            painter.translate(-c)
         path = self._float_path()
         if style.get("shadow"):
             # 便宜的"软阴影"：几层逐渐变淡的偏移轮廓（做指引够用，不引入模糊库）
@@ -7386,6 +7446,7 @@ class Canvas(QWidget):
                                 max(1, int(style.get("stroke_width", 3)))))
             painter.setBrush(Qt.NoBrush)
             painter.drawPath(path)
+        painter.restore()
 
     def cancel_float(self) -> bool:
         """丢掉浮动图，底图不动。"""
@@ -8050,7 +8111,8 @@ class EditorWindow(QMainWindow):
             canvas.commit_float()
         canvas.start_float(pix)
         self.statusBar().showMessage(
-            tr("已粘贴到当前图：拖动摆位置 · Ctrl+滚轮缩放 · Enter 固定 · Esc 取消"),
+            tr("已粘贴到当前图：拖动摆位置 · 拖手柄缩放、拖上方圆点旋转 · "
+               "Enter 固定 · Esc 取消"),
             6000)
         self._refresh_actions()
 

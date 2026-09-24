@@ -36,6 +36,7 @@ from PySide6.QtWidgets import QApplication
 app = QApplication([])
 
 from editor import EditorWindow
+from shapes import RectShape
 
 failures = []
 
@@ -220,6 +221,75 @@ check("第二次粘贴时，第一个浮动图已被固定进图",
       color_at(win2.canvas.base_pixmap, r_first.center().x(),
                r_first.center().y()))
 check("第二次粘贴仍然是浮动层（等着摆位置）", win2.canvas.has_float())
+
+# ---------- 11) 旋转手柄：**走真实鼠标事件**（之前拖不动就是这里） ----------
+win3 = EditorWindow(solid(400, 300, "#ffffff"))
+c3 = win3.canvas
+c3.tool = "select"
+set_clip(solid(120, 80, "#e91e63"))
+win3.paste_onto_current()
+r3 = c3.float_rect()
+
+
+def drag_canvas(canvas, from_img, to_img, modifiers=Qt.NoModifier):
+    """在画布上模拟一次"按下-移动-松开"（坐标是图像像素）。"""
+    p0 = canvas.to_widget(from_img)
+    p1 = canvas.to_widget(to_img)
+    canvas.mousePressEvent(QMouseEvent(QEvent.MouseButtonPress, p0,
+                                       Qt.LeftButton, Qt.LeftButton, modifiers))
+    canvas.mouseMoveEvent(QMouseEvent(QEvent.MouseMove, p1, Qt.NoButton,
+                                      Qt.LeftButton, modifiers))
+    canvas.mouseReleaseEvent(QMouseEvent(QEvent.MouseButtonRelease, p1,
+                                         Qt.LeftButton, Qt.NoButton, modifiers))
+
+
+rot_handle = c3.float_handles()[8]
+check("浮层旋转手柄画在上边外侧", rot_handle.y() < r3.top(), str(rot_handle))
+# 把旋转手柄拖到"中心正右方" → 应该转 90°
+drag_canvas(c3, rot_handle, QPointF(r3.center().x() + 150, r3.center().y()))
+check("**拖浮层旋转手柄真的能转**（真实鼠标路径）",
+      abs(c3._float_angle - 90.0) < 1.0, f"{c3._float_angle:.1f}°")
+# 转了 90° 之后，旋转手柄应该从"上边外侧"跑到"右边外侧"
+_h8 = c3.float_handles()[8]
+_c = c3.float_rect().center()
+check("旋转后旋转手柄跟着转到右边外侧",
+      _h8.x() > _c.x() + 5 and abs(_h8.y() - _c.y()) < 5,
+      f"手柄 {_h8} / 中心 {_c}")
+
+# 转过之后：还能拖动、还能点中（命中要按旋转后的位置算）
+before = QPointF(c3.float_rect().topLeft())
+drag_canvas(c3, c3.float_rect().center(),
+            c3.float_rect().center() + QPointF(30, 4))
+check("旋转后仍然能拖动", c3.float_rect().topLeft() != before,
+      f"{before} → {c3.float_rect().topLeft()}")
+check("旋转后点击应按旋转后的范围命中",
+      c3.float_rect().contains(c3.float_local(c3.float_rect().center())))
+
+# 渲染结果也要是转过的（颜色块的角度变了：看包围盒以外的点）
+out_rot = c3.render_result()
+px_center = out_rot.toImage().pixelColor(int(c3.float_rect().center().x()),
+                                         int(c3.float_rect().center().y())).name()
+check("旋转后的浮层仍然画在中心（内容没跑掉）", px_center == "#e91e63", px_center)
+
+# 固定后转过的角度要进底图
+c3.commit_float()
+check("旋转后固定：底图中心还是这个颜色",
+      color_at(c3.base_pixmap, int(r3.center().x()), int(r3.center().y()))
+      == "#e91e63")
+
+# 图形的旋转手柄也走一遍真实鼠标路径（之前只做了单元级验证）
+win4 = EditorWindow(solid(400, 300, "#ffffff"))
+c4 = win4.canvas
+c4.tool = "select"
+c4.push_undo()
+rect4 = RectShape(QColor("#2196f3"), 3, QRectF(150, 150, 100, 60))
+c4.shapes.append(rect4)
+c4._selected = rect4
+h8 = rect4.rotated_handles()[8]
+c4c = rect4.bounding_rect().center()
+drag_canvas(c4, h8, QPointF(c4c.x() + 120, c4c.y()))
+check("**拖图形旋转手柄也能转**（真实鼠标路径）",
+      abs(rect4.rotation - 90.0) < 1.0, f"{rect4.rotation:.1f}°")
 
 print()
 if failures:

@@ -208,7 +208,7 @@ TABLE = {
     "编辑默认边框…": ("編輯預設邊框…", "Edit Default Border…"),
     "帮助": ("幫助", "Help"),
     "关于 PyShot": ("關於 PyShot", "About PyShot"),
-    "已粘贴到当前图：拖动摆位置 · Ctrl+滚轮缩放 · Enter 固定 · Esc 取消": ("已貼上到當前圖：拖動擺位置 · Ctrl+滾輪縮放 · Enter 固定 · Esc 取消", "Pasted onto this image: drag to place · Ctrl+wheel to scale · Enter to apply · Esc to discard"),
+    "已粘贴到当前图：拖动摆位置 · 拖手柄缩放、拖上方圆点旋转 · Enter 固定 · Esc 取消": ("已貼上到當前圖：拖動擺位置 · 拖手柄縮放、拖上方圓點旋轉 · Enter 固定 · Esc 取消", "Pasted onto this image: drag to place · drag the handles to scale, the dot above to rotate · Enter to apply · Esc to discard"),
     "已再制一个（Ctrl+Z 可撤销）": ("已再製一個（Ctrl+Z 可復原）", "Duplicated (Ctrl+Z to undo)"),
     "选择字体": ("選擇字體", "Choose Font"),
     "之后的文字用这个字体": ("之後的文字用這個字體", "New text will use this font"),

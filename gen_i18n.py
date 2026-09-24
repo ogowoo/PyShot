@@ -608,6 +608,9 @@ EN = {
     "已粘贴到当前图：拖动摆位置 · Ctrl+滚轮缩放 · Enter 固定 · Esc 取消":
         "Pasted onto this image: drag to place · Ctrl+wheel to scale · "
         "Enter to apply · Esc to discard",
+    "已粘贴到当前图：拖动摆位置 · 拖手柄缩放、拖上方圆点旋转 · Enter 固定 · Esc 取消":
+        "Pasted onto this image: drag to place · drag the handles to scale, "
+        "the dot above to rotate · Enter to apply · Esc to discard",
     "已固定粘贴的图（Ctrl+Z 可撤销）":
         "Pasted image applied (Ctrl+Z to undo)",
     "已取消粘贴": "Paste discarded",
