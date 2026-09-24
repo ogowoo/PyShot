@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""PyShot 2.16 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
+"""PyShot 2.16.1 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
 
-本版主题：浮动粘贴 + 编辑增强 + 启动提速
+本版主题：工具条可滚动可收起
 
 这是一个自动生成的单文件版本：把多文件源码合并在一起，并在启动时自动安装
 缺失的第三方库（PySide6），因此可以直接发给别人运行::
@@ -212,6 +212,8 @@ TABLE = {
     "缩小": ("縮小", "Zoom Out"),
     "实际像素 (1:1)": ("實際像素 (1:1)", "Actual pixels (1:1)"),
     "适应窗口": ("符合窗口", "Fit to Window"),
+    "显示左侧工具条": ("顯示左側工具條", "Show Tool Rail"),
+    "工具条可以滚动；嫌占地方就整条收起（工具快捷键依然可用）": ("工具條可以捲動；嫌占地方就整條收起（工具快捷鍵依然可用）", "The tool rail scrolls; turn it off entirely if you need the space (tool shortcuts still work)"),
     "特效": ("特效", "Effects"),
     "水印…": ("水印…", "Watermark…"),
     "边框…": ("邊框…", "Border…"),
@@ -284,6 +286,8 @@ TABLE = {
     "已垂直翻转（Ctrl+Z 可撤销）": ("已垂直翻轉（Ctrl+Z 可復原）", "Flipped vertically (Ctrl+Z to undo)"),
     "已开启：截图时编辑器留在原地（方便截编辑器自己）": ("已開啟：截圖時編輯器留在原地（方便截編輯器自己）", "On: the editor stays visible while capturing (good for capturing the editor)"),
     "已关闭：截图时编辑器自动最小化让位": ("已關閉：截圖時編輯器自動最小化讓位", "Off: the editor minimizes itself while capturing"),
+    "已收起左侧工具条（工具快捷键仍可用；想恢复：视图菜单）": ("已收起左側工具條（工具快捷鍵仍可用；想恢複：視圖菜單）", "Tool rail hidden (shortcuts still work; bring it back from the View menu)"),
+    "已显示左侧工具条": ("已顯示左側工具條", "Tool rail shown"),
     "已清除上次的截图缓存": ("已清除上次的截圖緩存", "Last-capture cache cleared"),
     "已设为默认边框，之后每次新截图会自动加": ("已設為預設邊框，之後每次新截圖會自動加", "Saved as the default border; it will be added automatically"),
     "滚轮/Ctrl+滚轮 缩放 · 中键或空格拖动查看": ("滾輪/Ctrl+滾輪 縮放 · 中鍵或空格拖動查看", "Wheel / Ctrl+wheel to zoom · middle-drag or Space to pan"),
@@ -440,7 +444,7 @@ TABLE = {
     " 已就绪。": (" 已就绪。", ""),
     "[PyShot] pip 执行失败：": ("[PyShot] pip 執行失敗：", ""),
     "  [缺失] ": ("  [缺失] ", ""),
-    "浮动粘贴 + 编辑增强 + 启动提速": ("浮動貼上 + 編輯增強 + 啟動提速", "floating paste + editing power-ups + faster startup"),
+    "工具条可滚动可收起": ("工具條可捲動可收起", "scrollable / collapsible tool rail"),
 }
 
 
@@ -872,10 +876,10 @@ if not ensure_deps():
 命名：`MAJOR.MINOR[.PATCH]`，git 标签为 `v<版本>-qt`（`-qt` 表示根目录这套
 PySide6 实现，`tk_version/` 是独立的 Tkinter 版）。
 """
-APP_VERSION = "2.16"
+APP_VERSION = "2.16.1"
 
 # 这版的一句话主题（写进单文件头与「关于」对话框，便于用户确认自己拿的是哪版）
-VERSION_TITLE = "浮动粘贴 + 编辑增强 + 启动提速"
+VERSION_TITLE = "工具条可滚动可收起"
 
 # 版本日期（本地日期，供日志/文档使用）
 VERSION_DATE = "2026-09-24"
@@ -3473,6 +3477,14 @@ QScrollBar::handle:horizontal {{
 }}
 QScrollBar::handle:horizontal:hover {{ background: #4a5059; }}
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0; }}
+
+/* ---------- 左侧工具条的滚动条：细一点，别把 44px 的按钮挤掉 ---------- */
+QScrollArea#railscroll QScrollBar:vertical {{ width: 6px; margin: 0; background: transparent; }}
+QScrollArea#railscroll QScrollBar::handle:vertical {{
+    background: {BORDER_STRONG}; border-radius: 3px; min-height: 24px;
+}}
+QScrollArea#railscroll QScrollBar::handle:vertical:hover {{ background: #4a5059; }}
+QScrollArea#railscroll {{ background: {SURFACE}; }}
 
 /* ---------- 画布标签页（下划线指示，现代风） ---------- */
 QTabWidget#canvasTabs::pane {{ border: none; background: {BG}; }}
@@ -6292,6 +6304,15 @@ def keep_editor_on_capture() -> bool:
     except Exception:                              # noqa: BLE001
         return False
 
+
+def _rail_visible_setting() -> bool:
+    """左侧工具条是否显示（默认显示）。"""
+    try:
+
+        return bool(get_setting(RAIL_VISIBLE_SETTING, True))
+    except Exception:                              # noqa: BLE001
+        return True
+
 TOOLS = [
     ("select",    "选择",   "选择并移动已有标注（Delete 删除）"),
     ("rect",      "矩形",   "拖拽画矩形，Shift 画正方形"),
@@ -6448,6 +6469,10 @@ PALETTE = ["#e53935", "#fb8c00", "#fdd835", "#43a047", "#00acc1",
 
 HANDLE_SIZE = 8      # 选中图形四角/四边句柄的显示大小（屏幕像素）
 HANDLE_HIT = 11      # 句柄的点击容差
+
+RAIL_WIDTH = 56      # 左侧工具条总宽（44 按钮 + 3+3 边距 + 6 滚动条）
+RAIL_MIN_H = 64      # 工具条滚动区最小高度（约一个半按钮，窗口才能压得很矮）
+RAIL_VISIBLE_SETTING = "editor_tool_rail"   # 「显示左侧工具条」开关
 
 
 class FlowLayout(QLayout):
@@ -7830,6 +7855,12 @@ class EditorWindow(QMainWindow):
         self._build_menubar()
         self._build_shortcuts()
         self._update_empty_state()
+        # 工具条显隐沿用上次的选择（首次默认显示）
+        try:
+            if not _rail_visible_setting() and getattr(self, "tool_scroll", None):
+                self.tool_scroll.setVisible(False)
+        except Exception:                          # noqa: BLE001
+            pass
 
         if pixmap is not None:
             self.add_canvas(pixmap)
@@ -8025,6 +8056,15 @@ class EditorWindow(QMainWindow):
         self.act_zoom_fit = QAction(tr("适应窗口"), self)
         self.act_zoom_fit.triggered.connect(self.fit_to_window)
         m_view.addAction(self.act_zoom_fit)
+        m_view.addSeparator()
+        # 工具条可以整条收起（屏幕小/想要更宽的画布时；工具快捷键仍然可用）
+        self.act_rail = QAction(tr("显示左侧工具条"), self)
+        self.act_rail.setCheckable(True)
+        self.act_rail.setChecked(_rail_visible_setting())
+        self.act_rail.setToolTip(
+            tr("工具条可以滚动；嫌占地方就整条收起（工具快捷键依然可用）"))
+        self.act_rail.toggled.connect(self.set_rail_visible)
+        m_view.addAction(self.act_rail)
 
         # ---------- 特效 ----------
         # （画布翻转/旋转 90°/改尺寸 放在这里：都属于"整张图的变换"）
@@ -8398,6 +8438,26 @@ class EditorWindow(QMainWindow):
             tr("已开启：截图时编辑器留在原地（方便截编辑器自己）") if on
             else tr("已关闭：截图时编辑器自动最小化让位"), 4000)
 
+    def set_rail_visible(self, on: bool, persist: bool = True):
+        """显示/收起左侧工具条（收起后画布更宽，工具快捷键照旧可用）。"""
+        if persist:
+            try:
+
+                set_setting(RAIL_VISIBLE_SETTING, bool(on))
+            except Exception:                      # noqa: BLE001
+                pass
+        scroll = getattr(self, "tool_scroll", None)
+        if scroll is not None:
+            scroll.setVisible(bool(on))
+        act = getattr(self, "act_rail", None)
+        if act is not None and act.isChecked() != bool(on):
+            act.blockSignals(True)
+            act.setChecked(bool(on))
+            act.blockSignals(False)
+        self.statusBar().showMessage(
+            tr("已收起左侧工具条（工具快捷键仍可用；想恢复：视图菜单）") if not on
+            else tr("已显示左侧工具条"), 4000)
+
     def _clear_session_cache(self):
         """手动清掉上次的截图缓存（不影响当前打开的标签）。"""
         try:
@@ -8646,12 +8706,19 @@ class EditorWindow(QMainWindow):
     ]
 
     def _build_toolbar(self) -> QWidget:
+        """左侧工具条：包一层滚动区，免得工具条把窗口的最小高度顶死。
+
+        以前 13 个工具竖着排要 640px，窗口最小高度被顶到 782px —— 屏幕矮一点
+        就没法把编辑器压小。现在工具条可以滚（鼠标滚轮也行），窗口能压到很矮；
+        另外「视图 → 显示左侧工具条」可以整条收起。
+        """
         bar = QFrame()
         bar.setObjectName("sidebar")
         bar.setAttribute(Qt.WA_StyledBackground, True)
         bar.setFrameShape(QFrame.NoFrame)      # 去掉默认立体边框
         v = QVBoxLayout(bar)
-        v.setContentsMargins(6, 10, 6, 8)
+        # 左右留 3px：这样"44px 按钮 + 3+3" = 50px，正好塞进"56px 轨道 - 6px 滚动条"
+        v.setContentsMargins(3, 10, 3, 8)
         v.setSpacing(4)
         self.tool_group = QButtonGroup(self)
         self.tool_group.setExclusive(True)
@@ -8682,7 +8749,21 @@ class EditorWindow(QMainWindow):
                 v.addWidget(btn, 0, Qt.AlignHCenter)
         self.tool_buttons["select"].setChecked(True)
         v.addStretch(1)
-        return bar
+
+        scroll = QScrollArea()
+        scroll.setObjectName("railscroll")
+        scroll.setWidget(bar)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll.setFixedWidth(RAIL_WIDTH)
+        # 只保证"能放下两三个按钮"，剩下的交给滚动 —— 这就是窗口能压矮的关键
+        scroll.setMinimumHeight(RAIL_MIN_H)
+        scroll.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        self.tool_rail = bar
+        self.tool_scroll = scroll
+        return scroll
 
     def _action_button(self, action: QAction) -> QToolButton:
         """把一个 QAction 包成普通按钮（用于流式顶栏）。"""
@@ -8987,6 +9068,12 @@ class EditorWindow(QMainWindow):
                 c.set_tool_cursor()            # 抓手工具显示手型
                 c.update()
         self.tool_buttons[tid].setChecked(True)
+        # 工具条可滚动：用快捷键/取色切回来的工具也要滚进可见区
+        try:
+            if getattr(self, "tool_scroll", None) is not None:
+                self.tool_scroll.ensureWidgetVisible(self.tool_buttons[tid], 0, 12)
+        except Exception:                          # noqa: BLE001
+            pass
         self._refresh_actions()
         name = dict((t, n) for t, n, _ in TOOLS).get(tid, tid)
         self.tool_name_label.setText(tr("工具：") + tr(name))

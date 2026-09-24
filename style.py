@@ -214,6 +214,14 @@ QScrollBar::handle:horizontal {{
 QScrollBar::handle:horizontal:hover {{ background: #4a5059; }}
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0; }}
 
+/* ---------- 左侧工具条的滚动条：细一点，别把 44px 的按钮挤掉 ---------- */
+QScrollArea#railscroll QScrollBar:vertical {{ width: 6px; margin: 0; background: transparent; }}
+QScrollArea#railscroll QScrollBar::handle:vertical {{
+    background: {BORDER_STRONG}; border-radius: 3px; min-height: 24px;
+}}
+QScrollArea#railscroll QScrollBar::handle:vertical:hover {{ background: #4a5059; }}
+QScrollArea#railscroll {{ background: {SURFACE}; }}
+
 /* ---------- 画布标签页（下划线指示，现代风） ---------- */
 QTabWidget#canvasTabs::pane {{ border: none; background: {BG}; }}
 QTabBar {{ qproperty-drawBase: 0; }}

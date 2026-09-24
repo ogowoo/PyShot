@@ -671,6 +671,13 @@ EN = {
     "已调整为 {} × {}（Ctrl+Z 可撤销）":
         "Resized to {} × {} (Ctrl+Z to undo)",
     "放大": "Zoom In", "缩小": "Zoom Out", "适应窗口": "Fit to Window",
+    "显示左侧工具条": "Show Tool Rail",
+    "工具条可以滚动；嫌占地方就整条收起（工具快捷键依然可用）":
+        "The tool rail scrolls; turn it off entirely if you need the space "
+        "(tool shortcuts still work)",
+    "已收起左侧工具条（工具快捷键仍可用；想恢复：视图菜单）":
+        "Tool rail hidden (shortcuts still work; bring it back from the View menu)",
+    "已显示左侧工具条": "Tool rail shown",
     "水印…": "Watermark…", "边框…": "Border…",
     "编辑默认水印…": "Edit Default Watermark…",
     "编辑默认边框…": "Edit Default Border…",
@@ -691,6 +698,7 @@ EN = {
         "Editor: multi-tab annotation · paste & compose · watermark · borders (incl. torn paper) · 3 languages",
     "浮动粘贴 + 编辑增强 + 启动提速":
         "floating paste + editing power-ups + faster startup",
+    "工具条可滚动可收起": "scrollable / collapsible tool rail",
     "抓手": "Hand",
     "拖拽移动画面（图放大后看不同位置）；任何工具下按住中键或空格也能拖":
         "Drag to move the view (look around once zoomed in); middle-drag or hold Space works with any tool",

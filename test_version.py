@@ -115,9 +115,12 @@ else:
     print("NOTE 还没有生成 PyShot.py，跳过单文件检查")
 
 # ---------- 5) 版本相关字符串三语齐全 ----------
-for _key in ("浮动粘贴 + 编辑增强 + 启动提速",):
-    row = i18n.TABLE.get(_key)
-    check(f"版本主题已翻译：{_key}", bool(row and row[0] and row[1]), str(row))
+# 用**当前**标题（写死旧标题的话，一发新版测试就失效了）
+row = i18n.TABLE.get(VERSION_TITLE)
+check(f"版本主题已翻译：{VERSION_TITLE}",
+      bool(row and row[0] and row[1]), str(row))
+check("版本主题的三语都不一样（繁体不能等于简体）",
+      bool(row) and row[0] != VERSION_TITLE, str(row))
 
 print()
 if failures:

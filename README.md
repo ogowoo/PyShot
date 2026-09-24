@@ -1,6 +1,6 @@
 # PyShot —— 截图 + 标注工具（PySide6 主线）
 
-**当前版本 v2.16-qt**（版本号只在 [`version.py`](version.py) 定义；改动记录见
+**当前版本 v2.16.1-qt**（版本号只在 [`version.py`](version.py) 定义；改动记录见
 [CHANGELOG.md](CHANGELOG.md)）。
 
 FSCapture 风格的 Windows 截图与标注工具，专为**做操作指引/步骤说明**优化。
