@@ -3019,6 +3019,11 @@ from pathlib import Path as _Path
 from PySide6.QtWidgets import (QSpinBox as _QSpinBox, QStyle,
                                QStyleOptionSpinBox)
 
+# 注意：**必须在模块顶层导入**。函数内写 `from i18n import current_language`
+# 在单文件合并版里会被丢掉（合并只保留顶层导入），而 apply_font 里的
+# try/except 会把这个 NameError 吞掉 → 中文界面悄悄退回 Segoe UI（踩过）。
+
+
 
 class SpinBox(_QSpinBox):
     """深色主题的 SpinBox：自己画上/下箭头。
@@ -3089,11 +3094,37 @@ def apply_theme(app):
     pal.setColor(QPalette.Disabled, QPalette.Highlight, QColor("#2a2d33"))
     pal.setColor(QPalette.Disabled, QPalette.HighlightedText, QColor("#8a8f98"))
     app.setPalette(pal)
+    apply_font(app)
     app.setStyleSheet(APP_QSS)
+
+
+def apply_font(app):
+    """设置全局字体（**不要**用 QSS 的 `* { font-family: ... }`，见下）。
+
+    原来字体是靠 QSS 的 `* { font-family: "Segoe UI", "Microsoft YaHei UI" }`
+    设的。实测这个写法代价极大：本机进程内**第一次中文排版**要 7~8 秒
+    （`*` 把首选族钉在 Segoe UI 上，中文只能走回退扫描；而每次扫描都要
+    枚举 800+ 字体族）。改成一次性 app.setFont(中文字体) 之后，
+    第一次排版降到 1.3~2.6 秒 —— 这正是"启动后二十多秒按热键没反应"的主因。
+
+    中文界面用「微软雅黑」（Windows 自带、含完整 CJK），其它语言用 Segoe UI。
+    语言切换后要再调一次（字体不会自己换）。
+    """
+    fam = "Segoe UI"
+    try:
+        if str(current_language()).startswith("zh"):
+            fam = "Microsoft YaHei UI"
+    except Exception:                              # noqa: BLE001
+        pass
+    f = QFont(fam)
+    f.setPixelSize(13)                             # 与原来 QSS 里的字号一致
+    app.setFont(f)
+
 
 APP_QSS = f"""
 /* ============ PyShot 设计系统 ============ */
-* {{ font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif; font-size: 13px; }}
+/* 注意：这里**故意不写** `* {{ font-family: ... }}` —— 全局字体在
+   apply_font() 里用 app.setFont() 设，理由见那里的注释（性能，7s → 2s）。 */
 QMainWindow, QDialog {{ background: {BG}; color: {TEXT}; }}
 
 /* ---------- 顶栏（流式布局，窗口变窄自动换行） ---------- */
@@ -8066,6 +8097,7 @@ import ctypes.wintypes
 import os
 import signal
 import sys
+import time
 from pathlib import Path
 
 # 依赖自举：缺 PySide6 / numpy 时自动 pip 安装（必须在导入 PySide6 之前）
@@ -8074,10 +8106,10 @@ from pathlib import Path
 
 from PySide6.QtCore import (QAbstractNativeEventFilter, QObject, QPoint, QRect,
                             Qt, QTimer)
-from PySide6.QtGui import (QAction, QColor, QCursor, QGuiApplication, QIcon,
-                           QPainter, QPixmap)
-from PySide6.QtWidgets import (QApplication, QCheckBox, QFileDialog, QMenu,
-                               QMessageBox, QSystemTrayIcon)
+from PySide6.QtGui import (QAction, QColor, QCursor, QFontMetrics,
+                           QGuiApplication, QIcon, QPainter, QPixmap)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QFileDialog, QLabel,
+                               QMenu, QMessageBox, QSystemTrayIcon)
 
 
 
@@ -8096,6 +8128,9 @@ HOTKEY_ID_BASE = 0x5053          # "PS"
 # 启用前会先弹一段说明讲清"不稳定"。
 SCROLL_ENABLED_KEY = "scroll_capture_enabled"
 SCROLL_NOTICE_KEY = "scroll_capture_notice_off"
+
+# 进程开始的时刻：日志里用来报"启动到就绪共多久"
+_PROC_T0 = time.perf_counter()
 
 # 候选全局热键（按优先级尝试，选第一个没被占用的）。
 # 刻意避开被系统或常用软件注册的组合：
@@ -8532,6 +8567,12 @@ class PyShotApp(QObject):
     def _switch_language(self, code: str):
         """切换界面语言：重建托盘菜单，并让已打开的编辑器刷新文案。"""
         lang = set_language(code)
+        # 全局字体也要跟着换（中文界面用微软雅黑，其它用 Segoe UI）：
+        # 字体是 app.setFont 设的，不会自己随语言变。
+        try:
+            apply_font(self.app)
+        except Exception:                          # noqa: BLE001
+            pass
         self._retranslate()
         self._notify(tr("界面语言已切换"), language_name(lang))
 
@@ -8632,14 +8673,16 @@ class PyShotApp(QObject):
         return self._overlays
 
     def _warmup(self):
-        """启动预热：把冷启动的代价（首次抓屏 + 首次建全屏窗口）提前付掉。
+        """启动预热：把冷启动的一次性开销（首次排版 + 首次建编辑器 + 首次抓屏）提前付掉。
 
-        注意：这段跑在**主线程**，会在日志里显示为一段时间空白 ——
-        实测某些机器上首次抓屏要好几秒，期间界面是卡的。
+        注意：这段跑在**主线程**，日志里会显示为一段空白 —— 所以它被安排在
+        托盘/热键就绪之后（见 main() 里的 schedule_boot），
+        用户不会因为它在启动时按不动热键。
         """
         import time
         t0 = time.perf_counter()
         self._cap_log("预热·开始")
+        self._warm_ui()
         try:
             t1 = time.perf_counter()
             grab_virtual_desktop()
@@ -8656,6 +8699,79 @@ class PyShotApp(QObject):
         except Exception:                          # noqa: BLE001
             pass                               # 预热失败不影响正常使用
         self._cap_log("预热·结束", f"总耗时 {(time.perf_counter()-t0)*1000:.0f} ms")
+
+    def _warm_ui(self):
+        """把进程内"第一次用 Qt 界面"的几笔一次性开销在这里付掉。
+
+        本机实测（Qt 6.11 / Windows，800+ 字体族），这些都只跟"第一次"有关、
+        跟控件数量无关，但加起来好几秒：
+          · 第一次量一段文字（字体库 + 中文回退族扫描）   1.7~7.8 s
+            原来字体是 QSS 的 `* { font-family: "Segoe UI", ... }` 设的，
+            中文只能走回退扫描，实测 7.8 s；改成 app.setFont(中文字体) 后
+            降到 1.9 s 左右（见 style.apply_font）。
+          · 第一次建编辑器标签页（标签 + 关闭按钮 + 画布）3.3 s
+            直接建一个**隐藏的编辑器窗口**付掉；此后建编辑器只要几十毫秒。
+        不先付掉的话，这笔钱会落在"启动时恢复上次截图"或"第一次截图弹出编辑器"
+        上 —— 用户看到的就是启动后二十多秒没反应、截图后界面卡住。
+        """
+        import time
+        t_f = time.perf_counter()
+        try:
+            # 探针文字取**当前界面语言**的文案：英文界面 + Segoe UI 不需要中文
+            # 回退，写死中文反而会强制走最贵的回退扫描。
+            probe_text = tr("工具：选择")
+            QFontMetrics(self.app.font()).horizontalAdvance(probe_text)
+            probe = QLabel(probe_text)
+            probe.adjustSize()
+            probe.deleteLater()
+        except Exception:                          # noqa: BLE001
+            pass
+        self._cap_log("预热·字体排版",
+                      f"耗时 {(time.perf_counter()-t_f)*1000:.0f} ms（一次性）")
+        t_e = time.perf_counter()
+        try:
+            dummy = EditorWindow()
+            pix = QPixmap(64, 64)
+            pix.fill()
+            dummy.add_canvas(pix, "warmup")        # 建标签 + 关闭按钮 + 画布
+            dummy.close()                          # 没接任何信号，直接丢掉
+            dummy.deleteLater()
+        except Exception:                          # noqa: BLE001
+            pass
+        self._cap_log("预热·编辑器",
+                      f"耗时 {(time.perf_counter()-t_e)*1000:.0f} ms（一次性）")
+
+    def schedule_boot(self, delay_ms: int = 350):
+        """安排"恢复上次截图 + 弹就绪提示"在事件循环里跑（不在 exec() 之前）。
+
+        delay_ms 排在预热（150ms）之后：让预热先把字体/编辑器那两笔一次性开销
+        付掉，这里再建编辑器窗口就只要几十毫秒。
+        """
+        QTimer.singleShot(delay_ms, self.boot_restore)
+
+    def boot_restore(self):
+        """事件循环跑起来之后再做：恢复上次截图 + 弹"已就绪"提示。
+
+        为什么不放在 app.exec() 之前：恢复会话要建编辑器窗口，会触发上面那些
+        一次性开销（本机 5 秒级）。放在 exec() 之前会把托盘和全局热键**一起**
+        卡住 —— 用户按热键完全没反应（实测启动后 21 秒空白）。
+        现在托盘/热键先可用，这一步随后在事件循环里进行，日志能看到各段耗时。
+        """
+        import time
+        t0 = time.perf_counter()
+        restored = 0
+        try:
+            restored = self.restore_session()
+        except Exception:                          # noqa: BLE001
+            restored = 0
+        self._cap_log("启动·恢复会话",
+                      f"{restored} 张，耗时 {(time.perf_counter()-t0)*1000:.0f} ms")
+        try:
+            self.notify_ready(restored)
+        except Exception:                          # noqa: BLE001
+            pass
+        self._cap_log("启动·就绪",
+                      f"从进程开始到就绪 {(time.perf_counter()-_PROC_T0)*1000:.0f} ms")
 
     def _on_region_selected(self, region):
         self._cap_log("滚动·选区确定", f"region={region.x()},{region.y()} "
@@ -9212,12 +9328,16 @@ def main():
         core.capture_region()
     else:
         # 正常启动：只驻留托盘，不自动开始截图（避免启动就被全屏覆盖层挡住而以为卡死）
-        restored = 0
-        try:
-            restored = core.restore_session()      # 恢复上次的截图（有才显示编辑器）
-        except Exception:                          # noqa: BLE001
-            restored = 0
-        core.notify_ready(restored)
+        #
+        # 关键：恢复会话/就绪提示**推迟到事件循环里**（见 boot_restore 的注释）。
+        # 它们要建编辑器窗口，会触发进程内第一次文字排版和首次标签页开销
+        # （本机 5 秒级），放在 exec() 之前会把托盘和全局热键一起卡住。
+        _cap = getattr(core, "_cap_log", None)
+        if _cap:
+            _cap("启动·托盘就绪",
+                 f"从进程开始 {(time.perf_counter()-_PROC_T0)*1000:.0f} ms"
+                 f"（热键={core.hotkey_text or '无'}）")
+        core.schedule_boot()
 
     sys.exit(app.exec())
 

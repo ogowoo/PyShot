@@ -28,6 +28,11 @@ from pathlib import Path as _Path
 from PySide6.QtWidgets import (QSpinBox as _QSpinBox, QStyle,
                                QStyleOptionSpinBox)
 
+# 注意：**必须在模块顶层导入**。函数内写 `from i18n import current_language`
+# 在单文件合并版里会被丢掉（合并只保留顶层导入），而 apply_font 里的
+# try/except 会把这个 NameError 吞掉 → 中文界面悄悄退回 Segoe UI（踩过）。
+from i18n import current_language
+
 
 class SpinBox(_QSpinBox):
     """深色主题的 SpinBox：自己画上/下箭头。
@@ -98,11 +103,37 @@ def apply_theme(app):
     pal.setColor(QPalette.Disabled, QPalette.Highlight, QColor("#2a2d33"))
     pal.setColor(QPalette.Disabled, QPalette.HighlightedText, QColor("#8a8f98"))
     app.setPalette(pal)
+    apply_font(app)
     app.setStyleSheet(APP_QSS)
+
+
+def apply_font(app):
+    """设置全局字体（**不要**用 QSS 的 `* { font-family: ... }`，见下）。
+
+    原来字体是靠 QSS 的 `* { font-family: "Segoe UI", "Microsoft YaHei UI" }`
+    设的。实测这个写法代价极大：本机进程内**第一次中文排版**要 7~8 秒
+    （`*` 把首选族钉在 Segoe UI 上，中文只能走回退扫描；而每次扫描都要
+    枚举 800+ 字体族）。改成一次性 app.setFont(中文字体) 之后，
+    第一次排版降到 1.3~2.6 秒 —— 这正是"启动后二十多秒按热键没反应"的主因。
+
+    中文界面用「微软雅黑」（Windows 自带、含完整 CJK），其它语言用 Segoe UI。
+    语言切换后要再调一次（字体不会自己换）。
+    """
+    fam = "Segoe UI"
+    try:
+        if str(current_language()).startswith("zh"):
+            fam = "Microsoft YaHei UI"
+    except Exception:                              # noqa: BLE001
+        pass
+    f = QFont(fam)
+    f.setPixelSize(13)                             # 与原来 QSS 里的字号一致
+    app.setFont(f)
+
 
 APP_QSS = f"""
 /* ============ PyShot 设计系统 ============ */
-* {{ font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif; font-size: 13px; }}
+/* 注意：这里**故意不写** `* {{ font-family: ... }}` —— 全局字体在
+   apply_font() 里用 app.setFont() 设，理由见那里的注释（性能，7s → 2s）。 */
 QMainWindow, QDialog {{ background: {BG}; color: {TEXT}; }}
 
 /* ---------- 顶栏（流式布局，窗口变窄自动换行） ---------- */

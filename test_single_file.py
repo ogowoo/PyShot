@@ -27,6 +27,20 @@ sys.modules["PyShot_single"] = mod
 spec.loader.exec_module(mod)
 check("单文件可导入", mod is not None)
 
+# --- 全局字体：中文界面要用中文字体（性能关键，且踩过"函数内导入被合并丢掉"）---
+# 背景：全局字体原来是 QSS 的 `* { font-family: "Segoe UI", ... }` 设的，
+# 中文只能走字体回退扫描，本机实测第一次排版 7.8 秒 → 换成 app.setFont() 后 1.9 秒。
+# 而 apply_font 里若用**函数内** `from i18n import current_language`，单文件合并
+# 会把那行删掉、被 except 吞掉，中文界面悄悄退回 Segoe UI（本测试就是为此加的）。
+# 字体本身要等下面建好 QApplication 之后再验（见"核心功能"之前那段）。
+check("单文件：QSS 里没有 `*` 字体规则（性能）",
+      not [ln for ln in mod.APP_QSS.splitlines()
+           if ln.strip().startswith("*") and "font" in ln])
+check("单文件：启动预热与延后恢复都在",
+      hasattr(mod.PyShotApp, "_warm_ui")
+      and hasattr(mod.PyShotApp, "schedule_boot")
+      and hasattr(mod.PyShotApp, "boot_restore"))
+
 # --- 依赖自举逻辑（用假 runner 验证降级尝试链） ---
 calls = []
 ok = mod.pip_install(["FakePkg"], runner=lambda cmd: (calls.append(cmd), 1)[1])
@@ -49,6 +63,27 @@ check("跳过自举开关有效", mod.ensure_deps() is True)
 
 # --- 核心功能：画布 / 序号 / 撤销 ---
 app = mod.QApplication([])
+
+# --- 全局字体（要在 QApplication 建好之后验）---
+# PYSHOT_LANG 优先级高于 set_language()，切语言前先摘掉它
+_saved_lang = os.environ.pop("PYSHOT_LANG", None)
+_fam = {}
+for _lang in ("zh_CN", "zh_TW", "en"):
+    mod.set_language(_lang, persist=False)
+    mod.apply_font(app)
+    _fam[_lang] = app.font().family()
+if _saved_lang is not None:
+    os.environ["PYSHOT_LANG"] = _saved_lang
+check("单文件：中文界面用中文字体", _fam["zh_CN"] == "Microsoft YaHei UI", str(_fam))
+check("单文件：繁体界面也用中文字体", _fam["zh_TW"] == "Microsoft YaHei UI", str(_fam))
+check("单文件：英文界面用 Segoe UI", _fam["en"] == "Segoe UI", str(_fam))
+check("单文件：启动预热与延后恢复都在",
+      hasattr(mod.PyShotApp, "_warm_ui")
+      and hasattr(mod.PyShotApp, "schedule_boot")
+      and hasattr(mod.PyShotApp, "boot_restore"))
+mod.set_language("zh_CN", persist=False)
+mod.apply_font(app)
+
 pix = mod.QPixmap(400, 300)
 pix.fill(mod.QColor("#ddeeff"))
 canvas = mod.Canvas(pix)
