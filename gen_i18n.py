@@ -14,7 +14,8 @@ import re
 HERE = os.path.dirname(os.path.abspath(__file__))
 FILES = ["main.py", "snipper.py", "editor.py", "border.py", "watermark.py",
          "scroller.py", "pinboard.py", "bootstrap.py",
-         "version.py"]      # 版本主题等也在这里，别漏（否则英文界面会蹦中文）
+         "version.py",       # 版本主题等也在这里，别漏（否则英文界面会蹦中文）
+         "help_text.py", "helpwin.py"]      # 帮助正文/帮助窗口
 CJK = re.compile(r"[\u4e00-\u9fff]")
 
 # ---------------------------------------------------------------- 繁化：短语优先
@@ -82,6 +83,7 @@ S2T_CHARS = {
     "导": "導", "逻": "邏", "规": "規", "则": "則", "稳": "穩", "宫": "宮",
     "洁": "潔", "参": "參", "浅": "淺", "见": "見", "于": "於", "严": "嚴",
     "强": "強", "壮": "壯", "构": "構", "妇": "婦", "岗": "崗", "屿": "嶼",
+    "难": "難", "摊": "攤", "瘫": "癱", "叹": "嘆", "艰": "艱", "悬": "懸",
     "为": "為", "乐": "樂", "书": "書", "买": "買", "乱": "亂", "争": "爭",
     "亲": "親", "众": "眾", "优": "優", "传": "傳", "伤": "傷", "价": "價",
     "华": "華", "单": "單", "卖": "賣", "卫": "衛", "厂": "廠", "历": "歷",
@@ -699,6 +701,7 @@ EN = {
     "浮动粘贴 + 编辑增强 + 启动提速":
         "floating paste + editing power-ups + faster startup",
     "工具条可滚动可收起": "scrollable / collapsible tool rail",
+    "三语帮助系统": "trilingual help system",
     "抓手": "Hand",
     "拖拽移动画面（图放大后看不同位置）；任何工具下按住中键或空格也能拖":
         "Drag to move the view (look around once zoomed in); middle-drag or hold Space works with any tool",
@@ -727,6 +730,121 @@ EN = {
     "自定义颜色": "Custom colors",
     "点这里定义一个自定义颜色…": "Click to define a custom color…",
     "打开系统拾色器": "Open the system color picker",
+    # ---- 帮助（内容见 help_text.py / helpwin.py）----
+    "使用帮助": "Help",
+    "打开帮助窗口（三语，可按关键字搜索）":
+        "Open the help window (in 3 languages, searchable)",
+    "打开帮助窗口（F1；三语，可按关键字搜索）":
+        "Open the help window (F1; 3 languages, searchable)",
+    "区域截图（全局热键）": "Capture Region (global hotkey)",
+    "全屏截图（全局热键）": "Capture Full Screen (global hotkey)",
+    "PyShot 使用帮助": "PyShot Help",
+    "截图 + 标注工具，专为做操作指引/步骤说明优化。":
+        "Screenshot and annotation tool, built for step-by-step guides.",
+    "搜索帮助内容…（例如：拼图、滚动、快捷键）":
+        "Search the help… (e.g. compose, scrolling, shortcuts)",
+    "快捷键一览": "Shortcuts",
+    "下面这些是当前生效的快捷键（菜单里改不了的就写在这里）。":
+        "These are the shortcuts that are active right now.",
+    "快速开始": "Quick Start",
+    "截图方式": "Capture Modes",
+    "编辑器工具": "Editor Tools",
+    "把多张截图拼到一张图上": "Compose Several Screenshots into One",
+    "编辑效率": "Editing Power-Ups",
+    "水印与边框": "Watermark & Border",
+    "保存、复制与贴图": "Save, Copy, Pin",
+    "疑难解答": "Troubleshooting",
+    "关于与依赖": "About & Dependencies",
+    "按 {hotkey} 框选截图，或双击托盘图标。":
+        "Press {hotkey} to capture a region, or double-click the tray icon.",
+    "- 截完自动进编辑器：左边选工具，图上直接标。":
+        "- The capture opens in the editor: pick a tool on the left and annotate right on the image.",
+    "- 编辑器里 Ctrl+S 保存、Ctrl+C 复制、Ctrl+Z 撤销。":
+        "- In the editor: Ctrl+S saves, Ctrl+C copies, Ctrl+Z undoes.",
+    "- 托盘图标找不到时，点任务栏右侧的 ∧ 展开。":
+        "- Can't find the tray icon? Click the ∧ arrow near the clock to expand it.",
+    "- 区域截图：拖拽框选，Esc 或右键取消。":
+        "- Region capture: drag to select; Esc or right-click cancels.",
+    "- 全屏截图 {fullhotkey}：截鼠标所在的那块显示器。":
+        "- Full screen {fullhotkey}: captures the monitor the mouse is on.",
+    "- 选择显示器截图：多屏时指定某一块，或「所有显示器拼成一张」。":
+        "- Capture a specific monitor: pick one, or stitch every monitor into a single image.",
+    "- 滚动长截图（实验性，默认关闭）：先在托盘菜单里勾选启用；框选可滚动区域后程序自己滚轮逐屏拼接。":
+        "- Scrolling capture (experimental, off by default): enable it in the tray menu first; "
+        "select a scrollable area and PyShot scrolls and stitches frame by frame.",
+    "- 手动滚动：你自己滚，程序只负责拼帧，兼容性最好。":
+        "- Manual scroll: you scroll, PyShot only stitches — the most compatible mode.",
+    "- 选择：点选/拖动已有标注；方向键微调 1px（按住 Shift 是 10px）；Delete 删除。":
+        "- Select: click or drag existing annotations; arrow keys nudge by 1px (Shift: 10px); Delete removes.",
+    "- 矩形 / 椭圆 / 直线 / 箭头 / 画笔：拖拽绘制；按住 Shift 可画正方形、正圆或锁定方向。":
+        "- Rectangle / ellipse / line / arrow / pen: drag to draw; hold Shift for a square, a circle, or a locked direction.",
+    "- 序号：单击放置递增序号，做步骤指引。":
+        "- Step number: click to place an incrementing number for step-by-step guides.",
+    "- 文字：单击后输入，Enter 确认；双击已有文字可以直接改内容。":
+        "- Text: click and type, Enter to confirm; double-click existing text to edit it.",
+    "- 高亮 / 马赛克：拖拽涂抹。":
+        "- Highlight / mosaic: drag to paint.",
+    "- 取色：单击吸取图上颜色（取完自动切回上一个工具）。":
+        "- Pick color: click to pick a color from the image (it switches back to your previous tool).",
+    "- 裁剪：拖拽选出要保留的区域，Enter 应用。":
+        "- Crop: drag the area to keep, Enter applies it.",
+    "- 抓手：放大后拖动查看；任何工具下按住空格或鼠标中键也能拖。":
+        "- Hand: drag to pan once zoomed in; middle-drag or hold Space works with any tool.",
+    "Ctrl+V 会把剪贴板里的截图贴到**当前这张图**上（想新开标签用 Ctrl+Shift+V）。":
+        "Ctrl+V pastes the clipboard screenshot onto **this** image (Ctrl+Shift+V opens it as a new tab).",
+    "- 贴上去是浮动层：拖动摆位置、拖 8 个手柄改大小（Shift 等比）、拖上方圆点旋转。":
+        "- It arrives as a floating layer: drag to place, drag the 8 handles to resize (Shift keeps the ratio), drag the dot above to rotate.",
+    "- 外观可调：编辑菜单 →「粘贴图外观」可加阴影、白色描边、圆角。":
+        "- Style it from Edit → Pasted Image Style: shadow, white outline, rounded corners.",
+    "- Enter 或双击固定进图（Ctrl+Z 撤销），Esc 丢弃；连按两次 Ctrl+V 会先把上一张固定。":
+        "- Enter or double-click applies it (Ctrl+Z undoes), Esc discards; pasting twice applies the first one before starting the next.",
+    "- 固定后它就是底图的一部分，可以继续在上面标注。":
+        "- Once applied it is part of the image, and you can keep annotating on top.",
+    "- 图层顺序：右键菜单或编辑菜单里的置于顶层 / 底层、上移 / 下移一层。":
+        "- Layer order: right-click menu or Edit → Bring to Front / Send to Back / Bring Forward / Send Backward.",
+    "- Ctrl+D 再制一个；旋转 15° / 摆正也在编辑菜单。":
+        "- Ctrl+D duplicates; Rotate 15° / Straighten are in the Edit menu too.",
+    "- 画布变换（特效菜单）：水平/垂直翻转、顺/逆时针 90°、调整尺寸 —— 标注会跟着一起变换，之后还能继续编辑。":
+        "- Canvas transforms (Effects menu): flip horizontally/vertically, rotate 90° either way, resize — annotations transform with it and stay editable.",
+    "- 撤销 / 重做：Ctrl+Z / Ctrl+Y（Ctrl+Shift+Z 也可以）。":
+        "- Undo / redo: Ctrl+Z / Ctrl+Y (Ctrl+Shift+Z also works).",
+    "- 特效 → 水印：文字或图片、九宫格位置或平铺、各自调透明度、可旋转与设边距。":
+        "- Effects → Watermark: text or image, 9-grid position or tiling, separate opacity, rotation and margin.",
+    "- 特效 → 边框：单线 / 双线 / 虚线 / 圆角 / 投影 / 立体浮雕 / 边缘渐隐 / 拍立得 / 手撕纸。":
+        "- Effects → Border: solid / double / dashed / rounded / drop shadow / bevel / fade edges / polaroid / torn paper.",
+    "- 两个对话框里都能「应用并设为默认」，之后每次新截图自动加上。":
+        "- Both dialogs offer Apply and Set as Default, so new captures get it automatically.",
+    "- Ctrl+S 保存成 PNG / JPG / BMP；Ctrl+C 复制到剪贴板。":
+        "- Ctrl+S saves as PNG / JPG / BMP; Ctrl+C copies to the clipboard.",
+    "- 编辑 → 贴图到屏幕：把结果钉在屏幕最上层，方便照着做。":
+        "- Edit → Pin to Screen: keeps the result on top of everything while you follow it.",
+    "- 关掉编辑器也不怕：默认会记住上次的截图（选项 → 启动时恢复上次的截图）。":
+        "- Closing the editor is safe: your last captures are remembered (Options → Restore last captures on startup).",
+    "- 多标签：一次会话里的多张截图各占一个标签，Ctrl+W 关掉当前标签。":
+        "- Multiple tabs: each capture of a session gets a tab; Ctrl+W closes the current one.",
+    "滚动长截图拼不上：Citrix、远程桌面、Java、虚拟机里的画面经常拼不出来 —— 关掉目标软件的硬件加速，或改用「手动滚动」；另外选区只框住会滚的那块（别带上工具栏/侧栏）成功率更高。":
+        "Scrolling capture fails to stitch: Citrix, Remote Desktop, Java apps and virtual machines often "
+        "cannot be stitched — turn off hardware acceleration in the target app, or switch to Manual scroll; "
+        "selecting only the part that actually scrolls (without toolbars/sidebars) works much better.",
+    "截出来是黑的 / 花的：目标窗口在用硬件加速或内容保护，常见于 Citrix、视频播放器。可尝试改用手动滚动，或把窗口调整大小后重试。":
+        "The capture comes out black or garbled: the target window uses hardware acceleration or content "
+        "protection (common with Citrix and video players). Try Manual scroll, or resize the window and retry.",
+    "按快捷键没反应：先确认托盘图标还在（可能在任务栏右侧的 ∧ 里）；热键被别的软件占用时程序会自动换一个，启动气泡里会写当前用的是哪个。":
+        "The hotkey does nothing: first check the tray icon is still there (it may be behind the ∧ arrow). "
+        "If another app owns the hotkey, PyShot automatically picks a different one — the startup balloon says which.",
+    "启动有点慢：首次启动要付一次 Qt 的初始化开销（本机实测几秒），之后就好；想看得更细，设环境变量 PYSHOT_DEBUG=1，日志里每一步都有耗时。":
+        "Startup feels slow: the first launch pays a one-time Qt initialization cost (a few seconds on the "
+        "test machine) and is fine afterwards. Set PYSHOT_DEBUG=1 for a log with per-step timings.",
+    "想截编辑器自己：选项 → 截图时不最小化编辑器。":
+        "Want to capture the editor itself? Options → Keep the editor visible while capturing.",
+    "- 版本号在 version.py；托盘或编辑器「帮助 → 关于」也能看到。":
+        "- The version lives in version.py; Help → About shows it too.",
+    "- 检查依赖：python PyShot.py --check-deps（单文件版缺库会自动 pip 安装）。":
+        "- Check dependencies: python PyShot.py --check-deps (the single-file build auto-installs what is missing).",
+    "- 设置与缓存都在 ~/.pyshot/（settings.json、session/、debug.log）。":
+        "- Settings and cache live in ~/.pyshot/ (settings.json, session/, debug.log).",
+    "- 界面语言：选项 → 语言，简体中文 / 繁體中文 / English。":
+        "- Language: Options → Language — Simplified Chinese / Traditional Chinese / English.",
     "更多颜色…（基本颜色 + 自定义颜色）":
         "More colors… (basic + custom)",
 }

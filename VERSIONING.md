@@ -38,7 +38,8 @@ f3aaec7 feat(snipper): 全屏截图覆盖层
 
 | 标签 | 内容 |
 |---|---|
-| `v2.16-qt` | 当前主线：浮动粘贴拼图 + 编辑增强 + 启动提速（详见 CHANGELOG.md） |
+| `v2.17-qt` | 当前主线：三语帮助系统（详见 CHANGELOG.md） |
+| `v2.16-qt` | 浮动粘贴拼图 + 编辑增强 + 启动提速 |
 | `v2.0-tk` | 零第三方依赖版（tkinter + ctypes），便携版 31MB，代码在 `tk_version/` |
 | `v1.0-qt` | 早期 PySide6 版（代码在 `legacy_qt/`，含水印对话框、贴图板） |
 

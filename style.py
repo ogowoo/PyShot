@@ -513,6 +513,17 @@ def _draw_cancel(p, c):
     p.drawLine(QPointF(6.4, 6.4), QPointF(17.6, 17.6))
 
 
+def _draw_help(p, c):
+    """帮助：圆圈 + 问号（菜单/托盘「使用帮助」用）。"""
+    p.drawEllipse(QPointF(12, 12), 8.5, 8.5)
+    path = QPainterPath(QPointF(9, 9.5))
+    path.cubicTo(QPointF(9, 5.5), QPointF(15, 5.5), QPointF(15, 9.5))
+    path.cubicTo(QPointF(15, 12), QPointF(12, 12), QPointF(12, 14.5))
+    p.drawPath(path)
+    p.setBrush(c)
+    p.drawEllipse(QPointF(12, 17.6), 1.3, 1.3)
+
+
 _ICON_DRAWERS = {
     "select": _draw_select, "rect": _draw_rect, "ellipse": _draw_ellipse,
     "line": _draw_line, "arrow": _draw_arrow, "pen": _draw_pen,
@@ -522,6 +533,7 @@ _ICON_DRAWERS = {
     "monitor": _draw_monitor, "scroll": _draw_scroll, "image": _draw_image,
     "window": _draw_window, "pin": _draw_pin, "exit": _draw_exit,
     "globe": _draw_globe, "hand": _draw_hand, "pan": _draw_hand, "cancel": _draw_cancel,
+    "help": _draw_help,
 }
 
 

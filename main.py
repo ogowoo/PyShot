@@ -361,6 +361,11 @@ class PyShotApp(QObject):
         act_editor.triggered.connect(self.show_editor)
         menu.addAction(act_editor)
 
+        act_help = QAction(make_menu_icon("help"), tr("使用帮助"), self.app)
+        act_help.setToolTip(tr("打开帮助窗口（F1；三语，可按关键字搜索）"))
+        act_help.triggered.connect(self.show_help)
+        menu.addAction(act_help)
+
         menu.addSeparator()
 
         # ---------- 语言 ----------
@@ -917,6 +922,16 @@ class PyShotApp(QObject):
         QTimer.singleShot(280, _grab)
 
     # ---------- 滚动长截图 ----------
+    def show_help(self):
+        """托盘菜单「使用帮助」：确保有编辑器窗口，然后在它上面打开帮助。"""
+        try:
+            self.show_editor()
+            ed = self.editors[-1] if self.editors else None
+            if ed is not None:
+                ed.show_help()
+        except Exception as exc:                   # noqa: BLE001
+            self._cap_log("帮助打开失败", repr(exc))
+
     def scroll_enabled(self) -> bool:
         """滚动长截图是否已启用（默认关闭，见 SCROLL_ENABLED_KEY）。"""
         try:
@@ -1242,7 +1257,8 @@ class PyShotApp(QObject):
         editor.capture_requested.connect(self.capture_region)
         self._hook_session(editor)
         if hasattr(editor, "set_hotkey_hint"):
-            editor.set_hotkey_hint(getattr(self, "hotkey_text", "") or "")
+            editor.set_hotkey_hint(getattr(self, "hotkey_text", "") or "",
+                                   getattr(self, "full_hotkey_text", "") or "")
         self.editors.append(editor)
         # 新建的编辑器 = "用户又把编辑器打开了"：先把上次还在的标签放回来。
         # 关掉窗口后再截图（open_editor）走的也是这里 —— 以前只有「显示编辑器」

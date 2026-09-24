@@ -363,6 +363,8 @@ class Canvas(QWidget):
         self._text_pos = QPointF()
         self._text_target = None      # 正在改的已有文字（None = 新建）
         self.font_family = ""         # 文字字体（空 = 默认微软雅黑）
+        self.hotkey_hint = ""         # 当前生效的全局截图热键（帮助/提示里用）
+        self.full_hotkey_hint = ""
 
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.StrongFocus)
@@ -1870,6 +1872,12 @@ class EditorWindow(QMainWindow):
         # ---------- 帮助 ----------
         m_help = bar.addMenu(tr("帮助"))
         self.menus["help"] = m_help
+        self.act_help = QAction(tr("使用帮助"), self)
+        self.act_help.setShortcut("F1")
+        self.act_help.setToolTip(tr("打开帮助窗口（三语，可按关键字搜索）"))
+        self.act_help.triggered.connect(self.show_help)
+        m_help.addAction(self.act_help)
+        m_help.addSeparator()
         act_about = QAction(tr("关于 PyShot"), self)
         act_about.triggered.connect(self.show_about)
         m_help.addAction(act_about)
@@ -2138,6 +2146,32 @@ class EditorWindow(QMainWindow):
         canvas.scale_canvas(new_w, new_h)
         self.statusBar().showMessage(
             tr("已调整为 {} × {}（Ctrl+Z 可撤销）", new_w, new_h), 4000)
+
+    def show_help(self):
+        """打开帮助窗口（三语，内容见 help_text.py，快捷键从菜单实时收集）。"""
+        from helpwin import open_help
+        open_help(self, self.hotkey_hint or "", self.full_hotkey_hint or "",
+                  self.help_shortcuts())
+
+    def help_shortcuts(self) -> list:
+        """当前菜单/窗口里实际生效的快捷键 —— 实时收集，帮助不会过期。"""
+        out = []
+        seen = set()
+        if self.hotkey_hint:
+            out.append((tr("区域截图（全局热键）"), self.hotkey_hint))
+        if self.full_hotkey_hint:
+            out.append((tr("全屏截图（全局热键）"), self.full_hotkey_hint))
+        seen.update({s for _, s in out})
+        for act in self.findChildren(QAction):
+            seq = act.shortcut().toString()
+            text = act.text().split("\t")[0].strip()
+            if not seq or not text or text in ("", "-"):
+                continue
+            if seq in seen:
+                continue
+            seen.add(seq)
+            out.append((text, seq))
+        return out
 
     def show_about(self):
         """关于：一句话 + 版本号 + 主要能力（三语齐全）。"""
@@ -2772,8 +2806,10 @@ class EditorWindow(QMainWindow):
             a.triggered.connect(lambda checked, t=tid: self.set_tool(t))
             self.addAction(a)
 
-    def set_hotkey_hint(self, hotkey: str):
-        """把当前生效的全局热键告知编辑器（显示在截图按钮提示里）。"""
+    def set_hotkey_hint(self, hotkey: str, fullhotkey: str = ""):
+        """把当前生效的全局热键告知编辑器（截图按钮提示 + 帮助里也要用）。"""
+        self.hotkey_hint = hotkey or ""
+        self.full_hotkey_hint = fullhotkey or ""
         if not hasattr(self, "btn_shot"):
             return
         suffix = f"（{hotkey}）" if hotkey else ""

@@ -29,6 +29,8 @@ MODULES = [
     "session.py",
     "diag.py",
     "bootstrap.py",
+    "help_text.py",
+    "helpwin.py",
     "watermark.py",
     "border.py",
     "shapes.py",
@@ -48,7 +50,7 @@ MODULES = [
 # 这三个模块本身只用标准库（i18n 里的 QLocale 是函数内导入）。
 PRELUDE = ["i18n_data.py", "i18n.py", "bootstrap.py"]
 
-LOCAL_MODULES = ("i18n_data", "i18n", "version", "session", "diag", "bootstrap", "watermark", "border", "shapes", "style", "capture_utils",
+LOCAL_MODULES = ("i18n_data", "i18n", "version", "session", "diag", "bootstrap", "help_text", "helpwin", "watermark", "border", "shapes", "style", "capture_utils",
                  "pinboard", "snipper", "scroller", "editor", "main")
 
 _LOCAL_ALT = "|".join(LOCAL_MODULES)
