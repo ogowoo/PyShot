@@ -291,6 +291,56 @@ drag_canvas(c4, h8, QPointF(c4c.x() + 120, c4c.y()))
 check("**拖图形旋转手柄也能转**（真实鼠标路径）",
       abs(rect4.rotation - 90.0) < 1.0, f"{rect4.rotation:.1f}°")
 
+
+# ---------- 12) 虚线框要跟着一起转（用户报过"框不动"） ----------
+def blue_hits(img, p0, p1, n=80):
+    """沿一条线数"高亮蓝"像素：虚线框画到的地方才有点。"""
+    hits = 0
+    for i in range(n + 1):
+        t = i / n
+        x = int(round(p0.x() + (p1.x() - p0.x()) * t))
+        y = int(round(p0.y() + (p1.y() - p0.y()) * t))
+        c = img.pixelColor(max(0, min(img.width() - 1, x)),
+                           max(0, min(img.height() - 1, y)))
+        if c.blue() > 170 and c.red() < 170 and (c.blue() - c.green()) > 30:
+            hits += 1
+    return hits
+
+
+def frame_follows_rotation(canvas, corners, rect, tag):
+    """断言：框画在"旋转后的四角"上，而不是轴对齐的矩形上。"""
+    img = canvas.grab().toImage()
+    rotated = (corners[0], corners[1])
+    aligned = (QPointF(rect.left(), rect.top()),
+               QPointF(rect.right(), rect.top()))
+    n_rot = blue_hits(img, *rotated)
+    n_axis = blue_hits(img, *aligned)
+    check(f"**{tag}：虚线框画在旋转后的边上**（未旋转的那条边应该基本没有框）",
+          n_rot >= 12 and n_axis <= 8, f"旋转边 {n_rot} 点 / 未旋转边 {n_axis} 点")
+
+
+win5 = EditorWindow(solid(420, 320, "#ffffff"))
+c5 = win5.canvas
+c5.tool = "select"
+set_clip(solid(130, 90, "#bbbbbb"))          # 浅色内容，蓝色框才认得出
+win5.paste_onto_current()
+r5 = c5.float_rect()
+drag_canvas(c5, c5.float_handles()[8],
+            QPointF(r5.center().x() + 120, r5.center().y() - 40))
+check("浮层已转过一个角度",
+      abs(c5._float_angle) > 20, f"{c5._float_angle:.1f}°")
+frame_follows_rotation(c5, c5.float_corners(), r5, "浮层")
+
+win6 = EditorWindow(solid(420, 320, "#ffffff"))
+c6 = win6.canvas
+c6.tool = "select"
+c6.push_undo()
+rect6 = RectShape(QColor("#888888"), 3, QRectF(120, 110, 160, 100))
+c6.shapes.append(rect6)
+c6._selected = rect6
+rect6.rotation = 32.0
+frame_follows_rotation(c6, rect6.rotated_corners(), rect6.bounding_rect(), "图形")
+
 print()
 if failures:
     print("失败项:", failures)

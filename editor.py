@@ -1032,6 +1032,21 @@ class Canvas(QWidget):
                            top_mid.y() - math.cos(rad) * dist))
         return pts
 
+    def float_corners(self) -> list:
+        """浮层旋转后的四角（左上、右上、右下、左下）——虚线框按它画。"""
+        r = self._float_rect_obj
+        pts = [r.topLeft(), r.topRight(), r.bottomRight(), r.bottomLeft()]
+        if not self._float_angle:
+            return [QPointF(p) for p in pts]
+        c = r.center()
+        rad = math.radians(self._float_angle)
+        out = []
+        for p in pts:
+            dx, dy = p.x() - c.x(), p.y() - c.y()
+            out.append(QPointF(c.x() + dx * math.cos(rad) - dy * math.sin(rad),
+                               c.y() + dx * math.sin(rad) + dy * math.cos(rad)))
+        return out
+
     def float_local(self, pos: QPointF) -> QPointF:
         """世界坐标 → 浮层自身坐标（把点按旋转角反向转回来）。"""
         if not self._float_angle:
@@ -1368,15 +1383,15 @@ class Canvas(QWidget):
             self._draw_shape(painter, shape)
         if self._current is not None:
             self._draw_shape(painter, self._current)
-        # 浮动粘贴：虚线框 + 8 个缩放手柄 + 1 个旋转手柄（表示"还能拖/缩"）
+        # 浮动粘贴：虚线框 + 8 个缩放手柄 + 1 个旋转手柄（表示"还能拖/缩/转"）
         if self._float_pix is not None:
-            rect = self.float_rect()
             self._draw_float(painter)
+            # 虚线框必须用**旋转后的四角**画，否则转过之后框还是正的（用户报过）
             pen = QPen(QColor(ACCENT), 1.6 / self.zoom)
             pen.setStyle(Qt.DashLine)
             painter.setPen(pen)
             painter.setBrush(Qt.NoBrush)
-            painter.drawRect(rect)
+            painter.drawPolygon(QPolygonF(self.float_corners()))
             hs = HANDLE_SIZE / self.zoom
             handles = self.float_handles()
             painter.setPen(QPen(QColor(ACCENT), 1.2 / self.zoom))
@@ -1385,9 +1400,11 @@ class Canvas(QWidget):
                 painter.drawRect(QRectF(hp.x() - hs / 2, hp.y() - hs / 2, hs, hs))
             if len(handles) > 8:               # 旋转手柄：画个圆点 + 连接线
                 rp = handles[8]
-                top = QPointF(rect.center().x(), rect.top())
+                corners = self.float_corners()
+                top_mid = QPointF((corners[0].x() + corners[1].x()) / 2.0,
+                                  (corners[0].y() + corners[1].y()) / 2.0)
                 painter.setPen(QPen(QColor(ACCENT), 1.2 / self.zoom))
-                painter.drawLine(top, rp)
+                painter.drawLine(top_mid, rp)
                 painter.setBrush(QColor(ACCENT))
                 painter.drawEllipse(rp, hs * 0.6, hs * 0.6)
         # 选中框 + 缩放句柄（细实线 + 白色句柄，现代编辑器风格）
