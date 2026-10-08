@@ -589,10 +589,11 @@ class Canvas(QWidget):
 
         if self.tool == "step":
             self.push_undo()
+            n = self.next_step_number()
             self.shapes.append(StepShape(self.color, self.pen_width, pos,
-                                         self.step_counter, self.font_size,
+                                         n, self.font_size,
                                          self.step_diameter))
-            self.step_counter += 1
+            self.step_counter = n + 1
             self._dragging = False
             self.update()
             self.shapes_changed.emit()
@@ -791,12 +792,37 @@ class Canvas(QWidget):
             menu.addAction(tr("重做"), self.redo)
         menu.exec(e.globalPos())
 
+    # ---------- 序号（步骤） ----------
+    def step_shapes(self) -> list:
+        """当前画布上的序号，按现有编号排序。"""
+        return sorted((s for s in self.shapes if isinstance(s, StepShape)),
+                      key=lambda s: s.number)
+
+    def next_step_number(self) -> int:
+        """下一个序号 = 现有最大 + 1（删掉尾部自然"续上"，删掉中间先重排）。"""
+        steps = self.step_shapes()
+        return steps[-1].number + 1 if steps else 1
+
+    def renumber_steps(self):
+        """序号重排：按现有编号顺序压成 1..n，并同步计数器。
+
+        用户要的是"删掉 4 之后 5,6 自动变 4,5；删掉 6 之后再标还是 6"。
+        删除动作已经 push_undo() 过，所以重排与删除同属一步撤销。
+        """
+        steps = self.step_shapes()
+        for i, s in enumerate(steps, 1):
+            s.number = i
+        self.step_counter = len(steps) + 1
+
     def _emit_ctx(self, what: str):
         """画布右键菜单 → 交给宿主执行（宿主管撤销栈与状态栏提示）。"""
         if what == "del" and self._selected is not None:
             self.push_undo()
-            self.shapes.remove(self._selected)
+            removed = self._selected
+            self.shapes.remove(removed)
             self._selected = None
+            if isinstance(removed, StepShape):
+                self.renumber_steps()      # 删掉序号 → 后面的自动补上
             self.selection_changed.emit(None)
             self.update()
             self.shapes_changed.emit()
@@ -843,8 +869,11 @@ class Canvas(QWidget):
         if e.key() in (Qt.Key_Delete, Qt.Key_Backspace):
             if self._selected is not None and self._selected in self.shapes:
                 self.push_undo()
-                self.shapes.remove(self._selected)
+                removed = self._selected
+                self.shapes.remove(removed)
                 self._selected = None
+                if isinstance(removed, StepShape):
+                    self.renumber_steps()  # 删掉序号 → 后面的自动补上
                 self.selection_changed.emit(None)
                 self.update()
                 self.shapes_changed.emit()
@@ -2029,6 +2058,10 @@ class EditorWindow(QMainWindow):
         canvas.push_undo()
         dup = shape.clone()
         dup.move_by(12, 12)
+        if isinstance(dup, StepShape):
+            # 再制序号不能克隆原编号（否则出现两个"3"）：发一个新号
+            dup.number = canvas.next_step_number()
+            canvas.step_counter = dup.number + 1
         canvas.shapes.append(dup)
         canvas._selected = dup
         canvas.selection_changed.emit(dup)

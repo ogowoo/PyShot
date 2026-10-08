@@ -1,6 +1,6 @@
 # PyShot —— 截图 + 标注工具（PySide6 主线）
 
-**当前版本 v2.18.1-qt**（版本号只在 [`version.py`](version.py) 定义；改动记录见
+**当前版本 v2.19-qt**（版本号只在 [`version.py`](version.py) 定义；改动记录见
 [CHANGELOG.md](CHANGELOG.md)）。
 
 **作者 / Author**：Walt Liang &lt;Wat.L@outlook.com&gt;

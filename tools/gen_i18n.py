@@ -793,6 +793,10 @@ EN = {
         "- Rectangle / ellipse / line / arrow / pen: drag to draw; hold Shift for a square, a circle, or a locked direction.",
     "- 序号：单击放置递增序号，做步骤指引。":
         "- Step number: click to place an incrementing number for step-by-step guides.",
+    "- 删掉某个序号后，后面的会自动补上（删掉 4，5、6 变 4、5）；再标会从最大号续上。":
+        "- Deleting a step renumbers the rest (delete 4 and 5, 6 become 4, 5); "
+        "the next one continues from the highest number.",
+    "序号自动重排": "auto-renumbering step numbers",
     "- 文字：单击后输入，Enter 确认；双击已有文字可以直接改内容。":
         "- Text: click and type, Enter to confirm; double-click existing text to edit it.",
     "- 高亮 / 马赛克：拖拽涂抹。":

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""PyShot 2.18.1 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
+"""PyShot 2.19 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
 
-本版主题：标注作者信息
+本版主题：序号自动重排
 作者：Walt Liang <Wat.L@outlook.com>
 
 这是一个自动生成的单文件版本：把多文件源码合并在一起，并在启动时自动安装
@@ -455,7 +455,7 @@ TABLE = {
     " 已就绪。": (" 已就绪。", ""),
     "[PyShot] pip 执行失败：": ("[PyShot] pip 執行失敗：", ""),
     "  [缺失] ": ("  [缺失] ", ""),
-    "标注作者信息": ("標注作者資訊", "author info in About"),
+    "序号自动重排": ("序號自動重排", "auto-renumbering step numbers"),
     "PyShot 使用帮助": ("PyShot 使用幫助", "PyShot Help"),
     "截图 + 标注工具，专为做操作指引/步骤说明优化。": ("截圖 + 標注工具，專為做操作指引/步驟說明優化。", "Screenshot and annotation tool, built for step-by-step guides."),
     "快速开始": ("快速開始", "Quick Start"),
@@ -479,6 +479,7 @@ TABLE = {
     "- 选择：点选/拖动已有标注；方向键微调 1px（按住 Shift 是 10px）；Delete 删除。": ("- 選擇：點選/拖動已有標注；方向鍵微調 1px（按住 Shift 是 10px）；Delete 刪除。", "- Select: click or drag existing annotations; arrow keys nudge by 1px (Shift: 10px); Delete removes."),
     "- 矩形 / 椭圆 / 直线 / 箭头 / 画笔：拖拽绘制；按住 Shift 可画正方形、正圆或锁定方向。": ("- 矩形 / 橢圓 / 直線 / 箭頭 / 畫筆：拖曳繪製；按住 Shift 可畫正方形、正圓或鎖定方向。", "- Rectangle / ellipse / line / arrow / pen: drag to draw; hold Shift for a square, a circle, or a locked direction."),
     "- 序号：单击放置递增序号，做步骤指引。": ("- 序號：單擊放置遞增序號，做步驟指引。", "- Step number: click to place an incrementing number for step-by-step guides."),
+    "- 删掉某个序号后，后面的会自动补上（删掉 4，5、6 变 4、5）；再标会从最大号续上。": ("- 刪掉某個序號後，後面的會自動補上（刪掉 4，5、6 變 4、5）；再標會从最大號續上。", "- Deleting a step renumbers the rest (delete 4 and 5, 6 become 4, 5); the next one continues from the highest number."),
     "- 文字：单击后输入，Enter 确认；双击已有文字可以直接改内容。": ("- 文字：單擊後輸入，Enter 確認；雙擊已有文字可以直接改內容。", "- Text: click and type, Enter to confirm; double-click existing text to edit it."),
     "- 高亮 / 马赛克：拖拽涂抹。": ("- 標示 / 馬賽克：拖曳塗抹。", "- Highlight / mosaic: drag to paint."),
     "- 取色：单击吸取图上颜色（取完自动切回上一个工具）。": ("- 取色：單擊吸取圖上顏色（取完自動切回上一個工具）。", "- Pick color: click to pick a color from the image (it switches back to your previous tool)."),
@@ -946,10 +947,10 @@ if not ensure_deps():
 命名：`MAJOR.MINOR[.PATCH]`，git 标签为 `v<版本>-qt`（`-qt` 表示根目录这套
 PySide6 实现，`tk_version/` 是独立的 Tkinter 版）。
 """
-APP_VERSION = "2.18.1"
+APP_VERSION = "2.19"
 
 # 这版的一句话主题（写进单文件头与「关于」对话框，便于用户确认自己拿的是哪版）
-VERSION_TITLE = "标注作者信息"
+VERSION_TITLE = "序号自动重排"
 
 # 版本日期（本地日期，供日志/文档使用）
 VERSION_DATE = "2026-09-24"
@@ -1440,6 +1441,7 @@ SECTIONS = [
         "- 选择：点选/拖动已有标注；方向键微调 1px（按住 Shift 是 10px）；Delete 删除。",
         "- 矩形 / 椭圆 / 直线 / 箭头 / 画笔：拖拽绘制；按住 Shift 可画正方形、正圆或锁定方向。",
         "- 序号：单击放置递增序号，做步骤指引。",
+        "- 删掉某个序号后，后面的会自动补上（删掉 4，5、6 变 4、5）；再标会从最大号续上。",
         "- 文字：单击后输入，Enter 确认；双击已有文字可以直接改内容。",
         "- 高亮 / 马赛克：拖拽涂抹。",
         "- 取色：单击吸取图上颜色（取完自动切回上一个工具）。",
@@ -7242,10 +7244,11 @@ class Canvas(QWidget):
 
         if self.tool == "step":
             self.push_undo()
+            n = self.next_step_number()
             self.shapes.append(StepShape(self.color, self.pen_width, pos,
-                                         self.step_counter, self.font_size,
+                                         n, self.font_size,
                                          self.step_diameter))
-            self.step_counter += 1
+            self.step_counter = n + 1
             self._dragging = False
             self.update()
             self.shapes_changed.emit()
@@ -7444,12 +7447,37 @@ class Canvas(QWidget):
             menu.addAction(tr("重做"), self.redo)
         menu.exec(e.globalPos())
 
+    # ---------- 序号（步骤） ----------
+    def step_shapes(self) -> list:
+        """当前画布上的序号，按现有编号排序。"""
+        return sorted((s for s in self.shapes if isinstance(s, StepShape)),
+                      key=lambda s: s.number)
+
+    def next_step_number(self) -> int:
+        """下一个序号 = 现有最大 + 1（删掉尾部自然"续上"，删掉中间先重排）。"""
+        steps = self.step_shapes()
+        return steps[-1].number + 1 if steps else 1
+
+    def renumber_steps(self):
+        """序号重排：按现有编号顺序压成 1..n，并同步计数器。
+
+        用户要的是"删掉 4 之后 5,6 自动变 4,5；删掉 6 之后再标还是 6"。
+        删除动作已经 push_undo() 过，所以重排与删除同属一步撤销。
+        """
+        steps = self.step_shapes()
+        for i, s in enumerate(steps, 1):
+            s.number = i
+        self.step_counter = len(steps) + 1
+
     def _emit_ctx(self, what: str):
         """画布右键菜单 → 交给宿主执行（宿主管撤销栈与状态栏提示）。"""
         if what == "del" and self._selected is not None:
             self.push_undo()
-            self.shapes.remove(self._selected)
+            removed = self._selected
+            self.shapes.remove(removed)
             self._selected = None
+            if isinstance(removed, StepShape):
+                self.renumber_steps()      # 删掉序号 → 后面的自动补上
             self.selection_changed.emit(None)
             self.update()
             self.shapes_changed.emit()
@@ -7496,8 +7524,11 @@ class Canvas(QWidget):
         if e.key() in (Qt.Key_Delete, Qt.Key_Backspace):
             if self._selected is not None and self._selected in self.shapes:
                 self.push_undo()
-                self.shapes.remove(self._selected)
+                removed = self._selected
+                self.shapes.remove(removed)
                 self._selected = None
+                if isinstance(removed, StepShape):
+                    self.renumber_steps()  # 删掉序号 → 后面的自动补上
                 self.selection_changed.emit(None)
                 self.update()
                 self.shapes_changed.emit()
@@ -8681,6 +8712,10 @@ class EditorWindow(QMainWindow):
         canvas.push_undo()
         dup = shape.clone()
         dup.move_by(12, 12)
+        if isinstance(dup, StepShape):
+            # 再制序号不能克隆原编号（否则出现两个"3"）：发一个新号
+            dup.number = canvas.next_step_number()
+            canvas.step_counter = dup.number + 1
         canvas.shapes.append(dup)
         canvas._selected = dup
         canvas.selection_changed.emit(dup)
