@@ -184,3 +184,45 @@ def deps_report() -> str:
             lines.append(f"  [缺失] {pip_name}（{type(ex).__name__}）")
     lines.append(f"  Python: {sys.version.split()[0]}  解释器: {sys.executable}")
     return "\n".join(lines)
+
+
+# --------------------------------------------------------------------------
+# Windows 控制台窗口
+# --------------------------------------------------------------------------
+def _get_console_api():
+    """取 Windows 控制台相关的 API（单独抽出来便于测试打桩）。"""
+    import ctypes
+    return ctypes.windll.kernel32, ctypes.windll.user32
+
+
+def hide_own_console() -> str:
+    """双击启动时把自带的黑色控制台窗口藏起来（从终端启动的不动）。
+
+    规则：
+      · PYSHOT_CONSOLE=1  保留控制台（排障/看输出时用）
+      · 只有控制台是**本进程自己**的（附加进程数不超过 1，即双击/快捷方式启动）
+        才藏；从 pwsh/cmd 里运行时控制台是共享的，藏了会把用户的终端一起
+        藏起来 —— 不藏。
+      · 依赖自举（ensure_deps）在此之前已经跑完，自动安装的进度仍然看得见。
+
+    返回状态串（便于日志与测试）：
+      "hidden" / "shared" / "none" / "kept" / "n/a" / "error"
+    """
+    if os.environ.get("PYSHOT_CONSOLE") == "1":
+        return "kept"
+    if os.name != "nt":
+        return "n/a"
+    try:
+        k32, u32 = _get_console_api()
+        hwnd = k32.GetConsoleWindow()
+        if not hwnd:
+            return "none"            # pythonw.exe / 已无控制台
+        import ctypes
+        buf = (ctypes.c_ulong * 16)()
+        count = k32.GetConsoleProcessList(buf, 16)
+        if count and count <= 1:
+            u32.ShowWindow(hwnd, 0)  # SW_HIDE
+            return "hidden"
+        return "shared"              # 终端里启动的，控制台是共享的
+    except Exception:                # noqa: BLE001
+        return "error"

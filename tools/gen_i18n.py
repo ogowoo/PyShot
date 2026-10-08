@@ -857,6 +857,11 @@ EN = {
         "test machine) and is fine afterwards. Set PYSHOT_DEBUG=1 for a log with per-step timings.",
     "想截编辑器自己：选项 → 截图时不最小化编辑器。":
         "Want to capture the editor itself? Options → Keep the editor visible while capturing.",
+    "想看控制台输出：双击启动时黑色控制台会自动隐藏；设环境变量 PYSHOT_CONSOLE=1 再启动就能保留它（从终端里运行时本来就不会被藏）。":
+        "Want the console output? The black console window hides itself when you double-click "
+        "to start; set PYSHOT_CONSOLE=1 before launching to keep it (it is never hidden when "
+        "started from a terminal).",
+    "自动隐藏控制台窗口": "auto-hide the console window",
     "- 版本号在 version.py；托盘或编辑器「帮助 → 关于」也能看到。":
         "- The version lives in version.py; Help → About shows it too.",
     "- 作者：{author} <{email}>。":

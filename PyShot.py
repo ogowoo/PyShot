@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""PyShot 2.19 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
+"""PyShot 2.20 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
 
-本版主题：序号自动重排
+本版主题：自动隐藏控制台窗口
 作者：Walt Liang <Wat.L@outlook.com>
 
 这是一个自动生成的单文件版本：把多文件源码合并在一起，并在启动时自动安装
@@ -455,7 +455,7 @@ TABLE = {
     " 已就绪。": (" 已就绪。", ""),
     "[PyShot] pip 执行失败：": ("[PyShot] pip 執行失敗：", ""),
     "  [缺失] ": ("  [缺失] ", ""),
-    "序号自动重排": ("序號自動重排", "auto-renumbering step numbers"),
+    "自动隐藏控制台窗口": ("自動隱藏控製台窗口", "auto-hide the console window"),
     "PyShot 使用帮助": ("PyShot 使用幫助", "PyShot Help"),
     "截图 + 标注工具，专为做操作指引/步骤说明优化。": ("截圖 + 標注工具，專為做操作指引/步驟說明優化。", "Screenshot and annotation tool, built for step-by-step guides."),
     "快速开始": ("快速開始", "Quick Start"),
@@ -507,6 +507,7 @@ TABLE = {
     "按快捷键没反应：先确认托盘图标还在（可能在任务栏右侧的 ∧ 里）；热键被别的软件占用时程序会自动换一个，启动气泡里会写当前用的是哪个。": ("按快捷鍵沒反應：先確認托盤圖示還在（可能在任務欄右側的 ∧ 裡）；快速鍵被别的軟體佔用時程序會自動換一個，啟動氣泡裡會寫當前用的是哪個。", "The hotkey does nothing: first check the tray icon is still there (it may be behind the ∧ arrow). If another app owns the hotkey, PyShot automatically picks a different one — the startup balloon says which."),
     "启动有点慢：首次启动要付一次 Qt 的初始化开销（本机实测几秒），之后就好；想看得更细，设环境变量 PYSHOT_DEBUG=1，日志里每一步都有耗时。": ("啟動有點慢：首次啟動要付一次 Qt 的初始化開銷（本機實測几秒），之後就好；想看得更細，設環境變數 PYSHOT_DEBUG=1，日志裡每一步都有耗時。", "Startup feels slow: the first launch pays a one-time Qt initialization cost (a few seconds on the test machine) and is fine afterwards. Set PYSHOT_DEBUG=1 for a log with per-step timings."),
     "想截编辑器自己：选项 → 截图时不最小化编辑器。": ("想截編輯器自己：選項 → 截圖時不最小化編輯器。", "Want to capture the editor itself? Options → Keep the editor visible while capturing."),
+    "想看控制台输出：双击启动时黑色控制台会自动隐藏；设环境变量 PYSHOT_CONSOLE=1 再启动就能保留它（从终端里运行时本来就不会被藏）。": ("想看控製台輸出：雙擊啟動時黑色控製台會自動隱藏；設環境變數 PYSHOT_CONSOLE=1 再啟動就能保留它（从终端裡運行時本來就不會被藏）。", "Want the console output? The black console window hides itself when you double-click to start; set PYSHOT_CONSOLE=1 before launching to keep it (it is never hidden when started from a terminal)."),
     "- 作者：{author} <{email}>。": ("- 作者：{author} <{email}>。", "- Author: {author} <{email}>."),
     "- 版本号在 version.py；托盘或编辑器「帮助 → 关于」也能看到。": ("- 版本號在 version.py；托盤或編輯器「幫助 → 關於」也能看到。", "- The version lives in version.py; Help → About shows it too."),
     "- 检查依赖：python PyShot.py --check-deps（单文件版缺库会自动 pip 安装）。": ("- 檢查依賴：python PyShot.py --check-deps（單檔案版缺庫會自動 pip 安裝）。", "- Check dependencies: python PyShot.py --check-deps (the single-file build auto-installs what is missing)."),
@@ -929,6 +930,48 @@ def deps_report() -> str:
     return "\n".join(lines)
 
 
+# --------------------------------------------------------------------------
+# Windows 控制台窗口
+# --------------------------------------------------------------------------
+def _get_console_api():
+    """取 Windows 控制台相关的 API（单独抽出来便于测试打桩）。"""
+    import ctypes
+    return ctypes.windll.kernel32, ctypes.windll.user32
+
+
+def hide_own_console() -> str:
+    """双击启动时把自带的黑色控制台窗口藏起来（从终端启动的不动）。
+
+    规则：
+      · PYSHOT_CONSOLE=1  保留控制台（排障/看输出时用）
+      · 只有控制台是**本进程自己**的（附加进程数不超过 1，即双击/快捷方式启动）
+        才藏；从 pwsh/cmd 里运行时控制台是共享的，藏了会把用户的终端一起
+        藏起来 —— 不藏。
+      · 依赖自举（ensure_deps）在此之前已经跑完，自动安装的进度仍然看得见。
+
+    返回状态串（便于日志与测试）：
+      "hidden" / "shared" / "none" / "kept" / "n/a" / "error"
+    """
+    if os.environ.get("PYSHOT_CONSOLE") == "1":
+        return "kept"
+    if os.name != "nt":
+        return "n/a"
+    try:
+        k32, u32 = _get_console_api()
+        hwnd = k32.GetConsoleWindow()
+        if not hwnd:
+            return "none"            # pythonw.exe / 已无控制台
+        import ctypes
+        buf = (ctypes.c_ulong * 16)()
+        count = k32.GetConsoleProcessList(buf, 16)
+        if count and count <= 1:
+            u32.ShowWindow(hwnd, 0)  # SW_HIDE
+            return "hidden"
+        return "shared"              # 终端里启动的，控制台是共享的
+    except Exception:                # noqa: BLE001
+        return "error"
+
+
 # 依赖自举：在任何 PySide6 导入之前完成检查与安装
 if not ensure_deps():
     raise SystemExit(1)
@@ -947,10 +990,10 @@ if not ensure_deps():
 命名：`MAJOR.MINOR[.PATCH]`，git 标签为 `v<版本>-qt`（`-qt` 表示根目录这套
 PySide6 实现，`tk_version/` 是独立的 Tkinter 版）。
 """
-APP_VERSION = "2.19"
+APP_VERSION = "2.20"
 
 # 这版的一句话主题（写进单文件头与「关于」对话框，便于用户确认自己拿的是哪版）
-VERSION_TITLE = "序号自动重排"
+VERSION_TITLE = "自动隐藏控制台窗口"
 
 # 版本日期（本地日期，供日志/文档使用）
 VERSION_DATE = "2026-09-24"
@@ -1480,6 +1523,7 @@ SECTIONS = [
         "按快捷键没反应：先确认托盘图标还在（可能在任务栏右侧的 ∧ 里）；热键被别的软件占用时程序会自动换一个，启动气泡里会写当前用的是哪个。",
         "启动有点慢：首次启动要付一次 Qt 的初始化开销（本机实测几秒），之后就好；想看得更细，设环境变量 PYSHOT_DEBUG=1，日志里每一步都有耗时。",
         "想截编辑器自己：选项 → 截图时不最小化编辑器。",
+        "想看控制台输出：双击启动时黑色控制台会自动隐藏；设环境变量 PYSHOT_CONSOLE=1 再启动就能保留它（从终端里运行时本来就不会被藏）。",
     ]),
     ("关于与依赖", [
         "- 作者：{author} <{email}>。",
@@ -11173,6 +11217,10 @@ def main():
         print(deps_report())
         return
 
+    # 双击启动时自带的黑色控制台：藏起来（终端里启动的不动；
+    # 想看输出就设 PYSHOT_CONSOLE=1，或从终端里跑）
+    _console_state = hide_own_console()
+
     # Windows 任务栏图标分组
     try:
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("pyshot.app")
@@ -11191,6 +11239,11 @@ def main():
     app.setQuitOnLastWindowClosed(False)  # 托盘常驻
     app.setApplicationName("PyShot")
     apply_theme(app)
+    try:
+
+        log("启动", "console=" + _console_state)
+    except Exception:                              # noqa: BLE001
+        pass
 
     core = PyShotApp(app)
     try:

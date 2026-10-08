@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 
 # 依赖自举：缺 PySide6 / numpy 时自动 pip 安装（必须在导入 PySide6 之前）
-from bootstrap import deps_report, ensure_deps
+from bootstrap import deps_report, ensure_deps, hide_own_console
 
 if not ensure_deps():
     raise SystemExit(1)
@@ -1312,6 +1312,10 @@ def main():
         print(deps_report())
         return
 
+    # 双击启动时自带的黑色控制台：藏起来（终端里启动的不动；
+    # 想看输出就设 PYSHOT_CONSOLE=1，或从终端里跑）
+    _console_state = hide_own_console()
+
     # Windows 任务栏图标分组
     try:
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("pyshot.app")
@@ -1330,6 +1334,11 @@ def main():
     app.setQuitOnLastWindowClosed(False)  # 托盘常驻
     app.setApplicationName("PyShot")
     apply_theme(app)
+    try:
+        from diag import log
+        log("启动", "console=" + _console_state)
+    except Exception:                              # noqa: BLE001
+        pass
 
     core = PyShotApp(app)
     try:
