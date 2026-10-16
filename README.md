@@ -1,6 +1,6 @@
 # PyShot —— 截图 + 标注工具（PySide6 主线）
 
-**当前版本 v2.20-qt**（版本号只在 [`version.py`](version.py) 定义；改动记录见
+**当前版本 v2.21-qt**（版本号只在 [`version.py`](version.py) 定义；改动记录见
 [CHANGELOG.md](CHANGELOG.md)）。
 
 **作者 / Author**：Walt Liang &lt;Wat.L@outlook.com&gt;
@@ -291,9 +291,10 @@ pyshot/
 ## 测试
 
 ```powershell
-python tools/run_tests.py            # 跑全部离线套件（推荐；约 80 秒）
+python tools/run_tests.py            # 跑全部离线套件（推荐；约 90 秒）
 python tools/run_tests.py --live     # 连需要"真实桌面已解锁"的也一起跑
-python tools/run_tests.py test_help  # 只跑名字匹配的
+python tools/run_tests.py --net      # 连需要联网装包（pip）的也一起跑
+python tools/run_tests.py test_help  # 只跑名字匹配的（明确点名的一律跑）
 python tools/run_tests.py --list     # 看看会跑哪些
 ```
 

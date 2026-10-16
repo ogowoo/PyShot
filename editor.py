@@ -1259,6 +1259,41 @@ class Canvas(QWidget):
         t = QTransform().scale(width / float(w), height / float(h))
         self._apply_canvas_transform(t, new_size=QSize(int(width), int(height)))
 
+    def expand_edges(self, left=0, top=0, right=0, bottom=0,
+                     color="#ffffff") -> bool:
+        """把画布四边加大：图像内容位置不变，标注跟着偏移（左/上扩时）。
+
+        用途（用户原话）："把截到的图片的边缘加大，方便把另一个图放一起编辑" ——
+        先扩出一块空白，再 Ctrl+V 把另一张截图贴到空白处。
+        """
+        left, top, right, bottom = (max(0, int(v))
+                                    for v in (left, top, right, bottom))
+        if not any((left, top, right, bottom)):
+            return False
+        if self.has_float():
+            self.commit_float()          # 有浮动层先固定，免得坐标系变了它对不上
+        self.push_undo()
+        old = self.base_pixmap
+        w, h = old.width(), old.height()
+        new = QPixmap(w + left + right, h + top + bottom)
+        new.fill(QColor(color))
+        p = QPainter(new)
+        p.drawPixmap(left, top, old)
+        p.end()
+        new.setDevicePixelRatio(self.dpr)
+        self.base_pixmap = new
+        if left or top:
+            for shape in self.shapes:
+                try:
+                    shape.move_by(left, top)
+                except Exception:                  # noqa: BLE001
+                    pass
+        self._apply_size()
+        self._selected = None
+        self.shapes_changed.emit()
+        self.update()
+        return True
+
     def set_float_style(self, **kw) -> None:
         """调粘贴图外观（shadow / stroke / radius / stroke_color）。"""
         self.float_style.update({k: v for k, v in kw.items()
@@ -1578,6 +1613,80 @@ class Canvas(QWidget):
             p.drawText(wx + lh, wy + size + 6 + metrics.ascent() + 5, text)
 
 
+class ExpandEdgesDialog(QDialog):
+    """「扩展画布边缘」对话框：四边各加多少像素 + 填充色 + 预设。
+
+    用途（用户原话）："把截到的图片的边缘加大，方便把另一个图放一起编辑"。
+    """
+
+    def __init__(self, parent, width: int, height: int):
+        super().__init__(parent)
+        self.setWindowTitle(tr("扩展画布边缘"))
+        self._color = QColor("#ffffff")
+        self._base_w, self._base_h = width, height
+        lay = QVBoxLayout(self)
+
+        grid = QGridLayout()
+        self.spin = {}
+        for i, (key, label) in enumerate((("left", tr("左 (px)")), ("top", tr("上 (px)")),
+                                          ("right", tr("右 (px)")), ("bottom", tr("下 (px)")))):
+            sp = QSpinBox()
+            sp.setRange(0, 20000)
+            sp.setSingleStep(10)
+            sp.valueChanged.connect(self._update_result)
+            self.spin[key] = sp
+            grid.addWidget(QLabel(label), i // 2, (i % 2) * 2)
+            grid.addWidget(sp, i // 2, (i % 2) * 2 + 1)
+        lay.addLayout(grid)
+
+        # 预设：最常用的是"旁边再拼一张同样大小的图"
+        presets = QHBoxLayout()
+        for text, fn in (
+                (tr("右侧留一张图宽"), lambda: self.spin["right"].setValue(width)),
+                (tr("下方留一张图高"), lambda: self.spin["bottom"].setValue(height)),
+                (tr("四边各加 40"), lambda: [s.setValue(40) for s in self.spin.values()]),
+                (tr("清空"), lambda: [s.setValue(0) for s in self.spin.values()])):
+            b = QPushButton(text)
+            b.clicked.connect(fn)
+            presets.addWidget(b)
+        lay.addLayout(presets)
+
+        row = QHBoxLayout()
+        row.addWidget(QLabel(tr("填充色")))
+        self.btn_color = QPushButton(self._color.name())
+        self.btn_color.clicked.connect(self._pick_color)
+        row.addWidget(self.btn_color)
+        row.addStretch(1)
+        self.result = QLabel()
+        row.addWidget(self.result)
+        lay.addLayout(row)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        lay.addWidget(buttons)
+        self._update_result()
+
+    def _pick_color(self):
+        c = QColorDialog.getColor(self._color, self, tr("填充色"))
+        if c.isValid():
+            self._color = c
+            self.btn_color.setText(c.name())
+
+    def _update_result(self):
+        """实时显示扩展后的尺寸。"""
+        v = self.values()
+        # values() 需要原尺寸；存在 self 上，构造时写入
+        w = self._base_w + v["left"] + v["right"]
+        h = self._base_h + v["top"] + v["bottom"]
+        self.result.setText(tr("→ {} × {} px", w, h))
+
+    def values(self) -> dict:
+        return {"left": self.spin["left"].value(), "top": self.spin["top"].value(),
+                "right": self.spin["right"].value(), "bottom": self.spin["bottom"].value(),
+                "color": self._color.name()}
+
+
 class EditorWindow(QMainWindow):
     """FSCapture 风格编辑器主窗口。"""
 
@@ -1867,6 +1976,11 @@ class EditorWindow(QMainWindow):
         self.act_resize_img.setToolTip(tr("按像素重设整张图（含标注），可 Ctrl+Z 撤销"))
         self.act_resize_img.triggered.connect(self.resize_image)
         m_fx.addAction(self.act_resize_img)
+        self.act_expand = QAction(tr("扩展画布边缘…"), self)
+        self.act_expand.setToolTip(
+            tr("四边各加一圈空白，方便把另一张截图拼到旁边（Ctrl+Z 可撤销）"))
+        self.act_expand.triggered.connect(self.expand_canvas_dialog)
+        m_fx.addAction(self.act_expand)
 
         # ---------- 选项 ----------
         m_opt = bar.addMenu(tr("选项"))
@@ -1935,7 +2049,8 @@ class EditorWindow(QMainWindow):
                               self.act_m_redo, self.act_m_copy, self.act_m_pin,
                               self.act_zoom_in, self.act_zoom_out,
                               self.act_zoom_100, self.act_zoom_fit,
-                              self.act_m_wm, self.act_m_border]
+                              self.act_m_wm, self.act_m_border,
+                              self.act_resize_img, self.act_expand]
         return bar
 
     def _rebuild_language_menu(self):
@@ -2198,6 +2313,21 @@ class EditorWindow(QMainWindow):
         canvas.scale_canvas(new_w, new_h)
         self.statusBar().showMessage(
             tr("已调整为 {} × {}（Ctrl+Z 可撤销）", new_w, new_h), 4000)
+
+    def expand_canvas_dialog(self):
+        """「扩展画布边缘」：四边加空白，方便把另一张截图拼到旁边。"""
+        canvas = self.canvas
+        if canvas is None:
+            return
+        w, h = canvas.base_pixmap.width(), canvas.base_pixmap.height()
+        dlg = ExpandEdgesDialog(self, w, h)
+        if dlg.exec() == QDialog.Accepted:
+            v = dlg.values()
+            if canvas.expand_edges(**v):
+                self.statusBar().showMessage(
+                    tr("画布已扩展为 {} × {}（Ctrl+Z 可撤销）",
+                       canvas.base_pixmap.width(), canvas.base_pixmap.height()),
+                    4000)
 
     def show_help(self):
         """打开帮助窗口（三语，内容见 help_text.py，快捷键从菜单实时收集）。"""

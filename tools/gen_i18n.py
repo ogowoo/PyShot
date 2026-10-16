@@ -660,6 +660,19 @@ EN = {
     "顺时针 90°": "Rotate 90° CW",
     "逆时针 90°": "Rotate 90° CCW",
     "调整尺寸…": "Resize…",
+    "扩展画布边缘…": "Expand Canvas Edges…",
+    "四边各加一圈空白，方便把另一张截图拼到旁边（Ctrl+Z 可撤销）":
+        "Add blank space on any side so another screenshot can sit next to this one (Ctrl+Z to undo)",
+    "扩展画布边缘": "Expand Canvas Edges",
+    "左 (px)": "Left (px)", "上 (px)": "Top (px)",
+    "右 (px)": "Right (px)", "下 (px)": "Bottom (px)",
+    "右侧留一张图宽": "Space for another image on the right",
+    "下方留一张图高": "Space for another image below",
+    "四边各加 40": "40px on all sides",
+    "清空": "Clear",
+    "填充色": "Fill color",
+    "画布已扩展为 {} × {}（Ctrl+Z 可撤销）": "Canvas expanded to {} × {} (Ctrl+Z to undo)",
+    "画布边缘扩展": "expandable canvas edges",
     "按像素重设整张图（含标注），可 Ctrl+Z 撤销":
         "Resize the whole image in pixels (annotations scale with it); Ctrl+Z to undo",
     "已水平翻转（Ctrl+Z 可撤销）": "Flipped horizontally (Ctrl+Z to undo)",
@@ -817,6 +830,9 @@ EN = {
         "- Enter or double-click applies it (Ctrl+Z undoes), Esc discards; pasting twice applies the first one before starting the next.",
     "- 固定后它就是底图的一部分，可以继续在上面标注。":
         "- Once applied it is part of the image, and you can keep annotating on top.",
+    "- 图不够大、放不下第二张？特效 →「扩展画布边缘」先扩出一块空白，再把另一张贴上去。":
+        "- Not enough room for a second image? Effects → Expand Canvas Edges makes "
+        "some blank space first, then paste the other one on.",
     "- 图层顺序：右键菜单或编辑菜单里的置于顶层 / 底层、上移 / 下移一层。":
         "- Layer order: right-click menu or Edit → Bring to Front / Send to Back / Bring Forward / Send Backward.",
     "- Ctrl+D 再制一个；旋转 15° / 摆正也在编辑菜单。":

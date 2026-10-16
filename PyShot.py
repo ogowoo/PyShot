@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""PyShot 2.20 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
+"""PyShot 2.21 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
 
-本版主题：自动隐藏控制台窗口
+本版主题：画布边缘扩展
 作者：Walt Liang <Wat.L@outlook.com>
 
 这是一个自动生成的单文件版本：把多文件源码合并在一起，并在启动时自动安装
@@ -174,6 +174,8 @@ TABLE = {
     "打开系统拾色器": ("開啟系統拾色器", "Open the system color picker"),
     "自定义颜色": ("自定義顏色", "Custom colors"),
     "输入文字，Enter 确认 / Esc 取消": ("輸入文字，Enter 確認 / Esc 取消", "Type text, Enter to confirm / Esc to cancel"),
+    "扩展画布边缘": ("擴展畫布邊缘", "Expand Canvas Edges"),
+    "填充色": ("填充色", "Fill color"),
     "PyShot 编辑器": ("PyShot 編輯器", "PyShot Editor"),
     "还没有图片": ("還沒有圖片", "No image yet"),
     "从「文件」菜单打开图片，或直接截图 / 从剪贴板粘贴": ("从「檔案」菜單開啟圖片，或直接截圖 / 从剪貼簿貼上", "Open an image from the File menu, capture the screen, or paste from the clipboard"),
@@ -229,6 +231,8 @@ TABLE = {
     "逆时针 90°": ("逆時针 90°", "Rotate 90° CCW"),
     "调整尺寸…": ("調整尺寸…", "Resize…"),
     "按像素重设整张图（含标注），可 Ctrl+Z 撤销": ("按像素重設整張圖（含標注），可 Ctrl+Z 復原", "Resize the whole image in pixels (annotations scale with it); Ctrl+Z to undo"),
+    "扩展画布边缘…": ("擴展畫布邊缘…", "Expand Canvas Edges…"),
+    "四边各加一圈空白，方便把另一张截图拼到旁边（Ctrl+Z 可撤销）": ("四邊各加一圈空白，方便把另一張截圖拼到旁邊（Ctrl+Z 可復原）", "Add blank space on any side so another screenshot can sit next to this one (Ctrl+Z to undo)"),
     "选项": ("選項", "Options"),
     "启动时恢复上次的截图": ("啟動時恢複上次的截圖", "Restore last captures on startup"),
     "重启后自动把上次编辑的截图放回来（存在缓存里，不需要你保存）": ("重啟後自動把上次編輯的截圖放回來（存在緩存裡，不需要你儲存）", "Bring back your last captures automatically after a restart (kept in a cache — no need to save)"),
@@ -281,6 +285,10 @@ TABLE = {
     "PNG 图片 (*.png);;JPEG 图片 (*.jpg);;BMP 图片 (*.bmp)": ("PNG 圖片 (*.png);;JPEG 圖片 (*.jpg);;BMP 圖片 (*.bmp)", "PNG image (*.png);;JPEG image (*.jpg);;BMP image (*.bmp)"),
     "基本颜色": ("基本顏色", "Basic colors"),
     "删除": ("刪除", "Delete"),
+    "右侧留一张图宽": ("右側留一張圖寬", "Space for another image on the right"),
+    "下方留一张图高": ("下方留一張圖高", "Space for another image below"),
+    "四边各加 40": ("四邊各加 40", "40px on all sides"),
+    "清空": ("清空", "Clear"),
     "直角": ("直角", "Square corners"),
     "小圆角": ("小圓角", "Slightly rounded"),
     "大圆角": ("大圓角", "Very rounded"),
@@ -310,8 +318,13 @@ TABLE = {
     "边框宽度为 0，未做改动": ("邊框寬度為 0，未做改動", "Border width is 0 — nothing changed"),
     "已保存：": ("已儲存：", "Saved: "),
     "点这里定义一个自定义颜色…": ("點這裡定義一個自定義顏色…", "Click to define a custom color…"),
+    "左 (px)": ("左 (px)", "Left (px)"),
+    "上 (px)": ("上 (px)", "Top (px)"),
+    "右 (px)": ("右 (px)", "Right (px)"),
+    "下 (px)": ("下 (px)", "Bottom (px)"),
     "已旋转 90°（Ctrl+Z 可撤销）": ("已旋轉 90°（Ctrl+Z 可復原）", "Rotated 90° (Ctrl+Z to undo)"),
     "已逆时针旋转 90°（Ctrl+Z 可撤销）": ("已逆時针旋轉 90°（Ctrl+Z 可復原）", "Rotated 90° counter-clockwise (Ctrl+Z to undo)"),
+    "画布已扩展为 {} × {}（Ctrl+Z 可撤销）": ("畫布已擴展為 {} × {}（Ctrl+Z 可復原）", "Canvas expanded to {} × {} (Ctrl+Z to undo)"),
     "区域截图（全局热键）": ("區域截圖（全局快速鍵）", "Capture Region (global hotkey)"),
     "全屏截图（全局热键）": ("全螢幕截圖（全局快速鍵）", "Capture Full Screen (global hotkey)"),
     "当前颜色": ("當前顏色", "Current color"),
@@ -455,7 +468,7 @@ TABLE = {
     " 已就绪。": (" 已就绪。", ""),
     "[PyShot] pip 执行失败：": ("[PyShot] pip 執行失敗：", ""),
     "  [缺失] ": ("  [缺失] ", ""),
-    "自动隐藏控制台窗口": ("自動隱藏控製台窗口", "auto-hide the console window"),
+    "画布边缘扩展": ("畫布邊缘擴展", "expandable canvas edges"),
     "PyShot 使用帮助": ("PyShot 使用幫助", "PyShot Help"),
     "截图 + 标注工具，专为做操作指引/步骤说明优化。": ("截圖 + 標注工具，專為做操作指引/步驟說明優化。", "Screenshot and annotation tool, built for step-by-step guides."),
     "快速开始": ("快速開始", "Quick Start"),
@@ -490,6 +503,7 @@ TABLE = {
     "- 外观可调：编辑菜单 →「粘贴图外观」可加阴影、白色描边、圆角。": ("- 外观可調：編輯菜單 →「貼上圖外观」可加陰影、白色描邊、圓角。", "- Style it from Edit → Pasted Image Style: shadow, white outline, rounded corners."),
     "- Enter 或双击固定进图（Ctrl+Z 撤销），Esc 丢弃；连按两次 Ctrl+V 会先把上一张固定。": ("- Enter 或雙擊固定進圖（Ctrl+Z 復原），Esc 丢棄；連按兩次 Ctrl+V 會先把上一張固定。", "- Enter or double-click applies it (Ctrl+Z undoes), Esc discards; pasting twice applies the first one before starting the next."),
     "- 固定后它就是底图的一部分，可以继续在上面标注。": ("- 固定後它就是底圖的一部分，可以继續在上面標注。", "- Once applied it is part of the image, and you can keep annotating on top."),
+    "- 图不够大、放不下第二张？特效 →「扩展画布边缘」先扩出一块空白，再把另一张贴上去。": ("- 圖不够大、放不下第二張？特效 →「擴展畫布邊缘」先擴出一塊空白，再把另一張貼上去。", "- Not enough room for a second image? Effects → Expand Canvas Edges makes some blank space first, then paste the other one on."),
     "- 图层顺序：右键菜单或编辑菜单里的置于顶层 / 底层、上移 / 下移一层。": ("- 圖層順序：右鍵菜單或編輯菜單裡的置於顶層 / 底層、上移 / 下移一層。", "- Layer order: right-click menu or Edit → Bring to Front / Send to Back / Bring Forward / Send Backward."),
     "- Ctrl+D 再制一个；旋转 15° / 摆正也在编辑菜单。": ("- Ctrl+D 再製一個；旋轉 15° / 擺正也在編輯菜單。", "- Ctrl+D duplicates; Rotate 15° / Straighten are in the Edit menu too."),
     "- 画布变换（特效菜单）：水平/垂直翻转、顺/逆时针 90°、调整尺寸 —— 标注会跟着一起变换，之后还能继续编辑。": ("- 畫布變換（特效菜單）：水平/垂直翻轉、順/逆時针 90°、調整尺寸 —— 標注會跟着一起變換，之後還能继續編輯。", "- Canvas transforms (Effects menu): flip horizontally/vertically, rotate 90° either way, resize — annotations transform with it and stay editable."),
@@ -990,10 +1004,10 @@ if not ensure_deps():
 命名：`MAJOR.MINOR[.PATCH]`，git 标签为 `v<版本>-qt`（`-qt` 表示根目录这套
 PySide6 实现，`tk_version/` 是独立的 Tkinter 版）。
 """
-APP_VERSION = "2.20"
+APP_VERSION = "2.21"
 
 # 这版的一句话主题（写进单文件头与「关于」对话框，便于用户确认自己拿的是哪版）
-VERSION_TITLE = "自动隐藏控制台窗口"
+VERSION_TITLE = "画布边缘扩展"
 
 # 版本日期（本地日期，供日志/文档使用）
 VERSION_DATE = "2026-09-24"
@@ -1497,6 +1511,7 @@ SECTIONS = [
         "- 外观可调：编辑菜单 →「粘贴图外观」可加阴影、白色描边、圆角。",
         "- Enter 或双击固定进图（Ctrl+Z 撤销），Esc 丢弃；连按两次 Ctrl+V 会先把上一张固定。",
         "- 固定后它就是底图的一部分，可以继续在上面标注。",
+        "- 图不够大、放不下第二张？特效 →「扩展画布边缘」先扩出一块空白，再把另一张贴上去。",
     ]),
     ("编辑效率", [
         "- 图层顺序：右键菜单或编辑菜单里的置于顶层 / 底层、上移 / 下移一层。",
@@ -7958,6 +7973,41 @@ class Canvas(QWidget):
         t = QTransform().scale(width / float(w), height / float(h))
         self._apply_canvas_transform(t, new_size=QSize(int(width), int(height)))
 
+    def expand_edges(self, left=0, top=0, right=0, bottom=0,
+                     color="#ffffff") -> bool:
+        """把画布四边加大：图像内容位置不变，标注跟着偏移（左/上扩时）。
+
+        用途（用户原话）："把截到的图片的边缘加大，方便把另一个图放一起编辑" ——
+        先扩出一块空白，再 Ctrl+V 把另一张截图贴到空白处。
+        """
+        left, top, right, bottom = (max(0, int(v))
+                                    for v in (left, top, right, bottom))
+        if not any((left, top, right, bottom)):
+            return False
+        if self.has_float():
+            self.commit_float()          # 有浮动层先固定，免得坐标系变了它对不上
+        self.push_undo()
+        old = self.base_pixmap
+        w, h = old.width(), old.height()
+        new = QPixmap(w + left + right, h + top + bottom)
+        new.fill(QColor(color))
+        p = QPainter(new)
+        p.drawPixmap(left, top, old)
+        p.end()
+        new.setDevicePixelRatio(self.dpr)
+        self.base_pixmap = new
+        if left or top:
+            for shape in self.shapes:
+                try:
+                    shape.move_by(left, top)
+                except Exception:                  # noqa: BLE001
+                    pass
+        self._apply_size()
+        self._selected = None
+        self.shapes_changed.emit()
+        self.update()
+        return True
+
     def set_float_style(self, **kw) -> None:
         """调粘贴图外观（shadow / stroke / radius / stroke_color）。"""
         self.float_style.update({k: v for k, v in kw.items()
@@ -8277,6 +8327,80 @@ class Canvas(QWidget):
             p.drawText(wx + lh, wy + size + 6 + metrics.ascent() + 5, text)
 
 
+class ExpandEdgesDialog(QDialog):
+    """「扩展画布边缘」对话框：四边各加多少像素 + 填充色 + 预设。
+
+    用途（用户原话）："把截到的图片的边缘加大，方便把另一个图放一起编辑"。
+    """
+
+    def __init__(self, parent, width: int, height: int):
+        super().__init__(parent)
+        self.setWindowTitle(tr("扩展画布边缘"))
+        self._color = QColor("#ffffff")
+        self._base_w, self._base_h = width, height
+        lay = QVBoxLayout(self)
+
+        grid = QGridLayout()
+        self.spin = {}
+        for i, (key, label) in enumerate((("left", tr("左 (px)")), ("top", tr("上 (px)")),
+                                          ("right", tr("右 (px)")), ("bottom", tr("下 (px)")))):
+            sp = QSpinBox()
+            sp.setRange(0, 20000)
+            sp.setSingleStep(10)
+            sp.valueChanged.connect(self._update_result)
+            self.spin[key] = sp
+            grid.addWidget(QLabel(label), i // 2, (i % 2) * 2)
+            grid.addWidget(sp, i // 2, (i % 2) * 2 + 1)
+        lay.addLayout(grid)
+
+        # 预设：最常用的是"旁边再拼一张同样大小的图"
+        presets = QHBoxLayout()
+        for text, fn in (
+                (tr("右侧留一张图宽"), lambda: self.spin["right"].setValue(width)),
+                (tr("下方留一张图高"), lambda: self.spin["bottom"].setValue(height)),
+                (tr("四边各加 40"), lambda: [s.setValue(40) for s in self.spin.values()]),
+                (tr("清空"), lambda: [s.setValue(0) for s in self.spin.values()])):
+            b = QPushButton(text)
+            b.clicked.connect(fn)
+            presets.addWidget(b)
+        lay.addLayout(presets)
+
+        row = QHBoxLayout()
+        row.addWidget(QLabel(tr("填充色")))
+        self.btn_color = QPushButton(self._color.name())
+        self.btn_color.clicked.connect(self._pick_color)
+        row.addWidget(self.btn_color)
+        row.addStretch(1)
+        self.result = QLabel()
+        row.addWidget(self.result)
+        lay.addLayout(row)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        lay.addWidget(buttons)
+        self._update_result()
+
+    def _pick_color(self):
+        c = QColorDialog.getColor(self._color, self, tr("填充色"))
+        if c.isValid():
+            self._color = c
+            self.btn_color.setText(c.name())
+
+    def _update_result(self):
+        """实时显示扩展后的尺寸。"""
+        v = self.values()
+        # values() 需要原尺寸；存在 self 上，构造时写入
+        w = self._base_w + v["left"] + v["right"]
+        h = self._base_h + v["top"] + v["bottom"]
+        self.result.setText(tr("→ {} × {} px", w, h))
+
+    def values(self) -> dict:
+        return {"left": self.spin["left"].value(), "top": self.spin["top"].value(),
+                "right": self.spin["right"].value(), "bottom": self.spin["bottom"].value(),
+                "color": self._color.name()}
+
+
 class EditorWindow(QMainWindow):
     """FSCapture 风格编辑器主窗口。"""
 
@@ -8566,6 +8690,11 @@ class EditorWindow(QMainWindow):
         self.act_resize_img.setToolTip(tr("按像素重设整张图（含标注），可 Ctrl+Z 撤销"))
         self.act_resize_img.triggered.connect(self.resize_image)
         m_fx.addAction(self.act_resize_img)
+        self.act_expand = QAction(tr("扩展画布边缘…"), self)
+        self.act_expand.setToolTip(
+            tr("四边各加一圈空白，方便把另一张截图拼到旁边（Ctrl+Z 可撤销）"))
+        self.act_expand.triggered.connect(self.expand_canvas_dialog)
+        m_fx.addAction(self.act_expand)
 
         # ---------- 选项 ----------
         m_opt = bar.addMenu(tr("选项"))
@@ -8634,7 +8763,8 @@ class EditorWindow(QMainWindow):
                               self.act_m_redo, self.act_m_copy, self.act_m_pin,
                               self.act_zoom_in, self.act_zoom_out,
                               self.act_zoom_100, self.act_zoom_fit,
-                              self.act_m_wm, self.act_m_border]
+                              self.act_m_wm, self.act_m_border,
+                              self.act_resize_img, self.act_expand]
         return bar
 
     def _rebuild_language_menu(self):
@@ -8896,6 +9026,21 @@ class EditorWindow(QMainWindow):
         canvas.scale_canvas(new_w, new_h)
         self.statusBar().showMessage(
             tr("已调整为 {} × {}（Ctrl+Z 可撤销）", new_w, new_h), 4000)
+
+    def expand_canvas_dialog(self):
+        """「扩展画布边缘」：四边加空白，方便把另一张截图拼到旁边。"""
+        canvas = self.canvas
+        if canvas is None:
+            return
+        w, h = canvas.base_pixmap.width(), canvas.base_pixmap.height()
+        dlg = ExpandEdgesDialog(self, w, h)
+        if dlg.exec() == QDialog.Accepted:
+            v = dlg.values()
+            if canvas.expand_edges(**v):
+                self.statusBar().showMessage(
+                    tr("画布已扩展为 {} × {}（Ctrl+Z 可撤销）",
+                       canvas.base_pixmap.width(), canvas.base_pixmap.height()),
+                    4000)
 
     def show_help(self):
         """打开帮助窗口（三语，内容见 help_text.py，快捷键从菜单实时收集）。"""

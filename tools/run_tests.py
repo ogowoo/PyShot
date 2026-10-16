@@ -32,6 +32,12 @@ LIVE = {
     "test_tray_mask.py",            # 从托盘真截一次图
 }
 
+# 需要**联网真的装包**（pip 连 PyPI）的套件：网络不好时会 stall 很久，默认跳过。
+# 注意：即使单独指定名字（python tools/run_tests.py test_autoinstall）也会跑。
+NETWORK = {
+    "test_autoinstall.py",
+}
+
 
 def collect(patterns: list) -> list:
     files = sorted(TESTS.glob("test_*.py"))
@@ -45,23 +51,36 @@ def main() -> int:
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("patterns", nargs="*", help="只跑名字匹配这些的测试")
     ap.add_argument("--live", action="store_true", help="连 live 套件一起跑")
+    ap.add_argument("--net", action="store_true",
+                    help="连需要联网装包的套件一起跑（默认跳过）")
     ap.add_argument("--list", action="store_true", help="只列出将要跑的测试")
     ap.add_argument("-v", "--verbose", action="store_true", help="失败时打印完整输出")
     args = ap.parse_args()
 
     files = collect(args.patterns)
-    skipped = [] if args.live else [f for f in files if f.name in LIVE]
-    todo = [f for f in files if args.live or f.name not in LIVE]
+    # 明确点名要跑的（patterns 命中）一律跑，不做跳过判断
+    picked = bool(args.patterns)
+    skip_names = set()
+    if not args.live:
+        skip_names |= LIVE
+    if not args.net:
+        skip_names |= NETWORK
+    if picked:
+        skip_names = set()
+    skipped = [f for f in files if f.name in skip_names]
+    todo = [f for f in files if f.name not in skip_names]
 
     if args.list:
         for f in todo:
             print("  会跑:", f.name)
         for f in skipped:
-            print("  跳过（--live 可跑）:", f.name)
+            why = "--net" if f.name in NETWORK else "--live"
+            print(f"  跳过（{why} 可跑）:", f.name)
         return 0
 
     print(f"PyShot 测试：{len(todo)} 个套件"
-          + (f"（另有 {len(skipped)} 个需要真实桌面，加 --live 才跑）" if skipped else ""))
+          + (f"（另有 {len(skipped)} 个需要真实桌面/联网，默认跳过）"
+             if skipped else ""))
     print("=" * 72)
 
     env = dict(os.environ)
@@ -99,8 +118,13 @@ def main() -> int:
     print(f"通过 {len(passed)} / {len(todo)}"
           f"，总耗时 {(time.perf_counter() - t0):.1f} s")
     if skipped:
-        print(f"跳过 {len(skipped)} 个需要真实桌面的套件："
-              + ", ".join(f.name for f in skipped))
+        live_names = ", ".join(f.name for f in skipped if f.name in LIVE)
+        net_names = ", ".join(f.name for f in skipped if f.name in NETWORK)
+        if live_names:
+            print(f"跳过 {len([f for f in skipped if f.name in LIVE])} 个需要"
+                  f"真实桌面的套件（--live 可跑）：{live_names}")
+        if net_names:
+            print(f"跳过需要联网装包的套件（--net 可跑）：{net_names}")
     if failed:
         print("\n失败详情：")
         for f, out in failed:
