@@ -26,6 +26,25 @@ from i18n import tr
 KEEP_EDITOR_SETTING = "capture_keep_editor"
 # 「截图后自动复制到剪贴板」的设置键（主程序与编辑器菜单共用）
 AUTO_COPY_SETTING = "capture_auto_copy"
+# 「延迟截图」设置键：秒数，0 = 不延迟（主程序与编辑器菜单共用）
+CAPTURE_DELAY_SETTING = "capture_delay_seconds"
+DEFAULT_CAPTURE_DELAY = 3
+# 托盘/选项里提供的延迟档位
+CAPTURE_DELAY_CHOICES = (0, 2, 3, 5, 10)
+
+
+def capture_delay_seconds() -> int:
+    """截图前等几秒（0 = 立即截）。
+
+    用途：截**右键菜单/下拉框**。弹出菜单在所属窗口失去激活时会立刻关闭，
+    所以"按热键 → 才去收窗口 → 抓屏"这套顺序一定截不到菜单；延迟截图把顺序
+    换成"先收好窗口 → 等 N 秒（用户重新打开菜单）→ 到点只抓屏"。
+    """
+    try:
+        from i18n import get_setting
+        return max(0, int(get_setting(CAPTURE_DELAY_SETTING, 0) or 0))
+    except Exception:                              # noqa: BLE001
+        return 0
 
 
 def auto_copy_on_capture() -> bool:
@@ -2019,6 +2038,15 @@ class EditorWindow(QMainWindow):
             tr("截图完成后立刻把这张图放进剪贴板（标注后的版本仍可用 Ctrl+C 复制）"))
         self.act_auto_copy.toggled.connect(self._toggle_auto_copy)
         m_opt.addAction(self.act_auto_copy)
+        # 延迟截图：截右键菜单/下拉框必须用（弹出菜单一失去激活就关了）
+        self.act_delay = QAction(tr("延迟截图（截右键菜单用）"), self)
+        self.act_delay.setCheckable(True)
+        self.act_delay.setChecked(capture_delay_seconds() > 0)
+        self.act_delay.setToolTip(
+            tr("按热键后等 {} 秒再抓屏：先打开要截的菜单，到点自动抓（秒数在托盘菜单里改）",
+               DEFAULT_CAPTURE_DELAY))
+        self.act_delay.toggled.connect(self._toggle_capture_delay)
+        m_opt.addAction(self.act_delay)
         m_opt.addSeparator()
         self.act_clear_session = QAction(tr("清除上次的截图缓存"), self)
         self.act_clear_session.triggered.connect(self._clear_session_cache)
@@ -2385,6 +2413,21 @@ class EditorWindow(QMainWindow):
         self.statusBar().showMessage(
             tr("已开启：截图时编辑器留在原地（方便截编辑器自己）") if on
             else tr("已关闭：截图时编辑器自动最小化让位"), 4000)
+
+    def _toggle_capture_delay(self, on: bool):
+        """「延迟截图」开关：存进设置，主程序抓屏前读它。
+
+        勾上 = 用默认秒数（3 秒）；想改档位到托盘菜单 →「延迟截图」里选。
+        """
+        seconds = DEFAULT_CAPTURE_DELAY if on else 0
+        try:
+            from i18n import set_setting
+            set_setting(CAPTURE_DELAY_SETTING, int(seconds))
+        except Exception:                          # noqa: BLE001
+            pass
+        self.statusBar().showMessage(
+            tr("已开启延迟截图：按热键后 {} 秒自动抓屏（方便截右键菜单）", seconds)
+            if on else tr("已关闭延迟截图：按热键立即抓屏"), 5000)
 
     def _toggle_auto_copy(self, on: bool):
         """「截图后自动复制到剪贴板」开关：存进设置，主程序截图完成时读它。"""

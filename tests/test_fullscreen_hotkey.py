@@ -174,6 +174,10 @@ class Probe2(ProbeApp):
     _prepare_capture = lambda self: None
     _finish_capture_session = lambda self: None
     _notify = lambda self, *a, **k: None
+    _cap_log = lambda self, *a, **k: None
+    # 真实方法（本桩是"只借逻辑"的，不走继承，所以要显式挂上）：
+    # 设置里没开延迟时它返回 False，capture_fullscreen 会照旧往下走
+    _capture_with_delay = main_mod.PyShotApp._capture_with_delay
     open_editor = lambda self, pix: opened.append(pix)
 
 

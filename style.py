@@ -524,6 +524,13 @@ def _draw_help(p, c):
     p.drawEllipse(QPointF(12, 17.6), 1.3, 1.3)
 
 
+def _draw_clock(p, c):
+    """延迟截图：表盘 + 指针（托盘「延迟截图」菜单用）。"""
+    p.drawEllipse(QPointF(12, 12), 8.5, 8.5)
+    p.drawLine(QPointF(12, 12), QPointF(12, 6.8))       # 时针
+    p.drawLine(QPointF(12, 12), QPointF(16.2, 14.2))    # 分针
+
+
 _ICON_DRAWERS = {
     "select": _draw_select, "rect": _draw_rect, "ellipse": _draw_ellipse,
     "line": _draw_line, "arrow": _draw_arrow, "pen": _draw_pen,
@@ -533,7 +540,7 @@ _ICON_DRAWERS = {
     "monitor": _draw_monitor, "scroll": _draw_scroll, "image": _draw_image,
     "window": _draw_window, "pin": _draw_pin, "exit": _draw_exit,
     "globe": _draw_globe, "hand": _draw_hand, "pan": _draw_hand, "cancel": _draw_cancel,
-    "help": _draw_help,
+    "help": _draw_help, "clock": _draw_clock,
 }
 
 

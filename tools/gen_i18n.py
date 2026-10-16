@@ -664,6 +664,27 @@ EN = {
     "四边各加一圈空白，方便把另一张截图拼到旁边（Ctrl+Z 可撤销）":
         "Add blank space on any side so another screenshot can sit next to this one (Ctrl+Z to undo)",
     "扩展画布边缘": "Expand Canvas Edges",
+    # ---- 延迟截图（截右键菜单/下拉框）----
+    "延迟截图": "Delayed capture",
+    "按热键后等几秒再抓屏，用来截右键菜单 / 下拉框":
+        "Wait a few seconds after the hotkey before grabbing — for capturing "
+        "context menus and drop-downs",
+    "不延迟（立即截图）": "No delay (capture immediately)",
+    "{} 秒后抓屏": "Capture after {} s",
+    "{} 秒后自动抓屏：请先打开要截的菜单 / 下拉框":
+        "Grabbing in {} s: open the menu / drop-down you want to capture now",
+    "已设为 {} 秒：按热键后请打开要截的菜单，到点自动抓屏":
+        "Set to {} s: press the hotkey, open the menu you want, and it grabs automatically",
+    "延迟截图（截右键菜单用）": "Delayed capture (for context menus)",
+    "按热键后等 {} 秒再抓屏：先打开要截的菜单，到点自动抓（秒数在托盘菜单里改）":
+        "Wait {} s after the hotkey before grabbing: open the menu you want and it "
+        "grabs automatically (change the seconds in the tray menu)",
+    "已开启延迟截图：按热键后 {} 秒自动抓屏（方便截右键菜单）":
+        "Delayed capture on: {} s after the hotkey it grabs automatically "
+        "(handy for context menus)",
+    "已关闭延迟截图：按热键立即抓屏":
+        "Delayed capture off: the hotkey grabs immediately",
+    "截右键菜单/下拉框用延迟截图": "delayed capture for context menus",
     "左 (px)": "Left (px)", "上 (px)": "Top (px)",
     "右 (px)": "Right (px)", "下 (px)": "Bottom (px)",
     "右侧留一张图宽": "Space for another image on the right",
@@ -673,6 +694,7 @@ EN = {
     "填充色": "Fill color",
     "画布已扩展为 {} × {}（Ctrl+Z 可撤销）": "Canvas expanded to {} × {} (Ctrl+Z to undo)",
     "画布边缘扩展": "expandable canvas edges",
+    "延迟截图（截右键菜单）": "delayed capture for context menus",
     "按像素重设整张图（含标注），可 Ctrl+Z 撤销":
         "Resize the whole image in pixels (annotations scale with it); Ctrl+Z to undo",
     "已水平翻转（Ctrl+Z 可撤销）": "Flipped horizontally (Ctrl+Z to undo)",
@@ -800,6 +822,10 @@ EN = {
         "select a scrollable area and PyShot scrolls and stitches frame by frame.",
     "- 手动滚动：你自己滚，程序只负责拼帧，兼容性最好。":
         "- Manual scroll: you scroll, PyShot only stitches — the most compatible mode.",
+    "- 截右键菜单 / 下拉框老是截不到？用「延迟截图」：托盘菜单 → 延迟截图 → 3 秒，按热键后重新打开那个菜单，到点自动抓。":
+        "- Context menu or drop-down missing from your capture? Use Delayed capture: "
+        "tray menu → Delayed capture → 3 s, press the hotkey, reopen the menu, "
+        "and it grabs automatically.",
     "- 选择：点选/拖动已有标注；方向键微调 1px（按住 Shift 是 10px）；Delete 删除。":
         "- Select: click or drag existing annotations; arrow keys nudge by 1px (Shift: 10px); Delete removes.",
     "- 矩形 / 椭圆 / 直线 / 箭头 / 画笔：拖拽绘制；按住 Shift 可画正方形、正圆或锁定方向。":

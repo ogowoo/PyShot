@@ -35,8 +35,9 @@ from PySide6.QtGui import (QAction, QColor, QCursor, QFontMetrics,
 from PySide6.QtWidgets import (QApplication, QCheckBox, QFileDialog, QLabel,
                                QMenu, QMessageBox, QSystemTrayIcon)
 
-from editor import (AUTO_COPY_SETTING, KEEP_EDITOR_SETTING, EditorWindow,
-                    auto_copy_on_capture)
+from editor import (AUTO_COPY_SETTING, CAPTURE_DELAY_CHOICES,
+                    CAPTURE_DELAY_SETTING, KEEP_EDITOR_SETTING, EditorWindow,
+                    auto_copy_on_capture, capture_delay_seconds)
 from version import APP_VERSION
 from pinboard import PinWindow
 from scroller import ScrollCapture, ScrollDriver
@@ -348,6 +349,24 @@ class PyShotApp(QObject):
         act_pin_clip.triggered.connect(self.pin_clipboard)
         menu.addAction(act_pin_clip)
 
+        # 延迟截图：截右键菜单/下拉框用（弹出菜单一失去激活就关，所以要留时间
+        # 让用户重新打开它）
+        menu_delay = menu.addMenu(make_menu_icon("clock"), tr("延迟截图"))
+        menu_delay.setToolTipsVisible(True)
+        menu_delay.setToolTip(
+            tr("按热键后等几秒再抓屏，用来截右键菜单 / 下拉框"))
+        self._delay_actions = []
+        for sec in CAPTURE_DELAY_CHOICES:
+            label = tr("不延迟（立即截图）") if sec == 0 else tr("{} 秒后抓屏", sec)
+            act = QAction(label, menu_delay)
+            act.setCheckable(True)
+            act.setChecked(capture_delay_seconds() == sec)
+            act.triggered.connect(
+                lambda checked=False, s=sec: self._set_capture_delay(s))
+            menu_delay.addAction(act)
+            self._delay_actions.append((sec, act))
+        menu.addMenu(menu_delay)
+
         menu.addSeparator()
 
         # ---------- 窗口 ----------
@@ -439,10 +458,36 @@ class PyShotApp(QObject):
     # ---------- 截图流程 ----------
     def capture_region(self):
         self._cap_log("触发区域截图")
-        self._start_snipper("region")
+        if not self._capture_with_delay(
+                lambda: self._start_snipper("region", prepared=True), "区域截图"):
+            self._start_snipper("region")      # 不延迟：走正常路径（含自动最小化）
+
+    def _capture_with_delay(self, fn, what: str) -> bool:
+        """按设置延迟抓屏：**先收好自己的窗口 → 等 N 秒 → 到点只抓屏**。
+
+        为什么是这个顺序（用户反馈"截一些快捷菜单的时候截不到"）：
+        弹出菜单在所属窗口失去激活的瞬间就关了。旧顺序是"按热键 → 到抓屏前才
+        最小化编辑器" —— 这一最小化就把菜单关掉了，抓到的自然没有菜单。
+        现在窗口处理全部提前到延迟开始之前，倒计时期间和抓屏那一刻都不再动任何
+        窗口，用户利用这几秒重新打开菜单，到点就抓得到。
+
+        返回 True = 已排入延迟队列（调用方不要再立即截图）；
+        返回 False = 没开延迟，调用方按原路径继续（**不要**在这里替调用方执行，
+        否则"不延迟"这条路上的窗口处理会被漏掉 —— 踩过）。
+        """
+        seconds = capture_delay_seconds()
+        if seconds <= 0:
+            return False
+        self._prepare_capture()
+        self._cap_log("延迟截图", f"{seconds}s -> {what}")
+        self._notify(tr("延迟截图"),
+                     tr("{} 秒后自动抓屏：请先打开要截的菜单 / 下拉框", seconds))
+        QTimer.singleShot(int(seconds * 1000), fn)
+        return True
 
     def _start_snipper(self, mode: str, scroll_mode: str | None = None,
-                       point_region: QRect | None = None):
+                       point_region: QRect | None = None,
+                       prepared: bool = False):
         if self.snipper is not None:
             # 已有覆盖层在运行。但如果它其实已经不活跃/不可见（上次没收干净），
             # 就直接当作残留清掉继续走 —— 否则这一句会让之后每次截图都"没反应"
@@ -453,7 +498,8 @@ class PyShotApp(QObject):
                 return
             self._cap_log("清理残留覆盖层后继续")
             self._on_snip_done()
-        self._prepare_capture()
+        if not prepared:
+            self._prepare_capture()
         self._scroll_mode = scroll_mode      # None / "wheel" / "drag" / "key" / "manual"
         overlays = self._ensure_overlays()
         self.snipper = overlays[0]           # 代表整个会话（哪个屏先按就用哪个屏）
@@ -796,16 +842,19 @@ class PyShotApp(QObject):
 
         例外：用户勾了「截图时不最小化编辑器」就原地保留 —— 想截编辑器
         本身（写文档/做教程）时必须这样，否则一按截图它就自己缩下去了。
+
+        注意：**可以重复调用**（延迟截图会先调一次、正式抓屏时再进这里），
+        所以是"累加"而不是"覆盖"待恢复列表 —— 覆盖会把第一次记下的窗口弄丢，
+        截图结束后编辑器就再也回不来了。
         """
         if self.keep_editor_on_capture():
-            self._minimized_by_capture = []
             self._cap_log("截图·保留编辑器", "已开启「截图时不最小化编辑器」")
             return
-        self._minimized_by_capture = [
-            ed for ed in list(self.editors)
-            if ed.isVisible() and not ed.isMinimized()
-        ]
-        for ed in self._minimized_by_capture:
+        already = list(getattr(self, "_minimized_by_capture", []))
+        newly = [ed for ed in list(self.editors)
+                 if ed.isVisible() and not ed.isMinimized() and ed not in already]
+        self._minimized_by_capture = already + newly
+        for ed in newly:
             ed.showMinimized()
 
     def _finish_capture_session(self):
@@ -885,6 +934,20 @@ class PyShotApp(QObject):
 
         QTimer.singleShot(120, _open)
 
+    # ---------- 延迟截图 ----------
+    def _set_capture_delay(self, seconds: int, quiet: bool = False):
+        """设置延迟秒数（0 = 立即截），并让托盘菜单的勾选跟上。"""
+        from i18n import set_setting
+        set_setting(CAPTURE_DELAY_SETTING, int(seconds))
+        for sec, act in getattr(self, "_delay_actions", []):
+            act.setChecked(sec == int(seconds))
+        self._cap_log("延迟截图设置", f"{seconds}s")
+        if not quiet:
+            self._notify(
+                tr("延迟截图"),
+                tr("已设为 {} 秒：按热键后请打开要截的菜单，到点自动抓屏", seconds)
+                if seconds else tr("已关闭延迟截图：按热键立即抓屏"))
+
     def auto_copy(self, pixmap: QPixmap) -> bool:
         """按选项把刚截到的图放进剪贴板（默认开）。
 
@@ -908,17 +971,21 @@ class PyShotApp(QObject):
                 pass
         return True
 
-    def capture_fullscreen(self, screen=None):
+    def capture_fullscreen(self, screen=None, prepared: bool = False):
         """全屏截图。
 
         screen 为 None 时截"鼠标所在的那块显示器"（多屏下最符合直觉）；
         也可以显式指定某块屏（托盘菜单"截取指定显示器"）。
         另外保留"所有显示器拼成一张"的旧行为，见 capture_all_screens。
         """
+        if not prepared and self._capture_with_delay(
+                lambda: self.capture_fullscreen(screen, prepared=True), "全屏截图"):
+            return
         if screen is None:
             screen = QGuiApplication.screenAt(QCursor.pos()) \
                 or QGuiApplication.primaryScreen()
-        self._prepare_capture()
+        if not prepared:
+            self._prepare_capture()
 
         def _grab():
             try:
@@ -1083,7 +1150,10 @@ class PyShotApp(QObject):
 
     # ---------- 屏幕取色 ----------
     def pick_color(self):
-        self._start_snipper("color")
+        # 取色也支持延迟：菜单里的颜色要先把菜单打开才吸得到
+        if not self._capture_with_delay(
+                lambda: self._start_snipper("color", prepared=True), "屏幕取色"):
+            self._start_snipper("color")
 
     def _on_color_picked(self, color):
         self._on_snip_done()

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""PyShot 2.21 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
+"""PyShot 2.22 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
 
-本版主题：画布边缘扩展
+本版主题：延迟截图（截右键菜单）
 作者：Walt Liang <Wat.L@outlook.com>
 
 这是一个自动生成的单文件版本：把多文件源码合并在一起，并在启动时自动安装
@@ -31,6 +31,7 @@
 # key: 简体原文 -> (繁體, English)
 TABLE = {
     "区域截图": ("區域截圖", "Capture Region"),
+    "屏幕取色": ("螢幕取色", "Screen Color Picker"),
     "框选一块区域截图": ("框選一塊區域截圖", "Drag to capture a region"),
     "全屏截图": ("全螢幕截圖", "Capture Full Screen"),
     "截取鼠标所在的那块显示器": ("截取滑鼠所在的那塊顯示器", "Capture the monitor the mouse is on"),
@@ -47,10 +48,11 @@ TABLE = {
     "框选区域后程序发送 PageDown 翻页（适合没有滚动条的应用）": ("框選區域後程序发送 PageDown 翻頁（適合沒有捲動條的套用）", "Select an area; PyShot sends Page Down (for apps without a scrollbar)"),
     "手动滚动": ("手動捲動", "Manual Scroll"),
     "自己用滚轮滚动，程序只负责逐帧拼接": ("自己用滾輪捲動，程序只負責逐幀拼接", "You scroll; PyShot only stitches the frames"),
-    "屏幕取色": ("螢幕取色", "Screen Color Picker"),
     "单击屏幕任意位置，把色值复制到剪贴板": ("單擊螢幕任意位置，把色值複製到剪貼簿", "Click anywhere to copy its color to the clipboard"),
     "贴出剪贴板图片": ("貼出剪貼簿圖片", "Pin Clipboard Image"),
     "把剪贴板里的图片钉在屏幕最上层": ("把剪貼簿裡的圖片钉在螢幕最上層", "Pin the clipboard image on top of the screen"),
+    "延迟截图": ("延遲截圖", "Delayed capture"),
+    "按热键后等几秒再抓屏，用来截右键菜单 / 下拉框": ("按快速鍵後等几秒再抓屏，用來截右鍵菜單 / 下拉框", "Wait a few seconds after the hotkey before grabbing — for capturing context menus and drop-downs"),
     "打开图片编辑…": ("開啟圖片編輯…", "Open Image for Editing…"),
     "打开一张已有图片进行标注": ("開啟一張已有圖片進行標注", "Open an existing image to annotate"),
     "显示编辑器": ("顯示編輯器", "Show Editor"),
@@ -61,6 +63,7 @@ TABLE = {
     "取消截图": ("取消截圖", "Cancel Capture"),
     "收起正在显示的截图遮罩（Esc / 再按一次热键也可以）": ("收起正在顯示的截圖遮罩（Esc / 再按一次快速鍵也可以）", "Dismiss the capture overlay (Esc or pressing the hotkey again also works)"),
     "退出 PyShot": ("結束 PyShot", "Exit PyShot"),
+    "{} 秒后自动抓屏：请先打开要截的菜单 / 下拉框": ("{} 秒後自動抓屏：請先開啟要截的菜單 / 下拉框", "Grabbing in {} s: open the menu / drop-down you want to capture now"),
     "按系统语言自动选择": ("按系統語言自動選擇", "Choose automatically from the system language"),
     "界面语言已切换": ("介面語言已切換", "Interface language changed"),
     "所有显示器拼成一张": ("所有顯示器拼成一張", "All Monitors as One Image"),
@@ -90,6 +93,8 @@ TABLE = {
     "图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)": ("圖片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)", "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp)"),
     "[PyShot] 全局热键已注册：": ("[PyShot] 全局快速鍵已註冊：", ""),
     "[PyShot] 热键注册失败，已尝试：": ("[PyShot] 快速鍵註冊失敗，已嘗試：", ""),
+    "不延迟（立即截图）": ("不延遲（立即截圖）", "No delay (capture immediately)"),
+    "{} 秒后抓屏": ("{} 秒後抓屏", "Capture after {} s"),
     "{} 区域截图": ("{} 區域截圖", "{} Capture Region"),
     "{} 全屏截图": ("{} 全螢幕截圖", "{} Capture Full Screen"),
     "PyShot 截图工具\n{}\n双击图标截图": ("PyShot 截圖工具\n{}\n雙擊圖示截圖", "PyShot Screen Capture\n{}\nDouble-click the icon to capture"),
@@ -121,6 +126,8 @@ TABLE = {
     " 排队 ": (" 排队 ", ""),
     "ms，实际等了 ": ("ms，實際等了 ", ""),
     " 耗时 ": (" 耗時 ", ""),
+    "已设为 {} 秒：按热键后请打开要截的菜单，到点自动抓屏": ("已設為 {} 秒：按快速鍵後請開啟要截的菜單，到點自動抓屏", "Set to {} s: press the hotkey, open the menu you want, and it grabs automatically"),
+    "已关闭延迟截图：按热键立即抓屏": ("已關閉延遲截圖：按快速鍵立即抓屏", "Delayed capture off: the hotkey grabs immediately"),
     "已复制到剪贴板（选项里可关）": ("已複製到剪貼簿（選項裡可關）", "Copied to the clipboard (can be turned off in Options)"),
     "热键（{}）都被占用，请双击托盘图标截图。\n": ("快速鍵（{}）都被佔用，請雙擊托盤圖示截圖。\n", "Hotkeys ({}) are all taken — double-click the tray icon to capture.\n"),
     "可用环境变量 PYSHOT_HOTKEY 指定其他组合，例如 PYSHOT_HOTKEY=ctrl+alt+j": ("可用環境變數 PYSHOT_HOTKEY 指定其他組合，例如 PYSHOT_HOTKEY=ctrl+alt+j", "Set PYSHOT_HOTKEY to pick another combination, e.g. PYSHOT_HOTKEY=ctrl+alt+j"),
@@ -240,6 +247,8 @@ TABLE = {
     "打开后截图时编辑器留在原地，方便截编辑器自己；平时关着（截图时自动让位，免得被拍进图里）": ("開啟後截圖時編輯器留在原地，方便截編輯器自己；平時關着（截圖時自動讓位，免得被拍進圖裡）", "When on, the editor stays where it is while you capture — handy for capturing the editor itself. Keep it off normally, so the editor gets out of the way instead of appearing in your screenshot"),
     "截图后自动复制到剪贴板": ("截圖後自動複製到剪貼簿", "Copy to clipboard after capturing"),
     "截图完成后立刻把这张图放进剪贴板（标注后的版本仍可用 Ctrl+C 复制）": ("截圖完成後立刻把這張圖放進剪貼簿（標注後的版本仍可用 Ctrl+C 複製）", "Put the captured image on the clipboard right away (annotate it and use Ctrl+C later if you want the annotated version instead)"),
+    "延迟截图（截右键菜单用）": ("延遲截圖（截右鍵菜單用）", "Delayed capture (for context menus)"),
+    "按热键后等 {} 秒再抓屏：先打开要截的菜单，到点自动抓（秒数在托盘菜单里改）": ("按快速鍵後等 {} 秒再抓屏：先開啟要截的菜單，到點自動抓（秒數在托盤菜單裡改）", "Wait {} s after the hotkey before grabbing: open the menu you want and it grabs automatically (change the seconds in the tray menu)"),
     "清除上次的截图缓存": ("清除上次的截圖緩存", "Clear last-capture cache"),
     "编辑默认水印…": ("編輯預設水印…", "Edit Default Watermark…"),
     "编辑默认边框…": ("編輯預設邊框…", "Edit Default Border…"),
@@ -301,6 +310,7 @@ TABLE = {
     "已垂直翻转（Ctrl+Z 可撤销）": ("已垂直翻轉（Ctrl+Z 可復原）", "Flipped vertically (Ctrl+Z to undo)"),
     "已开启：截图时编辑器留在原地（方便截编辑器自己）": ("已開啟：截圖時編輯器留在原地（方便截編輯器自己）", "On: the editor stays visible while capturing (good for capturing the editor)"),
     "已关闭：截图时编辑器自动最小化让位": ("已關閉：截圖時編輯器自動最小化讓位", "Off: the editor minimizes itself while capturing"),
+    "已开启延迟截图：按热键后 {} 秒自动抓屏（方便截右键菜单）": ("已開啟延遲截圖：按快速鍵後 {} 秒自動抓屏（方便截右鍵菜單）", "Delayed capture on: {} s after the hotkey it grabs automatically (handy for context menus)"),
     "已开启：截图完成后自动复制到剪贴板": ("已開啟：截圖完成後自動複製到剪貼簿", "On: captures go to the clipboard automatically"),
     "已关闭：截图后不再自动复制（需要时按 Ctrl+C）": ("已關閉：截圖後不再自動複製（需要時按 Ctrl+C）", "Off: captures no longer go to the clipboard (press Ctrl+C when you need it)"),
     "已收起左侧工具条（工具快捷键仍可用；想恢复：视图菜单）": ("已收起左側工具條（工具快捷鍵仍可用；想恢複：視圖菜單）", "Tool rail hidden (shortcuts still work; bring it back from the View menu)"),
@@ -468,7 +478,7 @@ TABLE = {
     " 已就绪。": (" 已就绪。", ""),
     "[PyShot] pip 执行失败：": ("[PyShot] pip 執行失敗：", ""),
     "  [缺失] ": ("  [缺失] ", ""),
-    "画布边缘扩展": ("畫布邊缘擴展", "expandable canvas edges"),
+    "延迟截图（截右键菜单）": ("延遲截圖（截右鍵菜單）", "delayed capture for context menus"),
     "PyShot 使用帮助": ("PyShot 使用幫助", "PyShot Help"),
     "截图 + 标注工具，专为做操作指引/步骤说明优化。": ("截圖 + 標注工具，專為做操作指引/步驟說明優化。", "Screenshot and annotation tool, built for step-by-step guides."),
     "快速开始": ("快速開始", "Quick Start"),
@@ -489,6 +499,7 @@ TABLE = {
     "- 选择显示器截图：多屏时指定某一块，或「所有显示器拼成一张」。": ("- 選擇顯示器截圖：多屏時指定某一塊，或「所有顯示器拼成一張」。", "- Capture a specific monitor: pick one, or stitch every monitor into a single image."),
     "- 滚动长截图（实验性，默认关闭）：先在托盘菜单里勾选启用；框选可滚动区域后程序自己滚轮逐屏拼接。": ("- 捲動長截圖（實驗性，預設關閉）：先在托盤菜單裡勾選啟用；框選可捲動區域後程序自己滾輪逐屏拼接。", "- Scrolling capture (experimental, off by default): enable it in the tray menu first; select a scrollable area and PyShot scrolls and stitches frame by frame."),
     "- 手动滚动：你自己滚，程序只负责拼帧，兼容性最好。": ("- 手動捲動：你自己滾，程序只負責拼幀，兼容性最好。", "- Manual scroll: you scroll, PyShot only stitches — the most compatible mode."),
+    "- 截右键菜单 / 下拉框老是截不到？用「延迟截图」：托盘菜单 → 延迟截图 → 3 秒，按热键后重新打开那个菜单，到点自动抓。": ("- 截右鍵菜單 / 下拉框老是截不到？用「延遲截圖」：托盤菜單 → 延遲截圖 → 3 秒，按快速鍵後重新開啟那個菜單，到點自動抓。", "- Context menu or drop-down missing from your capture? Use Delayed capture: tray menu → Delayed capture → 3 s, press the hotkey, reopen the menu, and it grabs automatically."),
     "- 选择：点选/拖动已有标注；方向键微调 1px（按住 Shift 是 10px）；Delete 删除。": ("- 選擇：點選/拖動已有標注；方向鍵微調 1px（按住 Shift 是 10px）；Delete 刪除。", "- Select: click or drag existing annotations; arrow keys nudge by 1px (Shift: 10px); Delete removes."),
     "- 矩形 / 椭圆 / 直线 / 箭头 / 画笔：拖拽绘制；按住 Shift 可画正方形、正圆或锁定方向。": ("- 矩形 / 橢圓 / 直線 / 箭頭 / 畫筆：拖曳繪製；按住 Shift 可畫正方形、正圓或鎖定方向。", "- Rectangle / ellipse / line / arrow / pen: drag to draw; hold Shift for a square, a circle, or a locked direction."),
     "- 序号：单击放置递增序号，做步骤指引。": ("- 序號：單擊放置遞增序號，做步驟指引。", "- Step number: click to place an incrementing number for step-by-step guides."),
@@ -1004,10 +1015,10 @@ if not ensure_deps():
 命名：`MAJOR.MINOR[.PATCH]`，git 标签为 `v<版本>-qt`（`-qt` 表示根目录这套
 PySide6 实现，`tk_version/` 是独立的 Tkinter 版）。
 """
-APP_VERSION = "2.21"
+APP_VERSION = "2.22"
 
 # 这版的一句话主题（写进单文件头与「关于」对话框，便于用户确认自己拿的是哪版）
-VERSION_TITLE = "画布边缘扩展"
+VERSION_TITLE = "延迟截图（截右键菜单）"
 
 # 版本日期（本地日期，供日志/文档使用）
 VERSION_DATE = "2026-09-24"
@@ -1493,6 +1504,7 @@ SECTIONS = [
         "- 滚动长截图（实验性，默认关闭）：先在托盘菜单里勾选启用；"
         "框选可滚动区域后程序自己滚轮逐屏拼接。",
         "- 手动滚动：你自己滚，程序只负责拼帧，兼容性最好。",
+        "- 截右键菜单 / 下拉框老是截不到？用「延迟截图」：托盘菜单 → 延迟截图 → 3 秒，按热键后重新打开那个菜单，到点自动抓。",
     ]),
     ("编辑器工具", [
         "- 选择：点选/拖动已有标注；方向键微调 1px（按住 Shift 是 10px）；Delete 删除。",
@@ -4220,6 +4232,13 @@ def _draw_help(p, c):
     p.drawEllipse(QPointF(12, 17.6), 1.3, 1.3)
 
 
+def _draw_clock(p, c):
+    """延迟截图：表盘 + 指针（托盘「延迟截图」菜单用）。"""
+    p.drawEllipse(QPointF(12, 12), 8.5, 8.5)
+    p.drawLine(QPointF(12, 12), QPointF(12, 6.8))       # 时针
+    p.drawLine(QPointF(12, 12), QPointF(16.2, 14.2))    # 分针
+
+
 _ICON_DRAWERS = {
     "select": _draw_select, "rect": _draw_rect, "ellipse": _draw_ellipse,
     "line": _draw_line, "arrow": _draw_arrow, "pen": _draw_pen,
@@ -4229,7 +4248,7 @@ _ICON_DRAWERS = {
     "monitor": _draw_monitor, "scroll": _draw_scroll, "image": _draw_image,
     "window": _draw_window, "pin": _draw_pin, "exit": _draw_exit,
     "globe": _draw_globe, "hand": _draw_hand, "pan": _draw_hand, "cancel": _draw_cancel,
-    "help": _draw_help,
+    "help": _draw_help, "clock": _draw_clock,
 }
 
 
@@ -6740,6 +6759,25 @@ from PySide6.QtWidgets import (QDialogButtonBox, QFontDialog, QGridLayout, QMenu
 KEEP_EDITOR_SETTING = "capture_keep_editor"
 # 「截图后自动复制到剪贴板」的设置键（主程序与编辑器菜单共用）
 AUTO_COPY_SETTING = "capture_auto_copy"
+# 「延迟截图」设置键：秒数，0 = 不延迟（主程序与编辑器菜单共用）
+CAPTURE_DELAY_SETTING = "capture_delay_seconds"
+DEFAULT_CAPTURE_DELAY = 3
+# 托盘/选项里提供的延迟档位
+CAPTURE_DELAY_CHOICES = (0, 2, 3, 5, 10)
+
+
+def capture_delay_seconds() -> int:
+    """截图前等几秒（0 = 立即截）。
+
+    用途：截**右键菜单/下拉框**。弹出菜单在所属窗口失去激活时会立刻关闭，
+    所以"按热键 → 才去收窗口 → 抓屏"这套顺序一定截不到菜单；延迟截图把顺序
+    换成"先收好窗口 → 等 N 秒（用户重新打开菜单）→ 到点只抓屏"。
+    """
+    try:
+
+        return max(0, int(get_setting(CAPTURE_DELAY_SETTING, 0) or 0))
+    except Exception:                              # noqa: BLE001
+        return 0
 
 
 def auto_copy_on_capture() -> bool:
@@ -8733,6 +8771,15 @@ class EditorWindow(QMainWindow):
             tr("截图完成后立刻把这张图放进剪贴板（标注后的版本仍可用 Ctrl+C 复制）"))
         self.act_auto_copy.toggled.connect(self._toggle_auto_copy)
         m_opt.addAction(self.act_auto_copy)
+        # 延迟截图：截右键菜单/下拉框必须用（弹出菜单一失去激活就关了）
+        self.act_delay = QAction(tr("延迟截图（截右键菜单用）"), self)
+        self.act_delay.setCheckable(True)
+        self.act_delay.setChecked(capture_delay_seconds() > 0)
+        self.act_delay.setToolTip(
+            tr("按热键后等 {} 秒再抓屏：先打开要截的菜单，到点自动抓（秒数在托盘菜单里改）",
+               DEFAULT_CAPTURE_DELAY))
+        self.act_delay.toggled.connect(self._toggle_capture_delay)
+        m_opt.addAction(self.act_delay)
         m_opt.addSeparator()
         self.act_clear_session = QAction(tr("清除上次的截图缓存"), self)
         self.act_clear_session.triggered.connect(self._clear_session_cache)
@@ -9098,6 +9145,21 @@ class EditorWindow(QMainWindow):
         self.statusBar().showMessage(
             tr("已开启：截图时编辑器留在原地（方便截编辑器自己）") if on
             else tr("已关闭：截图时编辑器自动最小化让位"), 4000)
+
+    def _toggle_capture_delay(self, on: bool):
+        """「延迟截图」开关：存进设置，主程序抓屏前读它。
+
+        勾上 = 用默认秒数（3 秒）；想改档位到托盘菜单 →「延迟截图」里选。
+        """
+        seconds = DEFAULT_CAPTURE_DELAY if on else 0
+        try:
+
+            set_setting(CAPTURE_DELAY_SETTING, int(seconds))
+        except Exception:                          # noqa: BLE001
+            pass
+        self.statusBar().showMessage(
+            tr("已开启延迟截图：按热键后 {} 秒自动抓屏（方便截右键菜单）", seconds)
+            if on else tr("已关闭延迟截图：按热键立即抓屏"), 5000)
 
     def _toggle_auto_copy(self, on: bool):
         """「截图后自动复制到剪贴板」开关：存进设置，主程序截图完成时读它。"""
@@ -10399,6 +10461,24 @@ class PyShotApp(QObject):
         act_pin_clip.triggered.connect(self.pin_clipboard)
         menu.addAction(act_pin_clip)
 
+        # 延迟截图：截右键菜单/下拉框用（弹出菜单一失去激活就关，所以要留时间
+        # 让用户重新打开它）
+        menu_delay = menu.addMenu(make_menu_icon("clock"), tr("延迟截图"))
+        menu_delay.setToolTipsVisible(True)
+        menu_delay.setToolTip(
+            tr("按热键后等几秒再抓屏，用来截右键菜单 / 下拉框"))
+        self._delay_actions = []
+        for sec in CAPTURE_DELAY_CHOICES:
+            label = tr("不延迟（立即截图）") if sec == 0 else tr("{} 秒后抓屏", sec)
+            act = QAction(label, menu_delay)
+            act.setCheckable(True)
+            act.setChecked(capture_delay_seconds() == sec)
+            act.triggered.connect(
+                lambda checked=False, s=sec: self._set_capture_delay(s))
+            menu_delay.addAction(act)
+            self._delay_actions.append((sec, act))
+        menu.addMenu(menu_delay)
+
         menu.addSeparator()
 
         # ---------- 窗口 ----------
@@ -10490,10 +10570,36 @@ class PyShotApp(QObject):
     # ---------- 截图流程 ----------
     def capture_region(self):
         self._cap_log("触发区域截图")
-        self._start_snipper("region")
+        if not self._capture_with_delay(
+                lambda: self._start_snipper("region", prepared=True), "区域截图"):
+            self._start_snipper("region")      # 不延迟：走正常路径（含自动最小化）
+
+    def _capture_with_delay(self, fn, what: str) -> bool:
+        """按设置延迟抓屏：**先收好自己的窗口 → 等 N 秒 → 到点只抓屏**。
+
+        为什么是这个顺序（用户反馈"截一些快捷菜单的时候截不到"）：
+        弹出菜单在所属窗口失去激活的瞬间就关了。旧顺序是"按热键 → 到抓屏前才
+        最小化编辑器" —— 这一最小化就把菜单关掉了，抓到的自然没有菜单。
+        现在窗口处理全部提前到延迟开始之前，倒计时期间和抓屏那一刻都不再动任何
+        窗口，用户利用这几秒重新打开菜单，到点就抓得到。
+
+        返回 True = 已排入延迟队列（调用方不要再立即截图）；
+        返回 False = 没开延迟，调用方按原路径继续（**不要**在这里替调用方执行，
+        否则"不延迟"这条路上的窗口处理会被漏掉 —— 踩过）。
+        """
+        seconds = capture_delay_seconds()
+        if seconds <= 0:
+            return False
+        self._prepare_capture()
+        self._cap_log("延迟截图", f"{seconds}s -> {what}")
+        self._notify(tr("延迟截图"),
+                     tr("{} 秒后自动抓屏：请先打开要截的菜单 / 下拉框", seconds))
+        QTimer.singleShot(int(seconds * 1000), fn)
+        return True
 
     def _start_snipper(self, mode: str, scroll_mode: str | None = None,
-                       point_region: QRect | None = None):
+                       point_region: QRect | None = None,
+                       prepared: bool = False):
         if self.snipper is not None:
             # 已有覆盖层在运行。但如果它其实已经不活跃/不可见（上次没收干净），
             # 就直接当作残留清掉继续走 —— 否则这一句会让之后每次截图都"没反应"
@@ -10504,7 +10610,8 @@ class PyShotApp(QObject):
                 return
             self._cap_log("清理残留覆盖层后继续")
             self._on_snip_done()
-        self._prepare_capture()
+        if not prepared:
+            self._prepare_capture()
         self._scroll_mode = scroll_mode      # None / "wheel" / "drag" / "key" / "manual"
         overlays = self._ensure_overlays()
         self.snipper = overlays[0]           # 代表整个会话（哪个屏先按就用哪个屏）
@@ -10847,16 +10954,19 @@ class PyShotApp(QObject):
 
         例外：用户勾了「截图时不最小化编辑器」就原地保留 —— 想截编辑器
         本身（写文档/做教程）时必须这样，否则一按截图它就自己缩下去了。
+
+        注意：**可以重复调用**（延迟截图会先调一次、正式抓屏时再进这里），
+        所以是"累加"而不是"覆盖"待恢复列表 —— 覆盖会把第一次记下的窗口弄丢，
+        截图结束后编辑器就再也回不来了。
         """
         if self.keep_editor_on_capture():
-            self._minimized_by_capture = []
             self._cap_log("截图·保留编辑器", "已开启「截图时不最小化编辑器」")
             return
-        self._minimized_by_capture = [
-            ed for ed in list(self.editors)
-            if ed.isVisible() and not ed.isMinimized()
-        ]
-        for ed in self._minimized_by_capture:
+        already = list(getattr(self, "_minimized_by_capture", []))
+        newly = [ed for ed in list(self.editors)
+                 if ed.isVisible() and not ed.isMinimized() and ed not in already]
+        self._minimized_by_capture = already + newly
+        for ed in newly:
             ed.showMinimized()
 
     def _finish_capture_session(self):
@@ -10936,6 +11046,20 @@ class PyShotApp(QObject):
 
         QTimer.singleShot(120, _open)
 
+    # ---------- 延迟截图 ----------
+    def _set_capture_delay(self, seconds: int, quiet: bool = False):
+        """设置延迟秒数（0 = 立即截），并让托盘菜单的勾选跟上。"""
+
+        set_setting(CAPTURE_DELAY_SETTING, int(seconds))
+        for sec, act in getattr(self, "_delay_actions", []):
+            act.setChecked(sec == int(seconds))
+        self._cap_log("延迟截图设置", f"{seconds}s")
+        if not quiet:
+            self._notify(
+                tr("延迟截图"),
+                tr("已设为 {} 秒：按热键后请打开要截的菜单，到点自动抓屏", seconds)
+                if seconds else tr("已关闭延迟截图：按热键立即抓屏"))
+
     def auto_copy(self, pixmap: QPixmap) -> bool:
         """按选项把刚截到的图放进剪贴板（默认开）。
 
@@ -10959,17 +11083,21 @@ class PyShotApp(QObject):
                 pass
         return True
 
-    def capture_fullscreen(self, screen=None):
+    def capture_fullscreen(self, screen=None, prepared: bool = False):
         """全屏截图。
 
         screen 为 None 时截"鼠标所在的那块显示器"（多屏下最符合直觉）；
         也可以显式指定某块屏（托盘菜单"截取指定显示器"）。
         另外保留"所有显示器拼成一张"的旧行为，见 capture_all_screens。
         """
+        if not prepared and self._capture_with_delay(
+                lambda: self.capture_fullscreen(screen, prepared=True), "全屏截图"):
+            return
         if screen is None:
             screen = QGuiApplication.screenAt(QCursor.pos()) \
                 or QGuiApplication.primaryScreen()
-        self._prepare_capture()
+        if not prepared:
+            self._prepare_capture()
 
         def _grab():
             try:
@@ -11134,7 +11262,10 @@ class PyShotApp(QObject):
 
     # ---------- 屏幕取色 ----------
     def pick_color(self):
-        self._start_snipper("color")
+        # 取色也支持延迟：菜单里的颜色要先把菜单打开才吸得到
+        if not self._capture_with_delay(
+                lambda: self._start_snipper("color", prepared=True), "屏幕取色"):
+            self._start_snipper("color")
 
     def _on_color_picked(self, color):
         self._on_snip_done()
