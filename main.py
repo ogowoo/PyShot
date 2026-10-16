@@ -71,11 +71,24 @@ TRAY_CLICK_WINDOW_MS = 700
 # 刻意避开被系统或常用软件注册的组合：
 #   PrintScreen / Win+Shift+S  → Windows 11 截图工具
 #   Ctrl+Alt+A / Ctrl+Shift+A / Alt+A → QQ、微信的截图
-DEFAULT_HOTKEYS = ["ctrl+alt+x", "ctrl+shift+x", "ctrl+alt+f9", "ctrl+shift+f9"]
+#
+# **不含 Alt 的排在前面**：按下 Alt 那一下会被 Windows 当成"菜单键"送进目标窗口，
+# 右键菜单/下拉框会立刻消失 —— 用户反馈"截快捷菜单截不到"就是这个原因
+# （RegisterHotKey 只吃掉了组合里的最后一个键，修饰键按下时目标窗口仍然收得到）。
+# 所以默认给 ctrl+shift+x，带 Alt 的留作备选（被占用时还能用）。
+DEFAULT_HOTKEYS = ["ctrl+shift+x", "ctrl+alt+x", "ctrl+shift+f9",
+                   "ctrl+alt+f9", "ctrl+printscreen"]
 
 # 全屏截图热键（截"鼠标所在的那块显示器"），与区域截图分开注册、互不干扰
-FULLSCREEN_HOTKEYS = ["ctrl+alt+f", "ctrl+shift+f", "ctrl+alt+f10",
-                      "ctrl+shift+f10"]
+FULLSCREEN_HOTKEYS = ["ctrl+shift+f", "ctrl+alt+f", "ctrl+shift+f10",
+                      "ctrl+alt+f10"]
+
+# 托盘「截图热键」子菜单里可选的组合：前几个都不含 Alt（截菜单友好）
+HOTKEY_CHOICES = ["ctrl+shift+x", "ctrl+shift+s", "ctrl+printscreen",
+                  "ctrl+shift+f9", "ctrl+alt+x", "ctrl+alt+f9"]
+
+# 热键设置键（存用户选的组合；空 = 用内置候选表）
+HOTKEY_SETTING = "capture_hotkey"
 
 _VK_NAMES = {
     "printscreen": 0x2C, "prtsc": 0x2C, "insert": 0x2D, "delete": 0x2E,
@@ -88,6 +101,10 @@ for _c in "abcdefghijklmnopqrstuvwxyz":     # A..Z
     _VK_NAMES[_c] = ord(_c.upper())
 for _d in "0123456789":                     # 0..9
     _VK_NAMES[_d] = ord(_d)
+
+# 显示名（个别键的"通用叫法"，不按首字母大写硬拼）
+_KEY_LABELS = {"printscreen": "PrtSc", "prtsc": "PrtSc", "pageup": "PgUp",
+               "pagedown": "PgDn", "esc": "Esc", "escape": "Esc"}
 
 
 def parse_hotkey(spec: str):
@@ -117,12 +134,23 @@ def parse_hotkey(spec: str):
             if vk is not None:
                 return None                 # 两个主键，非法
             vk = _VK_NAMES[part]
-            labels.append(part.upper() if len(part) == 1 else part.capitalize())
+            labels.append(_KEY_LABELS.get(part,
+                                          part.upper() if len(part) == 1
+                                          else part.capitalize()))
         else:
             return None
     if vk is None or mods == 0:
         return None                          # 必须有主键，且至少一个修饰键
     return mods | MOD_NOREPEAT, vk, "+".join(labels)
+
+
+def saved_hotkey() -> str:
+    """用户在托盘「截图热键」里选的组合（空 = 没选过，用内置候选表）。"""
+    try:
+        from i18n import get_setting
+        return str(get_setting(HOTKEY_SETTING, "") or "").strip().lower()
+    except Exception:                              # noqa: BLE001
+        return ""
 
 
 def register_global_hotkeys(candidates, id_offset: int = 0) -> dict:
@@ -198,7 +226,12 @@ class PyShotApp(QObject):
         self._minimized_by_capture: list[EditorWindow] = []
         self._hotkey_ok = False
         self.hotkey_text = ""
+        self.full_hotkey_text = ""
+        self._region_hotkeys: dict = {}
         self._hotkeys: dict = {}
+        self._hotkey_actions: dict = {}
+        self._filter = None                    # 热键原生事件过滤器（换键时重装）
+        self._hotkey_actions_ui: list = []      # 托盘「截图热键」的勾选项
         self._scroll_mode: str | None = None   # None / "wheel" / "drag" / "key" / "manual"
         self._pending_scroll_region = None
 
@@ -218,15 +251,30 @@ class PyShotApp(QObject):
 
     # ---------- 全局热键 ----------
     def _init_hotkey(self):
-        """注册两组全局热键：区域截图 + 全屏截图（各自挑第一个没被占用的组合）。"""
+        """注册两组全局热键：区域截图 + 全屏截图（各自挑第一个没被占用的组合）。
+
+        优先级：用户选的组合（设置里）> PYSHOT_HOTKEY 环境变量 > 内置候选表。
+        """
         env_spec = os.environ.get("PYSHOT_HOTKEY")
-        region_cands = [env_spec] if env_spec else DEFAULT_HOTKEYS
+        chosen = saved_hotkey()
+        if chosen:
+            region_cands = [chosen] + [c for c in DEFAULT_HOTKEYS
+                                       if c != chosen]
+        elif env_spec:
+            region_cands = [env_spec]
+        else:
+            region_cands = DEFAULT_HOTKEYS
         self._region_hotkeys = register_global_hotkeys(region_cands, 0)
         self._full_hotkeys = register_global_hotkeys(FULLSCREEN_HOTKEYS, 100)
         self._hotkeys = {**self._region_hotkeys, **self._full_hotkeys}
         self._hotkey_ok = bool(self._hotkeys)
         self.hotkey_text = next(iter(self._region_hotkeys.values()), "")
         self.full_hotkey_text = next(iter(self._full_hotkeys.values()), "")
+        # 用户选的组合注册失败（被占用）时要说一声，别默默换一个
+        if chosen and chosen.replace(" ", "").lower() != \
+                (self.hotkey_text or "").replace(" ", "").lower():
+            print("[PyShot] 所选热键注册失败（可能被占用），已改用",
+                  self.hotkey_text)
         # id → 动作，供 nativeEventFilter 分发
         self._hotkey_actions = {}
         for hid in self._region_hotkeys:
@@ -244,6 +292,65 @@ class PyShotApp(QObject):
             print("[PyShot] 全局热键已注册：" + "、".join(parts))
         else:
             print("[PyShot] 热键注册失败，已尝试：" + "、".join(region_cands))
+
+    def set_hotkey(self, spec: str, quiet: bool = False) -> bool:
+        """换区域截图热键：**立即生效**（先注销旧的再注册新的），并记进设置。
+
+        为什么要能换：带 Alt 的组合会触发 Windows 的"菜单键"行为，右键菜单/
+        下拉框会在按下 Alt 的瞬间消失 —— 截这类菜单必须用不含 Alt 的键。
+        """
+        from i18n import set_setting
+        spec = (spec or "").strip().lower()
+        try:
+            user32 = ctypes.windll.user32
+            for hid in list(self._region_hotkeys):
+                try:
+                    user32.UnregisterHotKey(None, hid)
+                except Exception:                  # noqa: BLE001
+                    pass
+        except Exception:                          # noqa: BLE001
+            pass
+
+        parsed = parse_hotkey(spec) if spec else None
+        if parsed is None:
+            spec = ""                              # 空 = 回到候选表自动挑
+        set_setting(HOTKEY_SETTING, spec)
+        new = register_global_hotkeys([spec] if spec else DEFAULT_HOTKEYS, 0)
+        if not new and spec:
+            # 新键被占用：退回候选表，别让用户连截图键都没了
+            new = register_global_hotkeys(DEFAULT_HOTKEYS, 0)
+        self._region_hotkeys = new
+        self._hotkeys = {**self._region_hotkeys,
+                         **getattr(self, "_full_hotkeys", {})}
+        self._hotkey_ok = bool(self._hotkeys)
+        self.hotkey_text = next(iter(self._region_hotkeys.values()), "")
+        for hid in list(self._hotkey_actions):
+            if self._hotkey_actions[hid] == "region":
+                del self._hotkey_actions[hid]
+        for hid in self._region_hotkeys:
+            self._hotkey_actions[hid] = "region"
+        if self._filter is not None:
+            try:
+                self.app.removeNativeEventFilter(self._filter)
+            except Exception:                      # noqa: BLE001
+                pass
+        if self._hotkey_ok:
+            self._filter = HotkeyFilter(self._hotkeys.keys(), self._on_hotkey)
+            self.app.installNativeEventFilter(self._filter)
+        self._cap_log("热键已更换", spec or "auto", "->", self.hotkey_text)
+        # 菜单勾选 + 编辑器里的提示同步
+        for spec_i, act in getattr(self, "_hotkey_actions_ui", []):
+            act.setChecked(spec_i == spec)
+        for ed in getattr(self, "editors", []):
+            try:
+                ed.set_hotkey_hint(self.hotkey_text, self.full_hotkey_text)
+            except Exception:                      # noqa: BLE001
+                pass
+        if not quiet:
+            tip = tr("截右键菜单请用不带 Alt 的键（Alt 会让菜单消失）")
+            self._notify(tr("截图热键"),
+                         tr("已改为 {}（立即生效）", self.hotkey_text) + "\n" + tip)
+        return bool(new)
 
     # ---------- 托盘 ----------
     def _init_tray(self):
@@ -366,6 +473,35 @@ class PyShotApp(QObject):
             menu_delay.addAction(act)
             self._delay_actions.append((sec, act))
         menu.addMenu(menu_delay)
+
+        # 截图热键：**能换**很重要 —— 带 Alt 的组合会让 Windows 进入"菜单模式"，
+        # 右键菜单/下拉框在按下 Alt 的瞬间就消失，截菜单必须用不含 Alt 的键
+        menu_hot = menu.addMenu(make_menu_icon("camera"), tr("截图热键"))
+        menu_hot.setToolTipsVisible(True)
+        menu_hot.setToolTip(
+            tr("截右键菜单请选不带 Alt 的键：Alt 会让菜单消失"))
+        self._hotkey_actions_ui = []
+        cur = saved_hotkey()
+        for spec in HOTKEY_CHOICES:
+            nice = (parse_hotkey(spec) or (0, 0, spec))[2]
+            label = (tr("{}（截菜单友好）", nice) if "alt" not in spec
+                     else tr("{}（含 Alt，截菜单会失败）", nice))
+            act = QAction(label, menu_hot)
+            act.setCheckable(True)
+            act.setChecked(spec == cur)
+            act.triggered.connect(
+                lambda checked=False, s=spec: self.set_hotkey(s))
+            menu_hot.addAction(act)
+            self._hotkey_actions_ui.append((spec, act))
+        menu_hot.addSeparator()
+        act_auto = QAction(tr("自动选择（推荐）"), menu_hot)
+        act_auto.setCheckable(True)
+        act_auto.setChecked(not cur)
+        act_auto.setToolTip(tr("让程序按候选表挑第一个没被占用的键（优先不含 Alt 的）"))
+        act_auto.triggered.connect(lambda: self.set_hotkey(""))
+        menu_hot.addAction(act_auto)
+        self._hotkey_actions_ui.append(("", act_auto))
+        menu.addMenu(menu_hot)
 
         menu.addSeparator()
 

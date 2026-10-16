@@ -100,8 +100,12 @@ region_ids = {main_mod.HOTKEY_ID_BASE + i
 full_ids = {main_mod.HOTKEY_ID_BASE + 100 + i
             for i in range(len(main_mod.FULLSCREEN_HOTKEYS))}
 check("两组 id 互不相同", not (region_ids & full_ids))
-check("全屏热键默认是 Ctrl+Alt+F",
-      main_mod.parse_hotkey(main_mod.FULLSCREEN_HOTKEYS[0])[2] == "Ctrl+Alt+F",
+# 全屏热键同样首选不含 Alt（Alt 是 Windows 的"菜单键"，会关掉弹出菜单）
+check("**全屏热键首选不含 Alt**",
+      "alt" not in main_mod.FULLSCREEN_HOTKEYS[0],
+      main_mod.FULLSCREEN_HOTKEYS[0])
+check("全屏热键默认是 Ctrl+Shift+F",
+      main_mod.parse_hotkey(main_mod.FULLSCREEN_HOTKEYS[0])[2] == "Ctrl+Shift+F",
       main_mod.parse_hotkey(main_mod.FULLSCREEN_HOTKEYS[0])[2])
 
 calls = []

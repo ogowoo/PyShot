@@ -45,12 +45,19 @@ check("拒绝双主键", parse_hotkey("ctrl+a+b") is None)
 check("拒绝空", parse_hotkey("") is None)
 
 # --- 默认候选不应包含系统/常用软件占用的组合 ---
-joined = " ".join(DEFAULT_HOTKEYS).lower()
-check("默认不含 printscreen", "printscreen" not in joined)
+# 裸 PrintScreen 被 Win11 截图工具占用；Ctrl+PrtSc 是另一个组合，而且应用不响应
+# PrtSc（截右键菜单很稳），所以允许后者
+check("默认不含裸 printscreen（Win11 截图工具占用）",
+      all(h.strip() != "printscreen" for h in DEFAULT_HOTKEYS),
+      str(DEFAULT_HOTKEYS))
 check("默认不含 Ctrl+Alt+A（QQ/微信）", "ctrl+alt+a" not in DEFAULT_HOTKEYS)
 check("默认不含 Ctrl+Shift+A（QQ）", "ctrl+shift+a" not in DEFAULT_HOTKEYS)
 check("默认不含 Alt+A（微信）", "alt+a" not in DEFAULT_HOTKEYS)
-check("首选是 Ctrl+Alt+X", DEFAULT_HOTKEYS[0] == "ctrl+alt+x")
+# 首选**不能含 Alt**：按下 Alt 会被 Windows 当作"菜单键"，右键菜单/下拉框立刻
+# 消失（用户反馈"截快捷菜单截不到"就是这个原因）
+check("**首选不含 Alt（否则截不到右键菜单）**",
+      "alt" not in DEFAULT_HOTKEYS[0], DEFAULT_HOTKEYS[0])
+check("首选是 Ctrl+Shift+X", DEFAULT_HOTKEYS[0] == "ctrl+shift+x")
 
 # --- 真实注册：降级逻辑（用测试专用按键，不依赖系统当前占用情况） ---
 user32 = ctypes.windll.user32

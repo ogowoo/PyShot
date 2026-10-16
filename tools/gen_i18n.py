@@ -695,6 +695,7 @@ EN = {
     "画布已扩展为 {} × {}（Ctrl+Z 可撤销）": "Canvas expanded to {} × {} (Ctrl+Z to undo)",
     "画布边缘扩展": "expandable canvas edges",
     "延迟截图（截右键菜单）": "delayed capture for context menus",
+    "截图热键可选（避开 Alt）": "pickable capture hotkey (avoid Alt)",
     "按像素重设整张图（含标注），可 Ctrl+Z 撤销":
         "Resize the whole image in pixels (annotations scale with it); Ctrl+Z to undo",
     "已水平翻转（Ctrl+Z 可撤销）": "Flipped horizontally (Ctrl+Z to undo)",
@@ -826,6 +827,23 @@ EN = {
         "- Context menu or drop-down missing from your capture? Use Delayed capture: "
         "tray menu → Delayed capture → 3 s, press the hotkey, reopen the menu, "
         "and it grabs automatically.",
+    "- 截右键菜单 / 下拉框老是截不到？**别用带 Alt 的热键** —— 按下 Alt 会被 Windows 当成「菜单键」，菜单立刻消失（组合键里的 Alt 也一样）。托盘菜单 →「截图热键」换成 Ctrl+Shift+X / Ctrl+PrtSc 这类不含 Alt 的键；临时也想截，可以配合「延迟截图」。":
+        "- Context menu or drop-down keeps escaping you? **Avoid hotkeys containing Alt** — "
+        "Windows treats Alt as the menu key and closes the popup instantly (Alt inside a "
+        "combo counts too). Use tray menu → Capture hotkey to switch to an Alt-free combo "
+        "such as Ctrl+Shift+X or Ctrl+PrtSc; Delayed capture also helps.",
+    # ---- 截图热键可选 ----
+    "截图热键": "Capture hotkey",
+    "截右键菜单请选不带 Alt 的键：Alt 会让菜单消失":
+        "Pick a hotkey without Alt for context menus: Alt closes the menu",
+    "{}（截菜单友好）": "{} (menu friendly)",
+    "{}（含 Alt，截菜单会失败）": "{} (contains Alt — context menus will fail)",
+    "自动选择（推荐）": "Automatic (recommended)",
+    "让程序按候选表挑第一个没被占用的键（优先不含 Alt 的）":
+        "Let PyShot pick the first free combo (Alt-free ones first)",
+    "已改为 {}（立即生效）": "Changed to {} (takes effect immediately)",
+    "截右键菜单请用不带 Alt 的键（Alt 会让菜单消失）":
+        "For context menus use a hotkey without Alt (Alt closes the menu)",
     "- 选择：点选/拖动已有标注；方向键微调 1px（按住 Shift 是 10px）；Delete 删除。":
         "- Select: click or drag existing annotations; arrow keys nudge by 1px (Shift: 10px); Delete removes.",
     "- 矩形 / 椭圆 / 直线 / 箭头 / 画笔：拖拽绘制；按住 Shift 可画正方形、正圆或锁定方向。":
