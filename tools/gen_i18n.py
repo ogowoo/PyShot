@@ -15,7 +15,7 @@ HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # 项目根
 FILES = ["main.py", "snipper.py", "editor.py", "border.py", "watermark.py",
          "scroller.py", "pinboard.py", "bootstrap.py",
          "version.py",       # 版本主题等也在这里，别漏（否则英文界面会蹦中文）
-         "help_text.py", "helpwin.py"]      # 帮助正文/帮助窗口
+         "help_text.py", "helpwin.py", "hotkeyui.py"]   # 帮助正文/窗口/热键对话框
 CJK = re.compile(r"[\u4e00-\u9fff]")
 
 # ---------------------------------------------------------------- 繁化：短语优先
@@ -696,6 +696,7 @@ EN = {
     "画布边缘扩展": "expandable canvas edges",
     "延迟截图（截右键菜单）": "delayed capture for context menus",
     "截图热键可选（避开 Alt）": "pickable capture hotkey (avoid Alt)",
+    "热键冲突自检 + 自定义": "hotkey conflict checks + custom hotkey",
     "按像素重设整张图（含标注），可 Ctrl+Z 撤销":
         "Resize the whole image in pixels (annotations scale with it); Ctrl+Z to undo",
     "已水平翻转（Ctrl+Z 可撤销）": "Flipped horizontally (Ctrl+Z to undo)",
@@ -832,6 +833,11 @@ EN = {
         "Windows treats Alt as the menu key and closes the popup instantly (Alt inside a "
         "combo counts too). Use tray menu → Capture hotkey to switch to an Alt-free combo "
         "such as Ctrl+Shift+X or Ctrl+PrtSc; Delayed capture also helps.",
+    "- 热键被别的软件占了、或者抢了别的软件的键？托盘菜单 →「截图热键 → 自定义…」自己按一个，对话框会**当场检测**：语法对不对、是否被别的程序全局占用、是不是已知的应用快捷键（例如 Ctrl+Shift+F 是 Outlook 的「查找」）、以及含不含 Alt。":
+        "- Hotkey taken by another app, or is it stealing someone else's? Tray menu → "
+        "Capture hotkey → Custom… and press your own combo: the dialog **checks it "
+        "immediately** — syntax, whether it is taken globally, whether it is a known app "
+        "shortcut (Ctrl+Shift+F is Outlook's Find), and whether it contains Alt.",
     # ---- 截图热键可选 ----
     "截图热键": "Capture hotkey",
     "截右键菜单请选不带 Alt 的键：Alt 会让菜单消失":
@@ -844,6 +850,50 @@ EN = {
     "已改为 {}（立即生效）": "Changed to {} (takes effect immediately)",
     "截右键菜单请用不带 Alt 的键（Alt 会让菜单消失）":
         "For context menus use a hotkey without Alt (Alt closes the menu)",
+    # ---- 热键冲突自检 + 自定义 ----
+    "自定义…": "Custom…",
+    "自己按一个组合键，当场检测是否被占用 / 会不会抢别人的快捷键":
+        "Press your own combo and PyShot checks on the spot whether it is taken "
+        "or would steal another app's shortcut",
+    "自定义截图热键": "Custom capture hotkey",
+    "按下你想用的组合键（需要至少一个修饰键）：":
+        "Press the combo you want (at least one modifier):",
+    "重新检测": "Check again",
+    "用推荐值 {}（最稳）": "Use {} (safest)",
+    "✓ {} 可以使用，没有检测到冲突": "✓ {} is available — no conflicts found",
+    "⚠ {} 能用，但有问题要注意": "⚠ {} works, but there are things to know",
+    "✗ {} 不能用": "✗ {} cannot be used",
+    "还没有设置热键": "No hotkey set yet",
+    "写法不对，需要「修饰键+主键」，例如 Ctrl+Shift+X":
+        "Wrong format — needs a modifier plus a key, e.g. Ctrl+Shift+X",
+    "这个组合是 {} 的快捷键，设为截图键后它会失效（PyShot 会抢走它）":
+        "This combo is {}'s shortcut; it will stop working once PyShot takes it",
+    "{} 被 Windows 用于「{}」，建议换一个":
+        "{} is used by Windows for “{}” — pick another one",
+    "含 Alt：按下 Alt 会关掉右键菜单/下拉框（截菜单请换不含 Alt 的键）":
+        "Contains Alt: pressing Alt closes context menus and drop-downs "
+        "(use an Alt-free combo to capture those)",
+    "被其它程序全局占用了（注册失败），换一个组合":
+        "Already taken globally by another program (registration failed) — pick another combo",
+    "无法测试占用情况：{}": "Could not test availability: {}",
+    "这个组合不能用": "That combo cannot be used",
+    "没有可用的全局热键": "No global hotkey available",
+    "区域 {} ：可用": "Region {}: available",
+    "热键冲突检测": "hotkey conflict detection",
+    "Outlook 查找": "Outlook Find",
+    "多数软件的「另存为」": "Save As in most apps",
+    "VS Code 命令面板": "VS Code command palette",
+    "VS Code 扩展面板": "VS Code extensions",
+    "QQ 截图": "QQ screenshot",
+    "锁屏": "lock screen",
+    "显示桌面": "show desktop",
+    "资源管理器": "File Explorer",
+    "运行": "Run",
+    "任务视图": "Task View",
+    "安全界面": "security screen",
+    "切换窗口": "switch windows",
+    "关闭窗口": "close window",
+    "开始菜单": "Start menu",
     "- 选择：点选/拖动已有标注；方向键微调 1px（按住 Shift 是 10px）；Delete 删除。":
         "- Select: click or drag existing annotations; arrow keys nudge by 1px (Shift: 10px); Delete removes.",
     "- 矩形 / 椭圆 / 直线 / 箭头 / 画笔：拖拽绘制；按住 Shift 可画正方形、正圆或锁定方向。":

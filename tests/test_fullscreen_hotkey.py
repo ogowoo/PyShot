@@ -100,13 +100,17 @@ region_ids = {main_mod.HOTKEY_ID_BASE + i
 full_ids = {main_mod.HOTKEY_ID_BASE + 100 + i
             for i in range(len(main_mod.FULLSCREEN_HOTKEYS))}
 check("两组 id 互不相同", not (region_ids & full_ids))
-# 全屏热键同样首选不含 Alt（Alt 是 Windows 的"菜单键"，会关掉弹出菜单）
+# 全屏热键同样首选不含 Alt（Alt 是 Windows 的"菜单键"，会关掉弹出菜单），
+# 并且不踩已知的应用快捷键（Ctrl+Shift+F 是 Outlook 的「查找」）
 check("**全屏热键首选不含 Alt**",
       "alt" not in main_mod.FULLSCREEN_HOTKEYS[0],
       main_mod.FULLSCREEN_HOTKEYS[0])
-check("全屏热键默认是 Ctrl+Shift+F",
-      main_mod.parse_hotkey(main_mod.FULLSCREEN_HOTKEYS[0])[2] == "Ctrl+Shift+F",
-      main_mod.parse_hotkey(main_mod.FULLSCREEN_HOTKEYS[0])[2])
+check("全屏热键默认不踩 Outlook（Ctrl+Shift+F）",
+      main_mod.FULLSCREEN_HOTKEYS[0] != "ctrl+shift+f",
+      main_mod.FULLSCREEN_HOTKEYS[0])
+check("全屏首选是 PrtSc 族（PrtSc 应用基本不响应，不会抢别人的键）",
+      "printscreen" in main_mod.FULLSCREEN_HOTKEYS[0],
+      main_mod.FULLSCREEN_HOTKEYS[0])
 
 calls = []
 

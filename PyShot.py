@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""PyShot 2.23 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
+"""PyShot 2.24 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
 
-本版主题：截图热键可选（避开 Alt）
+本版主题：热键冲突自检 + 自定义
 作者：Walt Liang <Wat.L@outlook.com>
 
 这是一个自动生成的单文件版本：把多文件源码合并在一起，并在启动时自动安装
@@ -30,6 +30,27 @@
 
 # key: 简体原文 -> (繁體, English)
 TABLE = {
+    "Outlook 查找": ("Outlook 查找", "Outlook Find"),
+    "多数软件的「另存为」": ("多數軟體的「另存為」", "Save As in most apps"),
+    "VS Code 命令面板": ("VS Code 命令面板", "VS Code command palette"),
+    "VS Code 扩展面板": ("VS Code 擴展面板", "VS Code extensions"),
+    "QQ 截图": ("QQ 截圖", "QQ screenshot"),
+    "锁屏": ("鎖屏", "lock screen"),
+    "显示桌面": ("顯示桌面", "show desktop"),
+    "资源管理器": ("資源管理器", "File Explorer"),
+    "运行": ("運行", "Run"),
+    "任务视图": ("任務視圖", "Task View"),
+    "安全界面": ("安全介面", "security screen"),
+    "切换窗口": ("切換窗口", "switch windows"),
+    "关闭窗口": ("關閉窗口", "close window"),
+    "开始菜单": ("開始菜單", "Start menu"),
+    "区域 {} ：可用": ("區域 {} ：可用", "Region {}: available"),
+    "还没有设置热键": ("還沒有設定快速鍵", "No hotkey set yet"),
+    "写法不对，需要「修饰键+主键」，例如 Ctrl+Shift+X": ("寫法不對，需要「修饰鍵+主鍵」，例如 Ctrl+Shift+X", "Wrong format — needs a modifier plus a key, e.g. Ctrl+Shift+X"),
+    "这个组合是 {} 的快捷键，设为截图键后它会失效（PyShot 会抢走它）": ("這個組合是 {} 的快捷鍵，設為截圖鍵後它會失效（PyShot 會抢走它）", "This combo is {}'s shortcut; it will stop working once PyShot takes it"),
+    "{} 被 Windows 用于「{}」，建议换一个": ("{} 被 Windows 用於「{}」，建議換一個", "{} is used by Windows for “{}” — pick another one"),
+    "含 Alt：按下 Alt 会关掉右键菜单/下拉框（截菜单请换不含 Alt 的键）": ("含 Alt：按下 Alt 會關掉右鍵菜單/下拉框（截菜單請換不含 Alt 的鍵）", "Contains Alt: pressing Alt closes context menus and drop-downs (use an Alt-free combo to capture those)"),
+    "没有可用的全局热键": ("沒有可用的全局快速鍵", "No global hotkey available"),
     "截右键菜单请用不带 Alt 的键（Alt 会让菜单消失）": ("截右鍵菜單請用不帶 Alt 的鍵（Alt 會讓菜單消失）", "For context menus use a hotkey without Alt (Alt closes the menu)"),
     "区域截图": ("區域截圖", "Capture Region"),
     "框选一块区域截图": ("框選一塊區域截圖", "Drag to capture a region"),
@@ -56,6 +77,8 @@ TABLE = {
     "按热键后等几秒再抓屏，用来截右键菜单 / 下拉框": ("按快速鍵後等几秒再抓屏，用來截右鍵菜單 / 下拉框", "Wait a few seconds after the hotkey before grabbing — for capturing context menus and drop-downs"),
     "截图热键": ("截圖快速鍵", "Capture hotkey"),
     "截右键菜单请选不带 Alt 的键：Alt 会让菜单消失": ("截右鍵菜單請選不帶 Alt 的鍵：Alt 會讓菜單消失", "Pick a hotkey without Alt for context menus: Alt closes the menu"),
+    "自定义…": ("自定義…", "Custom…"),
+    "自己按一个组合键，当场检测是否被占用 / 会不会抢别人的快捷键": ("自己按一個組合鍵，當場檢測是否被佔用 / 會不會抢别人的快捷鍵", "Press your own combo and PyShot checks on the spot whether it is taken or would steal another app's shortcut"),
     "自动选择（推荐）": ("自動選擇（推荐）", "Automatic (recommended)"),
     "让程序按候选表挑第一个没被占用的键（优先不含 Alt 的）": ("讓程序按候選表挑第一個沒被佔用的鍵（優先不含 Alt 的）", "Let PyShot pick the first free combo (Alt-free ones first)"),
     "打开图片编辑…": ("開啟圖片編輯…", "Open Image for Editing…"),
@@ -128,8 +151,11 @@ TABLE = {
     "跳过保存：当前 ": ("跳過儲存：當前 ", ""),
     " 个标签少于缓存的 ": (" 個標籤少於緩存的 ", ""),
     "启动·托盘就绪": ("啟動·托盤就绪", ""),
+    "被其它程序全局占用了（注册失败），换一个组合": ("被其它程序全局佔用了（註冊失敗），換一個組合", "Already taken globally by another program (registration failed) — pick another combo"),
+    "无法测试占用情况：{}": ("無法測試佔用情况：{}", "Could not test availability: {}"),
     "区域 ": ("區域 ", ""),
     "全屏 ": ("全螢幕 ", ""),
+    "这个组合不能用": ("這個組合不能用", "That combo cannot be used"),
     " 排队 ": (" 排队 ", ""),
     "ms，实际等了 ": ("ms，實際等了 ", ""),
     " 耗时 ": (" 耗時 ", ""),
@@ -185,7 +211,6 @@ TABLE = {
     "拖拽移动画面（图放大后看不同位置）；任何工具下按住中键或空格也能拖": ("拖曳移動畫面（圖放大後看不同位置）；任何工具下按住中鍵或空格也能拖", "Drag to move the view (look around once zoomed in); middle-drag or hold Space works with any tool"),
     "选择颜色": ("選擇顏色", "Choose a color"),
     "颜色": ("顏色", "Color"),
-    "自定义…": ("自定義…", "Custom…"),
     "打开系统拾色器": ("開啟系統拾色器", "Open the system color picker"),
     "自定义颜色": ("自定義顏色", "Custom colors"),
     "输入文字，Enter 确认 / Esc 取消": ("輸入文字，Enter 確認 / Esc 取消", "Type text, Enter to confirm / Esc to cancel"),
@@ -486,7 +511,7 @@ TABLE = {
     " 已就绪。": (" 已就绪。", ""),
     "[PyShot] pip 执行失败：": ("[PyShot] pip 執行失敗：", ""),
     "  [缺失] ": ("  [缺失] ", ""),
-    "截图热键可选（避开 Alt）": ("截圖快速鍵可選（避開 Alt）", "pickable capture hotkey (avoid Alt)"),
+    "热键冲突自检 + 自定义": ("快速鍵衝突自檢 + 自定義", "hotkey conflict checks + custom hotkey"),
     "PyShot 使用帮助": ("PyShot 使用幫助", "PyShot Help"),
     "截图 + 标注工具，专为做操作指引/步骤说明优化。": ("截圖 + 標注工具，專為做操作指引/步驟說明優化。", "Screenshot and annotation tool, built for step-by-step guides."),
     "快速开始": ("快速開始", "Quick Start"),
@@ -508,6 +533,7 @@ TABLE = {
     "- 滚动长截图（实验性，默认关闭）：先在托盘菜单里勾选启用；框选可滚动区域后程序自己滚轮逐屏拼接。": ("- 捲動長截圖（實驗性，預設關閉）：先在托盤菜單裡勾選啟用；框選可捲動區域後程序自己滾輪逐屏拼接。", "- Scrolling capture (experimental, off by default): enable it in the tray menu first; select a scrollable area and PyShot scrolls and stitches frame by frame."),
     "- 手动滚动：你自己滚，程序只负责拼帧，兼容性最好。": ("- 手動捲動：你自己滾，程序只負責拼幀，兼容性最好。", "- Manual scroll: you scroll, PyShot only stitches — the most compatible mode."),
     "- 截右键菜单 / 下拉框老是截不到？**别用带 Alt 的热键** —— 按下 Alt 会被 Windows 当成「菜单键」，菜单立刻消失（组合键里的 Alt 也一样）。托盘菜单 →「截图热键」换成 Ctrl+Shift+X / Ctrl+PrtSc 这类不含 Alt 的键；临时也想截，可以配合「延迟截图」。": ("- 截右鍵菜單 / 下拉框老是截不到？**别用帶 Alt 的快速鍵** —— 按下 Alt 會被 Windows 當成「菜單鍵」，菜單立刻消失（組合鍵裡的 Alt 也一樣）。托盤菜單 →「截圖快速鍵」換成 Ctrl+Shift+X / Ctrl+PrtSc 這類不含 Alt 的鍵；临時也想截，可以配合「延遲截圖」。", "- Context menu or drop-down keeps escaping you? **Avoid hotkeys containing Alt** — Windows treats Alt as the menu key and closes the popup instantly (Alt inside a combo counts too). Use tray menu → Capture hotkey to switch to an Alt-free combo such as Ctrl+Shift+X or Ctrl+PrtSc; Delayed capture also helps."),
+    "- 热键被别的软件占了、或者抢了别的软件的键？托盘菜单 →「截图热键 → 自定义…」自己按一个，对话框会**当场检测**：语法对不对、是否被别的程序全局占用、是不是已知的应用快捷键（例如 Ctrl+Shift+F 是 Outlook 的「查找」）、以及含不含 Alt。": ("- 快速鍵被别的軟體占了、或者抢了别的軟體的鍵？托盤菜單 →「截圖快速鍵 → 自定義…」自己按一個，對話框會**當場檢測**：語法對不對、是否被别的程序全局佔用、是不是已知的套用快捷鍵（例如 Ctrl+Shift+F 是 Outlook 的「查找」）、以及含不含 Alt。", "- Hotkey taken by another app, or is it stealing someone else's? Tray menu → Capture hotkey → Custom… and press your own combo: the dialog **checks it immediately** — syntax, whether it is taken globally, whether it is a known app shortcut (Ctrl+Shift+F is Outlook's Find), and whether it contains Alt."),
     "- 选择：点选/拖动已有标注；方向键微调 1px（按住 Shift 是 10px）；Delete 删除。": ("- 選擇：點選/拖動已有標注；方向鍵微調 1px（按住 Shift 是 10px）；Delete 刪除。", "- Select: click or drag existing annotations; arrow keys nudge by 1px (Shift: 10px); Delete removes."),
     "- 矩形 / 椭圆 / 直线 / 箭头 / 画笔：拖拽绘制；按住 Shift 可画正方形、正圆或锁定方向。": ("- 矩形 / 橢圓 / 直線 / 箭頭 / 畫筆：拖曳繪製；按住 Shift 可畫正方形、正圓或鎖定方向。", "- Rectangle / ellipse / line / arrow / pen: drag to draw; hold Shift for a square, a circle, or a locked direction."),
     "- 序号：单击放置递增序号，做步骤指引。": ("- 序號：單擊放置遞增序號，做步驟指引。", "- Step number: click to place an incrementing number for step-by-step guides."),
@@ -550,6 +576,13 @@ TABLE = {
     "快捷键一览": ("快捷鍵一覽", "Shortcuts"),
     " 快捷键 ": (" 快捷鍵 ", ""),
     "下面这些是当前生效的快捷键（菜单里改不了的就写在这里）。": ("下面這些是當前生效的快捷鍵（菜單裡改不了的就寫在這裡）。", "These are the shortcuts that are active right now."),
+    "自定义截图热键": ("自定義截圖快速鍵", "Custom capture hotkey"),
+    "重新检测": ("重新檢測", "Check again"),
+    "按下你想用的组合键（需要至少一个修饰键）：": ("按下你想用的組合鍵（需要至少一個修饰鍵）：", "Press the combo you want (at least one modifier):"),
+    "用推荐值 {}（最稳）": ("用推荐值 {}（最穩）", "Use {} (safest)"),
+    "✓ {} 可以使用，没有检测到冲突": ("✓ {} 可以使用，沒有檢測到衝突", "✓ {} is available — no conflicts found"),
+    "⚠ {} 能用，但有问题要注意": ("⚠ {} 能用，但有问題要注意", "⚠ {} works, but there are things to know"),
+    "✗ {} 不能用": ("✗ {} 不能用", "✗ {} cannot be used"),
 }
 
 
@@ -1023,10 +1056,10 @@ if not ensure_deps():
 命名：`MAJOR.MINOR[.PATCH]`，git 标签为 `v<版本>-qt`（`-qt` 表示根目录这套
 PySide6 实现，`tk_version/` 是独立的 Tkinter 版）。
 """
-APP_VERSION = "2.23"
+APP_VERSION = "2.24"
 
 # 这版的一句话主题（写进单文件头与「关于」对话框，便于用户确认自己拿的是哪版）
-VERSION_TITLE = "截图热键可选（避开 Alt）"
+VERSION_TITLE = "热键冲突自检 + 自定义"
 
 # 版本日期（本地日期，供日志/文档使用）
 VERSION_DATE = "2026-09-24"
@@ -1513,6 +1546,7 @@ SECTIONS = [
         "框选可滚动区域后程序自己滚轮逐屏拼接。",
         "- 手动滚动：你自己滚，程序只负责拼帧，兼容性最好。",
         "- 截右键菜单 / 下拉框老是截不到？**别用带 Alt 的热键** —— 按下 Alt 会被 Windows 当成「菜单键」，菜单立刻消失（组合键里的 Alt 也一样）。托盘菜单 →「截图热键」换成 Ctrl+Shift+X / Ctrl+PrtSc 这类不含 Alt 的键；临时也想截，可以配合「延迟截图」。",
+        "- 热键被别的软件占了、或者抢了别的软件的键？托盘菜单 →「截图热键 → 自定义…」自己按一个，对话框会**当场检测**：语法对不对、是否被别的程序全局占用、是不是已知的应用快捷键（例如 Ctrl+Shift+F 是 Outlook 的「查找」）、以及含不含 Alt。",
     ]),
     ("编辑器工具", [
         "- 选择：点选/拖动已有标注；方向键微调 1px（按住 Shift 是 10px）；Delete 删除。",
@@ -1775,6 +1809,165 @@ def open_help(parent=None, hotkey: str = "", fullhotkey: str = "",
     dlg.raise_()
     dlg.activateWindow()
     return dlg
+
+
+# ========================================================================
+# 来自 hotkeyui.py
+# ========================================================================
+# -*- coding: utf-8 -*-
+"""自定义截图热键对话框：按下组合键 → 当场告诉你能不能用。
+
+为什么要"检测"：`RegisterHotKey` **成功不等于没冲突**。大多数应用的快捷键
+（Outlook 的 Ctrl+Shift+F、多数软件的 Ctrl+Shift+S…）只是本地快捷键，我们照样
+注册得上，然后把它"抢走"。所以这里除了真去试注册，还查一张已知冲突表，
+并把「含 Alt 会关掉右键菜单」这类坑直接在对话框里说清楚。
+"""
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeySequence
+from PySide6.QtWidgets import (QDialog, QDialogButtonBox, QHBoxLayout, QLabel,
+                               QKeySequenceEdit, QPushButton, QVBoxLayout)
+
+
+
+
+def spec_from_sequence(seq: QKeySequence) -> str:
+    """QKeySequence 的 "Ctrl+Shift+X" → 我们的 "ctrl+shift+x"。"""
+    parts = [p.strip().lower() for p in seq.toString().split("+") if p.strip()]
+    alias = {"ctrl": "ctrl", "control": "ctrl", "meta": "win", "shift": "shift",
+             "alt": "alt", "del": "delete", "esc": "esc", "return": "enter",
+             "print": "printscreen", "prtsc": "printscreen"}
+    return "+".join(alias.get(p, p) for p in parts)
+
+
+# Qt 对个别键的叫法和我们不同（尤其 PrintScreen 在 Qt 里叫 "Print"——
+# 写成 "Ctrl+PrintScreen" 会解析成空序列，这是踩过的坑）
+_QT_KEY_NAMES = {"printscreen": "Print", "prtsc": "Print",
+                 "pageup": "PgUp", "pagedown": "PgDn",
+                 "insert": "Ins", "delete": "Del", "esc": "Esc"}
+
+
+def sequence_from_spec(spec: str) -> QKeySequence:
+    """我们的 "ctrl+printscreen" → QKeySequence（能正确显示的写法）。"""
+    out = []
+    for raw in (spec or "").split("+"):
+        p = raw.strip().lower()
+        if not p:
+            continue
+        if p in ("ctrl", "control"):
+            out.append("Ctrl")
+        elif p == "shift":
+            out.append("Shift")
+        elif p == "alt":
+            out.append("Alt")
+        elif p in ("win", "meta", "super"):
+            out.append("Meta")
+        elif p in _QT_KEY_NAMES:
+            out.append(_QT_KEY_NAMES[p])
+        elif len(p) == 1:
+            out.append(p.upper())
+        elif p.startswith("f") and p[1:].isdigit():
+            out.append("F" + p[1:])
+        else:
+            out.append(p.capitalize())
+    return QKeySequence("+".join(out))
+
+
+def pretty_spec(spec: str) -> str:
+    """显示用的名字：ctrl+printscreen → Ctrl+PrtSc。"""
+
+    parsed = parse_hotkey(spec)
+    return parsed[2] if parsed else (spec or "")
+
+
+class HotkeyDialog(QDialog):
+    """输入一个组合键，实时显示"可用 / 有风险 / 不可用"，并给出原因。"""
+
+    def __init__(self, parent, current: str, check, suggest: list | None = None):
+        """
+        current  当前生效的组合（形如 "ctrl+shift+x"）
+        check    回调 spec -> dict（main.check_hotkey 的结果）
+        suggest  推荐组合列表（第一个作为"用推荐值"按钮）
+        """
+        super().__init__(parent)
+        self._check = check
+        self._suggest = list(suggest or [])
+        self.setWindowTitle(tr("自定义截图热键"))
+        self.setMinimumWidth(460)
+
+        lay = QVBoxLayout(self)
+        lay.addWidget(QLabel(tr("按下你想用的组合键（需要至少一个修饰键）：")))
+
+        self.edit = QKeySequenceEdit(sequence_from_spec(current))
+        # 快捷键输入控件默认会"等 1 秒确认"，这里关掉，改成每次按下就检测
+        self.edit.setMaximumSequenceLength(1)
+        self.edit.keySequenceChanged.connect(self._recheck)
+        lay.addWidget(self.edit)
+
+        self.status = QLabel()
+        self.status.setWordWrap(True)
+        self.status.setObjectName("hotkeystatus")
+        lay.addWidget(self.status)
+
+        self.details = QLabel()
+        self.details.setWordWrap(True)
+        self.details.setObjectName("hotkeydetails")
+        lay.addWidget(self.details)
+
+        row = QHBoxLayout()
+        self.btn_recheck = QPushButton(tr("重新检测"))
+        self.btn_recheck.clicked.connect(self._recheck)
+        row.addWidget(self.btn_recheck)
+        if self._suggest:
+            nice = pretty_spec(self._suggest[0])
+            self.btn_suggest = QPushButton(tr("用推荐值 {}（最稳）", nice))
+            self.btn_suggest.clicked.connect(self._use_suggestion)
+            row.addWidget(self.btn_suggest)
+        row.addStretch(1)
+        lay.addLayout(row)
+
+        self.buttons = QDialogButtonBox(QDialogButtonBox.Ok
+                                        | QDialogButtonBox.Cancel)
+        self.buttons.accepted.connect(self._accept_if_ok)
+        self.buttons.rejected.connect(self.reject)
+        lay.addWidget(self.buttons)
+
+        self.result_info = {"level": "bad"}
+        self._recheck()
+
+    # ---------- 内部 ----------
+    def spec(self) -> str:
+        return spec_from_sequence(self.edit.keySequence())
+
+    def _use_suggestion(self):
+        self.edit.setKeySequence(sequence_from_spec(self._suggest[0]))
+        self._recheck()
+
+    def _recheck(self, *args):
+        info = self._check(self.spec())
+        self.result_info = info
+        level = info.get("level", "bad")
+        if level == "ok":
+            self.status.setText(tr("✓ {} 可以使用，没有检测到冲突", info["name"]))
+            self.status.setStyleSheet("color:#2e7d32; font-weight:600;")
+        elif level == "warn":
+            self.status.setText(tr("⚠ {} 能用，但有问题要注意", info["name"]))
+            self.status.setStyleSheet("color:#ef6c00; font-weight:600;")
+        else:
+            self.status.setText(tr("✗ {} 不能用", info["name"] or self.spec()))
+            self.status.setStyleSheet("color:#c62828; font-weight:600;")
+        lines = [f"· {x}" for x in info.get("errors", [])]
+        lines += [f"· {x}" for x in info.get("warnings", [])]
+        self.details.setText("\n".join(lines))
+        # 语法错/被占用时不让点确定；"有风险"允许（用户可能就是想要那个键）
+        self.buttons.button(QDialogButtonBox.Ok).setEnabled(
+            bool(info.get("ok")) and level != "bad")
+
+    def _accept_if_ok(self):
+        if self.buttons.button(QDialogButtonBox.Ok).isEnabled():
+            self.accept()
+
+    def chosen_spec(self) -> str:
+        return self.spec()
 
 
 # ========================================================================
@@ -10155,8 +10348,8 @@ from PySide6.QtCore import (QAbstractNativeEventFilter, QObject, QPoint, QRect,
                             Qt, QTimer)
 from PySide6.QtGui import (QAction, QColor, QCursor, QFontMetrics,
                            QGuiApplication, QIcon, QPainter, QPixmap)
-from PySide6.QtWidgets import (QApplication, QCheckBox, QFileDialog, QLabel,
-                               QMenu, QMessageBox, QSystemTrayIcon)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
+                               QLabel, QMenu, QMessageBox, QSystemTrayIcon)
 
 
 
@@ -10191,21 +10384,33 @@ TRAY_CLICK_WINDOW_MS = 700
 # 刻意避开被系统或常用软件注册的组合：
 #   PrintScreen / Win+Shift+S  → Windows 11 截图工具
 #   Ctrl+Alt+A / Ctrl+Shift+A / Alt+A → QQ、微信的截图
+#   Ctrl+Shift+F → Outlook 的「查找」（用户实测：被我们抢走，Outlook 就用不了了）
 #
-# **不含 Alt 的排在前面**：按下 Alt 那一下会被 Windows 当成"菜单键"送进目标窗口，
-# 右键菜单/下拉框会立刻消失 —— 用户反馈"截快捷菜单截不到"就是这个原因
-# （RegisterHotKey 只吃掉了组合里的最后一个键，修饰键按下时目标窗口仍然收得到）。
-# 所以默认给 ctrl+shift+x，带 Alt 的留作备选（被占用时还能用）。
-DEFAULT_HOTKEYS = ["ctrl+shift+x", "ctrl+alt+x", "ctrl+shift+f9",
-                   "ctrl+alt+f9", "ctrl+printscreen"]
+# **默认用 PrtSc 族**：应用基本不响应 PrtSc，既不抢别人的快捷键，也不会打断
+# 右键菜单；不带 Alt 也是同理 —— Alt 是 Windows 的「菜单键」，按下就把菜单关了。
+# 注意：RegisterHotKey **成功不等于没冲突**（本地应用快捷键会被我们"抢成功"），
+# 所以有名的组合（见 KNOWN_CONFLICTS）只作兜底，并在托盘菜单里标注风险。
+DEFAULT_HOTKEYS = ["ctrl+printscreen", "ctrl+shift+x", "ctrl+shift+f9",
+                   "ctrl+alt+x", "ctrl+alt+f9"]
 
 # 全屏截图热键（截"鼠标所在的那块显示器"），与区域截图分开注册、互不干扰
-FULLSCREEN_HOTKEYS = ["ctrl+shift+f", "ctrl+alt+f", "ctrl+shift+f10",
-                      "ctrl+alt+f10"]
+FULLSCREEN_HOTKEYS = ["ctrl+shift+printscreen", "ctrl+shift+f10",
+                      "ctrl+alt+f10", "ctrl+alt+f"]
 
-# 托盘「截图热键」子菜单里可选的组合：前几个都不含 Alt（截菜单友好）
-HOTKEY_CHOICES = ["ctrl+shift+x", "ctrl+shift+s", "ctrl+printscreen",
-                  "ctrl+shift+f9", "ctrl+alt+x", "ctrl+alt+f9"]
+# 托盘「截图热键」子菜单里可选的组合：PrtSc 族与不含 Alt 的排前面
+HOTKEY_CHOICES = ["ctrl+printscreen", "ctrl+shift+printscreen",
+                  "ctrl+shift+x", "ctrl+shift+f9",
+                  "ctrl+shift+s", "ctrl+alt+x", "ctrl+alt+f9"]
+
+# 已知会被"抢"的常用软件快捷键：只用来**提示**（注册照样成功，属于静默抢占）
+KNOWN_CONFLICTS = {
+    "ctrl+shift+f": "Outlook 查找",
+    "ctrl+shift+s": "多数软件的「另存为」",
+    "ctrl+shift+p": "VS Code 命令面板",
+    "ctrl+shift+x": "VS Code 扩展面板",
+    "ctrl+shift+a": "QQ 截图",
+    "ctrl+alt+a": "QQ 截图",
+}
 
 # 热键设置键（存用户选的组合；空 = 用内置候选表）
 HOTKEY_SETTING = "capture_hotkey"
@@ -10271,6 +10476,83 @@ def saved_hotkey() -> str:
         return str(get_setting(HOTKEY_SETTING, "") or "").strip().lower()
     except Exception:                              # noqa: BLE001
         return ""
+
+
+# Windows 自己吃掉的组合：注册可能"成功"但实际按不出来，或者干脆抢不到
+RESERVED_HOTKEYS = {
+    "win+l": "锁屏",
+    "win+d": "显示桌面",
+    "win+e": "资源管理器",
+    "win+r": "运行",
+    "win+tab": "任务视图",
+    "ctrl+alt+delete": "安全界面",
+    "alt+tab": "切换窗口",
+    "alt+f4": "关闭窗口",
+    "ctrl+esc": "开始菜单",
+}
+
+
+def check_hotkey(spec: str, probe: bool = True) -> dict:
+    """检查一个热键组合能不能用，并给出**冲突**与风险提示。
+
+    为什么需要它：`RegisterHotKey` **成功不等于没冲突** —— 大多数应用快捷键
+    （Outlook 的 Ctrl+Shift+F、多为「另存为」的 Ctrl+Shift+S…）只是本地快捷键，
+    我们照样能注册成功并把它们"抢走"。所以这里除了真去试注册，还要查一张
+    已知冲突表，把风险明确告诉用户。
+
+    返回 dict：
+      ok       语法是否合法
+      name     规范化显示名（Ctrl+Shift+F）
+      spec     规范化组合（ctrl+shift+f）
+      errors   不可用的原因（语法错 / 被别的程序全局占用）
+      warnings 可用但有风险（含 Alt、已知会被抢、Windows 保留）
+      level    "ok" / "warn" / "bad"
+    """
+    out = {"ok": False, "name": spec or "", "spec": (spec or "").strip().lower(),
+           "errors": [], "warnings": [], "level": "bad"}
+    if not (spec or "").strip():
+        out["errors"].append(tr("还没有设置热键"))
+        return out
+    parsed = parse_hotkey(spec)
+    if parsed is None:
+        out["errors"].append(tr("写法不对，需要「修饰键+主键」，例如 Ctrl+Shift+X"))
+        return out
+    mods, vk, name = parsed
+    out.update(ok=True, name=name, level="ok")
+    low = "+".join([p for p in out["spec"].replace(" ", "").split("+") if p])
+
+    # 1) 已知会被"抢"的应用快捷键
+    known = KNOWN_CONFLICTS.get(low)
+    if known:
+        out["warnings"].append(
+            tr("这个组合是 {} 的快捷键，设为截图键后它会失效（PyShot 会抢走它）",
+               tr(known)))
+    # 2) Windows 保留组合
+    reserved = RESERVED_HOTKEYS.get(low)
+    if reserved:
+        out["warnings"].append(
+            tr("{} 被 Windows 用于「{}」，建议换一个", name, tr(reserved)))
+    # 3) 含 Alt：截右键菜单/下拉框会失败（Alt 是 Windows 的"菜单键"）
+    if mods & MOD_ALT:
+        out["warnings"].append(
+            tr("含 Alt：按下 Alt 会关掉右键菜单/下拉框（截菜单请换不含 Alt 的键）"))
+    # 4) 真去试注册，看有没有别的程序全局占着
+    if probe:
+        try:
+            user32 = ctypes.windll.user32
+            hid = HOTKEY_ID_BASE + 900          # 只是探测，立刻注销
+            if user32.RegisterHotKey(None, hid, mods, vk):
+                user32.UnregisterHotKey(None, hid)
+            else:
+                out["errors"].append(
+                    tr("被其它程序全局占用了（注册失败），换一个组合"))
+                out["level"] = "bad"
+                return out
+        except Exception as exc:                   # noqa: BLE001
+            out["warnings"].append(tr("无法测试占用情况：{}", repr(exc)))
+    if out["warnings"]:
+        out["level"] = "warn"
+    return out
 
 
 def register_global_hotkeys(candidates, id_offset: int = 0) -> dict:
@@ -10412,6 +10694,32 @@ class PyShotApp(QObject):
             print("[PyShot] 全局热键已注册：" + "、".join(parts))
         else:
             print("[PyShot] 热键注册失败，已尝试：" + "、".join(region_cands))
+
+    def custom_hotkey(self):
+        """托盘「截图热键 → 自定义…」：自己按一个组合键，当场检测冲突。"""
+
+        dlg = HotkeyDialog(self.editors[-1] if self.editors else None,
+                           saved_hotkey() or self.hotkey_text or "",
+                           check_hotkey, HOTKEY_CHOICES)
+        if dlg.exec() != QDialog.Accepted:
+            return
+        spec = dlg.chosen_spec()
+        info = check_hotkey(spec)
+        if not info["ok"]:
+            self._notify(tr("截图热键"), "\n".join(info["errors"]) or
+                         tr("这个组合不能用"))
+            return
+        self.set_hotkey(spec)
+        self._cap_log("自定义热键", spec, info["level"])
+
+    def hotkey_report(self) -> str:
+        """当前热键的自检报告（启动日志/排障用）。"""
+        if not self.hotkey_text:
+            return tr("没有可用的全局热键")
+        info = check_hotkey(saved_hotkey() or self.hotkey_text, probe=False)
+        issues = info["warnings"]
+        head = tr("区域 {} ：可用", self.hotkey_text)
+        return head + ("；".join([""] + issues) if issues else "")
 
     def set_hotkey(self, spec: str, quiet: bool = False) -> bool:
         """换区域截图热键：**立即生效**（先注销旧的再注册新的），并记进设置。
@@ -10614,6 +10922,11 @@ class PyShotApp(QObject):
             menu_hot.addAction(act)
             self._hotkey_actions_ui.append((spec, act))
         menu_hot.addSeparator()
+        act_custom = QAction(tr("自定义…"), menu_hot)
+        act_custom.setToolTip(
+            tr("自己按一个组合键，当场检测是否被占用 / 会不会抢别人的快捷键"))
+        act_custom.triggered.connect(self.custom_hotkey)
+        menu_hot.addAction(act_custom)
         act_auto = QAction(tr("自动选择（推荐）"), menu_hot)
         act_auto.setCheckable(True)
         act_auto.setChecked(not cur)

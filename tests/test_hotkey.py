@@ -20,8 +20,8 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QApplication
 
 from editor import EditorWindow
-from main import (DEFAULT_HOTKEYS, MOD_ALT, MOD_CONTROL, MOD_SHIFT,
-                  parse_hotkey, register_global_hotkeys)
+from main import (DEFAULT_HOTKEYS, KNOWN_CONFLICTS, MOD_ALT, MOD_CONTROL,
+                  MOD_SHIFT, parse_hotkey, register_global_hotkeys)
 
 failures = []
 
@@ -57,7 +57,11 @@ check("默认不含 Alt+A（微信）", "alt+a" not in DEFAULT_HOTKEYS)
 # 消失（用户反馈"截快捷菜单截不到"就是这个原因）
 check("**首选不含 Alt（否则截不到右键菜单）**",
       "alt" not in DEFAULT_HOTKEYS[0], DEFAULT_HOTKEYS[0])
-check("首选是 Ctrl+Shift+X", DEFAULT_HOTKEYS[0] == "ctrl+shift+x")
+# 首选还要"应用基本不响应"，否则会把别人的快捷键抢走（Ctrl+Shift+F = Outlook 查找）
+check("**首选不踩已知的应用快捷键**",
+      DEFAULT_HOTKEYS[0] not in KNOWN_CONFLICTS, DEFAULT_HOTKEYS[0])
+check("首选是 PrtSc 族（Ctrl+PrtSc）",
+      DEFAULT_HOTKEYS[0] == "ctrl+printscreen", DEFAULT_HOTKEYS[0])
 
 # --- 真实注册：降级逻辑（用测试专用按键，不依赖系统当前占用情况） ---
 user32 = ctypes.windll.user32

@@ -126,12 +126,14 @@ check("托盘菜单里有「截图热键」子菜单", len(hot_menu) == 1)
 labels = [a.text() for a in hot_menu[0].actions()] if hot_menu else []
 picks = [a for a in hot_menu[0].actions()
          if a.isCheckable()] if hot_menu else []
-check("子菜单含全部可选项 + 自动选择",
-      len([x for x in labels if x]) == len(m.HOTKEY_CHOICES) + 1
+check("子菜单含全部可选项 + 自定义 + 自动选择",
+      len([x for x in labels if x]) == len(m.HOTKEY_CHOICES) + 2
+      and "自定义…" in labels
       and labels[-1] == "自动选择（推荐）",
       str(labels))
-check("选项标签是规范的热键名（不是 ctrl+shift+x 这种）",
-      labels[0] == "Ctrl+Shift+X（截菜单友好）", labels[0] if labels else "")
+first_choice = m.parse_hotkey(m.HOTKEY_CHOICES[0])[2]
+check("选项标签是规范的热键名（不是 ctrl+printscreen 这种）",
+      labels[0] == f"{first_choice}（截菜单友好）", labels[0] if labels else "")
 check("**带 Alt 的选项标注了「会失败」**",
       any("Alt" in t and "失败" in t for t in labels), str(labels))
 check("默认勾的是「自动选择」",
@@ -178,7 +180,7 @@ try:
           m.saved_hotkey())
     check("托盘勾选跟着走",
           [a.isChecked() for a in picks]
-          == [False, True, False, False, False, False, False],
+          == [h == "ctrl+shift+s" for h in m.HOTKEY_CHOICES] + [False],
           str([a.isChecked() for a in picks]))
     check("给了提示且提到 Alt 的坑",
           core._notifies and "Alt" in core._notifies[-1][1],
