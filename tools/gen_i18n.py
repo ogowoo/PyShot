@@ -875,6 +875,7 @@ EN = {
     "{} 已经是{}的热键了，一组动作只能用一个键":
         "{} is already the {} hotkey — each action needs its own key",
     "两组热键都能自定义": "custom hotkeys for both region and full screen",
+    "热键文案跟着换": "hotkey labels follow your change",
     "按下你想用的组合键（需要至少一个修饰键）：":
         "Press the combo you want (at least one modifier):",
     "重新检测": "Check again",

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""PyShot 2.25 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
+"""PyShot 2.25.1 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
 
-本版主题：两组热键都能自定义
+本版主题：热键文案跟着换
 作者：Walt Liang <Wat.L@outlook.com>
 
 这是一个自动生成的单文件版本：把多文件源码合并在一起，并在启动时自动安装
@@ -128,10 +128,6 @@ TABLE = {
     "自己按一个组合键，当场检测是否被占用 / 会不会抢别人的快捷键": ("自己按一個組合鍵，當場檢測是否被佔用 / 會不會抢别人的快捷鍵", "Press your own combo and PyShot checks on the spot whether it is taken or would steal another app's shortcut"),
     "自动选择（推荐）": ("自動選擇（推荐）", "Automatic (recommended)"),
     "让程序按候选表挑第一个没被占用的键（优先不含 Alt 的）": ("讓程序按候選表挑第一個沒被佔用的鍵（優先不含 Alt 的）", "Let PyShot pick the first free combo (Alt-free ones first)"),
-    "{} 区域截图": ("{} 區域截圖", "{} Capture Region"),
-    "{} 全屏截图": ("{} 全螢幕截圖", "{} Capture Full Screen"),
-    "PyShot 截图工具\n{}\n双击图标截图": ("PyShot 截圖工具\n{}\n雙擊圖示截圖", "PyShot Screen Capture\n{}\nDouble-click the icon to capture"),
-    "PyShot 截图工具\n双击图标截图 · 右键菜单": ("PyShot 截圖工具\n雙擊圖示截圖 · 右鍵菜單", "PyShot Screen Capture\nDouble-click to capture · right-click for the menu"),
     "跟随系统": ("跟隨系統", "Follow system"),
     "主屏": ("主屏", "Primary"),
     "（未检测到显示器）": ("（未偵測到顯示器）", "(no monitor detected)"),
@@ -176,6 +172,10 @@ TABLE = {
     " · 从进程开始 ": (" · 从進程開始 ", ""),
     " ms（热键=": (" ms（快速鍵=", ""),
     "{} 已改为 {}（立即生效）": ("{} 已改為 {}（立即生效）", "{} is now {} (takes effect immediately)"),
+    "{} 区域截图": ("{} 區域截圖", "{} Capture Region"),
+    "{} 全屏截图": ("{} 全螢幕截圖", "{} Capture Full Screen"),
+    "PyShot 截图工具\n{}\n双击图标截图": ("PyShot 截圖工具\n{}\n雙擊圖示截圖", "PyShot Screen Capture\n{}\nDouble-click the icon to capture"),
+    "PyShot 截图工具\n双击图标截图 · 右键菜单": ("PyShot 截圖工具\n雙擊圖示截圖 · 右鍵菜單", "PyShot Screen Capture\nDouble-click to capture · right-click for the menu"),
     "显示器 {}": ("顯示器 {}", "Monitor {}"),
     "打开编辑器失败": ("開啟編輯器失敗", "Could not open the editor"),
     "全屏截图失败": ("全螢幕截圖失敗", "Full-screen capture failed"),
@@ -519,7 +519,7 @@ TABLE = {
     " 已就绪。": (" 已就绪。", ""),
     "[PyShot] pip 执行失败：": ("[PyShot] pip 執行失敗：", ""),
     "  [缺失] ": ("  [缺失] ", ""),
-    "两组热键都能自定义": ("兩組快速鍵都能自定義", "custom hotkeys for both region and full screen"),
+    "热键文案跟着换": ("快速鍵文案跟着換", "hotkey labels follow your change"),
     "PyShot 使用帮助": ("PyShot 使用幫助", "PyShot Help"),
     "截图 + 标注工具，专为做操作指引/步骤说明优化。": ("截圖 + 標注工具，專為做操作指引/步驟說明優化。", "Screenshot and annotation tool, built for step-by-step guides."),
     "快速开始": ("快速開始", "Quick Start"),
@@ -1064,10 +1064,10 @@ if not ensure_deps():
 命名：`MAJOR.MINOR[.PATCH]`，git 标签为 `v<版本>-qt`（`-qt` 表示根目录这套
 PySide6 实现，`tk_version/` 是独立的 Tkinter 版）。
 """
-APP_VERSION = "2.25"
+APP_VERSION = "2.25.1"
 
 # 这版的一句话主题（写进单文件头与「关于」对话框，便于用户确认自己拿的是哪版）
-VERSION_TITLE = "两组热键都能自定义"
+VERSION_TITLE = "热键文案跟着换"
 
 # 版本日期（本地日期，供日志/文档使用）
 VERSION_DATE = "2026-09-24"
@@ -10853,6 +10853,8 @@ class PyShotApp(QObject):
                          tr("{} 已改为 {}（立即生效）",
                             tr("全屏截图") if full else tr("区域截图"), now)
                          + "\n" + tip)
+        # 菜单文案 / 托盘提示 / 子菜单标题都要跟着变（用户反馈过：只换键不换文案）
+        self._refresh_hotkey_texts()
         return bool(new)
 
     # ---------- 托盘 ----------
@@ -10985,6 +10987,7 @@ class PyShotApp(QObject):
         menu_hot.setToolTip(
             tr("截右键菜单请选不带 Alt 的键：Alt 会让菜单消失"))
         self._hotkey_actions_ui = []
+        self._hotkey_submenus = {}
         for which, title, tip, choices in (
                 ("region", tr("区域截图（选区）"),
                  tr("按这个键框选区域截图"),
@@ -10995,10 +10998,12 @@ class PyShotApp(QObject):
             cur = saved_hotkey(which)
             cur_text = (self.full_hotkey_text if which == "full"
                         else self.hotkey_text)
-            # 标题里带上"当前生效的键"，不用点进去猜
-            sub = menu_hot.addMenu(f"{title} — {cur_text}" if cur_text else title)
+            # 标题里带上"当前生效的键"，不用点进去猜（换键后由
+            # _refresh_hotkey_texts 统一刷新）
+            sub = menu_hot.addMenu(title)
             sub.setToolTipsVisible(True)
             sub.setToolTip(tip)
+            self._hotkey_submenus[which] = sub
             for spec in choices:
                 nice = (parse_hotkey(spec) or (0, 0, spec))[2]
                 label = (tr("{}（截菜单友好）", nice) if "alt" not in spec
@@ -11069,24 +11074,52 @@ class PyShotApp(QObject):
         menu.addAction(act_quit)
 
         self.tray.setContextMenu(menu)
-        # 快捷键写进右侧列（\t 之后的部分由 Qt 右对齐显示）
-        if self.hotkey_text:
-            act_region.setText(tr("区域截图") + "\t" + self.hotkey_text)
-        if self.full_hotkey_text:
-            act_full.setText(tr("全屏截图") + "\t" + self.full_hotkey_text)
-        hints = []
-        if self.hotkey_text:
-            hints.append(tr("{} 区域截图", self.hotkey_text))
-        if self.full_hotkey_text:
-            hints.append(tr("{} 全屏截图", self.full_hotkey_text))
-        if hints:
-            self.tray.setToolTip(
-                tr("PyShot 截图工具\n{}\n双击图标截图", " · ".join(hints)))
-        else:
-            self.tray.setToolTip(
-                tr("PyShot 截图工具\n双击图标截图 · 右键菜单"))
+        self._refresh_hotkey_texts()
         # 注意：启动提示不在这里弹 —— 由 notify_ready() 统一负责，
         # 否则构造托盘和 main() 会各弹一次，用户看到两个气泡。
+
+    def _refresh_hotkey_texts(self):
+        """把当前热键同步到**所有**显示它的地方：菜单项右侧提示、托盘 tooltip、
+        「截图热键」子菜单标题。
+
+        为什么单独抽一个函数：这些文案原本是在 _build_tray_menu 里一次写死的，
+        换了热键却不刷新 —— 用户看到的还是旧键（"菜单的快捷键提示不会随着我
+        改变的快捷键变更显示"）。换键后不重建整个菜单是为了安全：菜单可能正开着，
+        重建会把 action 删掉。所以只改文案。
+        """
+        try:
+            act = getattr(self, "act_region", None)
+            if act is not None:
+                act.setText(tr("区域截图")
+                            + (f"\t{self.hotkey_text}" if self.hotkey_text
+                               else ""))
+            act = getattr(self, "act_full", None)
+            if act is not None:
+                act.setText(tr("全屏截图")
+                            + (f"\t{self.full_hotkey_text}"
+                               if self.full_hotkey_text else ""))
+            # 子菜单标题里的"当前生效的键"
+            for which, sub in (getattr(self, "_hotkey_submenus", {}) or {}).items():
+                base = (tr("区域截图（选区）") if which == "region"
+                        else tr("全屏截图"))
+                now = (self.full_hotkey_text if which == "full"
+                       else self.hotkey_text)
+                sub.setTitle(f"{base} — {now}" if now else base)
+            tray = getattr(self, "tray", None)
+            if tray is not None:
+                hints = []
+                if self.hotkey_text:
+                    hints.append(tr("{} 区域截图", self.hotkey_text))
+                if self.full_hotkey_text:
+                    hints.append(tr("{} 全屏截图", self.full_hotkey_text))
+                if hints:
+                    tray.setToolTip(
+                        tr("PyShot 截图工具\n{}\n双击图标截图", " · ".join(hints)))
+                else:
+                    tray.setToolTip(
+                        tr("PyShot 截图工具\n双击图标截图 · 右键菜单"))
+        except Exception as exc:                   # noqa: BLE001
+            self._cap_log("刷新热键文案失败", repr(exc))
 
     def _on_hotkey(self, hotkey_id=None):
         """来自原生消息回调（WM_HOTKEY）——按热键 id 分发，延后一拍再动作。

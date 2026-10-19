@@ -529,6 +529,8 @@ class PyShotApp(QObject):
                          tr("{} 已改为 {}（立即生效）",
                             tr("全屏截图") if full else tr("区域截图"), now)
                          + "\n" + tip)
+        # 菜单文案 / 托盘提示 / 子菜单标题都要跟着变（用户反馈过：只换键不换文案）
+        self._refresh_hotkey_texts()
         return bool(new)
 
     # ---------- 托盘 ----------
@@ -661,6 +663,7 @@ class PyShotApp(QObject):
         menu_hot.setToolTip(
             tr("截右键菜单请选不带 Alt 的键：Alt 会让菜单消失"))
         self._hotkey_actions_ui = []
+        self._hotkey_submenus = {}
         for which, title, tip, choices in (
                 ("region", tr("区域截图（选区）"),
                  tr("按这个键框选区域截图"),
@@ -671,10 +674,12 @@ class PyShotApp(QObject):
             cur = saved_hotkey(which)
             cur_text = (self.full_hotkey_text if which == "full"
                         else self.hotkey_text)
-            # 标题里带上"当前生效的键"，不用点进去猜
-            sub = menu_hot.addMenu(f"{title} — {cur_text}" if cur_text else title)
+            # 标题里带上"当前生效的键"，不用点进去猜（换键后由
+            # _refresh_hotkey_texts 统一刷新）
+            sub = menu_hot.addMenu(title)
             sub.setToolTipsVisible(True)
             sub.setToolTip(tip)
+            self._hotkey_submenus[which] = sub
             for spec in choices:
                 nice = (parse_hotkey(spec) or (0, 0, spec))[2]
                 label = (tr("{}（截菜单友好）", nice) if "alt" not in spec
@@ -745,24 +750,52 @@ class PyShotApp(QObject):
         menu.addAction(act_quit)
 
         self.tray.setContextMenu(menu)
-        # 快捷键写进右侧列（\t 之后的部分由 Qt 右对齐显示）
-        if self.hotkey_text:
-            act_region.setText(tr("区域截图") + "\t" + self.hotkey_text)
-        if self.full_hotkey_text:
-            act_full.setText(tr("全屏截图") + "\t" + self.full_hotkey_text)
-        hints = []
-        if self.hotkey_text:
-            hints.append(tr("{} 区域截图", self.hotkey_text))
-        if self.full_hotkey_text:
-            hints.append(tr("{} 全屏截图", self.full_hotkey_text))
-        if hints:
-            self.tray.setToolTip(
-                tr("PyShot 截图工具\n{}\n双击图标截图", " · ".join(hints)))
-        else:
-            self.tray.setToolTip(
-                tr("PyShot 截图工具\n双击图标截图 · 右键菜单"))
+        self._refresh_hotkey_texts()
         # 注意：启动提示不在这里弹 —— 由 notify_ready() 统一负责，
         # 否则构造托盘和 main() 会各弹一次，用户看到两个气泡。
+
+    def _refresh_hotkey_texts(self):
+        """把当前热键同步到**所有**显示它的地方：菜单项右侧提示、托盘 tooltip、
+        「截图热键」子菜单标题。
+
+        为什么单独抽一个函数：这些文案原本是在 _build_tray_menu 里一次写死的，
+        换了热键却不刷新 —— 用户看到的还是旧键（"菜单的快捷键提示不会随着我
+        改变的快捷键变更显示"）。换键后不重建整个菜单是为了安全：菜单可能正开着，
+        重建会把 action 删掉。所以只改文案。
+        """
+        try:
+            act = getattr(self, "act_region", None)
+            if act is not None:
+                act.setText(tr("区域截图")
+                            + (f"\t{self.hotkey_text}" if self.hotkey_text
+                               else ""))
+            act = getattr(self, "act_full", None)
+            if act is not None:
+                act.setText(tr("全屏截图")
+                            + (f"\t{self.full_hotkey_text}"
+                               if self.full_hotkey_text else ""))
+            # 子菜单标题里的"当前生效的键"
+            for which, sub in (getattr(self, "_hotkey_submenus", {}) or {}).items():
+                base = (tr("区域截图（选区）") if which == "region"
+                        else tr("全屏截图"))
+                now = (self.full_hotkey_text if which == "full"
+                       else self.hotkey_text)
+                sub.setTitle(f"{base} — {now}" if now else base)
+            tray = getattr(self, "tray", None)
+            if tray is not None:
+                hints = []
+                if self.hotkey_text:
+                    hints.append(tr("{} 区域截图", self.hotkey_text))
+                if self.full_hotkey_text:
+                    hints.append(tr("{} 全屏截图", self.full_hotkey_text))
+                if hints:
+                    tray.setToolTip(
+                        tr("PyShot 截图工具\n{}\n双击图标截图", " · ".join(hints)))
+                else:
+                    tray.setToolTip(
+                        tr("PyShot 截图工具\n双击图标截图 · 右键菜单"))
+        except Exception as exc:                   # noqa: BLE001
+            self._cap_log("刷新热键文案失败", repr(exc))
 
     def _on_hotkey(self, hotkey_id=None):
         """来自原生消息回调（WM_HOTKEY）——按热键 id 分发，延后一拍再动作。
