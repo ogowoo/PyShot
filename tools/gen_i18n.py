@@ -838,6 +838,10 @@ EN = {
         "Capture hotkey → Custom… and press your own combo: the dialog **checks it "
         "immediately** — syntax, whether it is taken globally, whether it is a known app "
         "shortcut (Ctrl+Shift+F is Outlook's Find), and whether it contains Alt.",
+    "- **区域截图和全屏截图两个热键都能改**：托盘菜单 →「截图热键」，下面分「区域截图（选区）」和「全屏截图」两节，各自可以选预设、自定义或恢复自动选择（同一个组合不能同时绑两个动作）。":
+        "- **Both the region and the full-screen hotkey can be changed**: tray menu → "
+        "Capture hotkey has a Region capture and a Full-screen capture section, each with "
+        "presets, Custom… and Automatic (one combo cannot drive two actions).",
     # ---- 截图热键可选 ----
     "截图热键": "Capture hotkey",
     "截右键菜单请选不带 Alt 的键：Alt 会让菜单消失":
@@ -856,6 +860,21 @@ EN = {
         "Press your own combo and PyShot checks on the spot whether it is taken "
         "or would steal another app's shortcut",
     "自定义截图热键": "Custom capture hotkey",
+    # ---- 两组热键都可自定义 ----
+    "区域截图（选区）": "Region capture (selection)",
+    "全屏截图": "Full-screen capture",
+    "按这个键框选区域截图": "Press this to select a region",
+    "按这个键截鼠标所在的那块显示器":
+        "Press this to capture the monitor under the mouse",
+    "自定义全屏截图热键": "Custom full-screen capture hotkey",
+    "{} 已经是{}的热键了，换一个组合（一个键只能绑一个动作）":
+        "{} is already the {} hotkey — pick another combo (one key, one action)",
+    "{} 已改为 {}（立即生效）": "{} is now {} (takes effect immediately)",
+    "全屏截图热键同样可以用「自定义…」自己按一个":
+        "The full-screen hotkey can also be set with Custom…",
+    "{} 已经是{}的热键了，一组动作只能用一个键":
+        "{} is already the {} hotkey — each action needs its own key",
+    "两组热键都能自定义": "custom hotkeys for both region and full screen",
     "按下你想用的组合键（需要至少一个修饰键）：":
         "Press the combo you want (at least one modifier):",
     "重新检测": "Check again",

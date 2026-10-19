@@ -203,10 +203,14 @@ core = Probe()
 core._build_tray_menu()
 hot = [a.menu() for a in core.menu.actions()
        if a.menu() is not None and a.text() == "截图热键"][0]
-labels = [a.text() for a in hot.actions() if a.text()]
+# 现在是两层：「截图热键」→「区域截图（选区）」→ 选项
+region2 = [a.menu() for a in hot.actions()
+           if a.menu() is not None and a.text().startswith("区域截图")][0]
+labels = [a.text() for a in region2.actions() if a.text()]
 check("**托盘子菜单里有「自定义…」**", "自定义…" in labels, str(labels))
 check("自定义项的提示说明了会检测冲突",
-      any("检测" in a.toolTip() for a in hot.actions() if a.text() == "自定义…"))
+      any("检测" in a.toolTip() for a in region2.actions()
+          if a.text() == "自定义…"))
 
 print()
 if failures:

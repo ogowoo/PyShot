@@ -66,16 +66,18 @@ def pretty_spec(spec: str) -> str:
 class HotkeyDialog(QDialog):
     """输入一个组合键，实时显示"可用 / 有风险 / 不可用"，并给出原因。"""
 
-    def __init__(self, parent, current: str, check, suggest: list | None = None):
+    def __init__(self, parent, current: str, check, suggest: list | None = None,
+                 title: str = ""):
         """
         current  当前生效的组合（形如 "ctrl+shift+x"）
         check    回调 spec -> dict（main.check_hotkey 的结果）
         suggest  推荐组合列表（第一个作为"用推荐值"按钮）
+        title    窗口标题（区域 / 全屏各自不同）
         """
         super().__init__(parent)
         self._check = check
         self._suggest = list(suggest or [])
-        self.setWindowTitle(tr("自定义截图热键"))
+        self.setWindowTitle(title or tr("自定义截图热键"))
         self.setMinimumWidth(460)
 
         lay = QVBoxLayout(self)

@@ -123,9 +123,17 @@ core._build_tray_menu()
 hot_menu = [a.menu() for a in core.menu.actions()
             if a.menu() is not None and a.text() == "截图热键"]
 check("托盘菜单里有「截图热键」子菜单", len(hot_menu) == 1)
-labels = [a.text() for a in hot_menu[0].actions()] if hot_menu else []
-picks = [a for a in hot_menu[0].actions()
-         if a.isCheckable()] if hot_menu else []
+def region_menu(hot_menu):
+    """「截图热键」下的「区域截图（选区）」子菜单（现在是两层结构）。"""
+    for a in hot_menu.actions():
+        if a.menu() is not None and a.text().startswith("区域截图"):
+            return a.menu()
+    return None
+
+
+region = region_menu(hot_menu[0]) if hot_menu else None
+labels = [a.text() for a in region.actions()] if region else []
+picks = [a for a in region.actions() if a.isCheckable()] if region else []
 check("子菜单含全部可选项 + 自定义 + 自动选择",
       len([x for x in labels if x]) == len(m.HOTKEY_CHOICES) + 2
       and "自定义…" in labels

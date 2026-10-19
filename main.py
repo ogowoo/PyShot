@@ -84,10 +84,14 @@ DEFAULT_HOTKEYS = ["ctrl+printscreen", "ctrl+shift+x", "ctrl+shift+f9",
 FULLSCREEN_HOTKEYS = ["ctrl+shift+printscreen", "ctrl+shift+f10",
                       "ctrl+alt+f10", "ctrl+alt+f"]
 
-# 托盘「截图热键」子菜单里可选的组合：PrtSc 族与不含 Alt 的排前面
-HOTKEY_CHOICES = ["ctrl+printscreen", "ctrl+shift+printscreen",
-                  "ctrl+shift+x", "ctrl+shift+f9",
+# 托盘「截图热键」子菜单里可选的组合：PrtSc 族与不含 Alt 的排前面。
+# 两组列表**刻意不重叠**：同一个组合只能绑一个动作，菜单里点混了会互相打架。
+HOTKEY_CHOICES = ["ctrl+printscreen", "ctrl+shift+x", "ctrl+shift+f9",
                   "ctrl+shift+s", "ctrl+alt+x", "ctrl+alt+f9"]
+
+# 全屏截图的可选组合（与区域那组不重叠）
+FULLSCREEN_CHOICES = ["ctrl+shift+printscreen", "ctrl+alt+printscreen",
+                      "ctrl+shift+f10", "ctrl+shift+f7", "ctrl+alt+f10"]
 
 # 已知会被"抢"的常用软件快捷键：只用来**提示**（注册照样成功，属于静默抢占）
 KNOWN_CONFLICTS = {
@@ -99,8 +103,9 @@ KNOWN_CONFLICTS = {
     "ctrl+alt+a": "QQ 截图",
 }
 
-# 热键设置键（存用户选的组合；空 = 用内置候选表）
+# 热键设置键（存用户选的组合；空 = 用内置候选表）。区域与全屏各自独立
 HOTKEY_SETTING = "capture_hotkey"
+HOTKEY_SETTING_FULL = "capture_hotkey_full"
 
 _VK_NAMES = {
     "printscreen": 0x2C, "prtsc": 0x2C, "insert": 0x2D, "delete": 0x2E,
@@ -156,11 +161,12 @@ def parse_hotkey(spec: str):
     return mods | MOD_NOREPEAT, vk, "+".join(labels)
 
 
-def saved_hotkey() -> str:
+def saved_hotkey(which: str = "region") -> str:
     """用户在托盘「截图热键」里选的组合（空 = 没选过，用内置候选表）。"""
     try:
         from i18n import get_setting
-        return str(get_setting(HOTKEY_SETTING, "") or "").strip().lower()
+        key = HOTKEY_SETTING_FULL if which == "full" else HOTKEY_SETTING
+        return str(get_setting(key, "") or "").strip().lower()
     except Exception:                              # noqa: BLE001
         return ""
 
@@ -345,7 +351,7 @@ class PyShotApp(QObject):
         优先级：用户选的组合（设置里）> PYSHOT_HOTKEY 环境变量 > 内置候选表。
         """
         env_spec = os.environ.get("PYSHOT_HOTKEY")
-        chosen = saved_hotkey()
+        chosen = saved_hotkey("region")
         if chosen:
             region_cands = [chosen] + [c for c in DEFAULT_HOTKEYS
                                        if c != chosen]
@@ -353,8 +359,12 @@ class PyShotApp(QObject):
             region_cands = [env_spec]
         else:
             region_cands = DEFAULT_HOTKEYS
+        chosen_full = saved_hotkey("full")
+        full_cands = ([chosen_full] + [c for c in FULLSCREEN_HOTKEYS
+                                       if c != chosen_full]
+                      if chosen_full else FULLSCREEN_HOTKEYS)
         self._region_hotkeys = register_global_hotkeys(region_cands, 0)
-        self._full_hotkeys = register_global_hotkeys(FULLSCREEN_HOTKEYS, 100)
+        self._full_hotkeys = register_global_hotkeys(full_cands, 100)
         self._hotkeys = {**self._region_hotkeys, **self._full_hotkeys}
         self._hotkey_ok = bool(self._hotkeys)
         self.hotkey_text = next(iter(self._region_hotkeys.values()), "")
@@ -382,22 +392,41 @@ class PyShotApp(QObject):
         else:
             print("[PyShot] 热键注册失败，已尝试：" + "、".join(region_cands))
 
-    def custom_hotkey(self):
-        """托盘「截图热键 → 自定义…」：自己按一个组合键，当场检测冲突。"""
+    def custom_hotkey(self, which: str = "region"):
+        """托盘「截图热键 → … → 自定义…」：自己按组合键，当场检测冲突。"""
         from hotkeyui import HotkeyDialog
-        dlg = HotkeyDialog(self.editors[-1] if self.editors else None,
-                           saved_hotkey() or self.hotkey_text or "",
-                           check_hotkey, HOTKEY_CHOICES)
+        full = (which == "full")
+        other_text = self.hotkey_text if full else self.full_hotkey_text
+        choices = FULLSCREEN_CHOICES if full else HOTKEY_CHOICES
+
+        def check(spec, _probe=True):
+            info = check_hotkey(spec)
+            # 两组不能撞车
+            if info["ok"] and other_text and \
+                    info["name"].lower() == other_text.lower():
+                info["warnings"].append(
+                    tr("{} 已经是{}的热键了，一组动作只能用一个键",
+                       other_text, tr("区域截图") if full else tr("全屏截图")))
+                info["level"] = "bad"
+            return info
+
+        dlg = HotkeyDialog(
+            self.editors[-1] if self.editors else None,
+            saved_hotkey(which) or (self.full_hotkey_text if full
+                                    else self.hotkey_text),
+            check, choices,
+            title=(tr("自定义全屏截图热键") if full else tr("自定义截图热键")))
         if dlg.exec() != QDialog.Accepted:
             return
         spec = dlg.chosen_spec()
-        info = check_hotkey(spec)
-        if not info["ok"]:
-            self._notify(tr("截图热键"), "\n".join(info["errors"]) or
-                         tr("这个组合不能用"))
+        info = check(spec)
+        if not info["ok"] or info["level"] == "bad":
+            self._notify(tr("截图热键"), "\n".join(info["errors"]
+                                                   + info["warnings"])
+                         or tr("这个组合不能用"))
             return
-        self.set_hotkey(spec)
-        self._cap_log("自定义热键", spec, info["level"])
+        self.set_hotkey(spec, which)
+        self._cap_log("自定义热键", which, spec, info["level"])
 
     def hotkey_report(self) -> str:
         """当前热键的自检报告（启动日志/排障用）。"""
@@ -408,17 +437,39 @@ class PyShotApp(QObject):
         head = tr("区域 {} ：可用", self.hotkey_text)
         return head + ("；".join([""] + issues) if issues else "")
 
-    def set_hotkey(self, spec: str, quiet: bool = False) -> bool:
-        """换区域截图热键：**立即生效**（先注销旧的再注册新的），并记进设置。
+    def set_hotkey(self, spec: str, which: str = "region",
+                   quiet: bool = False) -> bool:
+        """换区域 / 全屏截图热键：**立即生效**，并记进设置。
 
+        which = "region"（选区截图）或 "full"（全屏截图）。
         为什么要能换：带 Alt 的组合会触发 Windows 的"菜单键"行为，右键菜单/
-        下拉框会在按下 Alt 的瞬间消失 —— 截这类菜单必须用不含 Alt 的键。
+        下拉框会在按下 Alt 的瞬间消失；而像 Ctrl+Shift+F 这种又会抢走 Outlook
+        的快捷键 —— 用户得能自己挑。
         """
         from i18n import set_setting
+        full = (which == "full")
+        attr = "_full_hotkeys" if full else "_region_hotkeys"
+        setting = HOTKEY_SETTING_FULL if full else HOTKEY_SETTING
+        cands = FULLSCREEN_HOTKEYS if full else DEFAULT_HOTKEYS
+        other_text = (self.hotkey_text if full else self.full_hotkey_text)
         spec = (spec or "").strip().lower()
+
+        # 两组不能撞车：同一个组合没法注册两次
+        parsed_new = parse_hotkey(spec) if spec else None
+        if parsed_new and other_text and \
+                parsed_new[2].lower() == other_text.strip().lower():
+            # 提示里说的是"占着这个键的是哪一组"：设全屏时占着的是区域，
+            # 反之亦然（这里搞反过一次）
+            owner = tr("区域截图") if full else tr("全屏截图")
+            self._notify(
+                tr("截图热键"),
+                tr("{} 已经是{}的热键了，换一个组合（一个键只能绑一个动作）",
+                   other_text, owner))
+            return False
+
         try:
             user32 = ctypes.windll.user32
-            for hid in list(self._region_hotkeys):
+            for hid in list(getattr(self, attr, {})):
                 try:
                     user32.UnregisterHotKey(None, hid)
                 except Exception:                  # noqa: BLE001
@@ -426,24 +477,30 @@ class PyShotApp(QObject):
         except Exception:                          # noqa: BLE001
             pass
 
-        parsed = parse_hotkey(spec) if spec else None
-        if parsed is None:
-            spec = ""                              # 空 = 回到候选表自动挑
-        set_setting(HOTKEY_SETTING, spec)
-        new = register_global_hotkeys([spec] if spec else DEFAULT_HOTKEYS, 0)
+        if parse_hotkey(spec) is None:
+            spec = ""                              # 空/非法 = 回到候选表自动挑
+        set_setting(setting, spec)
+        new = register_global_hotkeys([spec] if spec else cands,
+                                     0 if not full else 100)
         if not new and spec:
             # 新键被占用：退回候选表，别让用户连截图键都没了
-            new = register_global_hotkeys(DEFAULT_HOTKEYS, 0)
-        self._region_hotkeys = new
-        self._hotkeys = {**self._region_hotkeys,
+            new = register_global_hotkeys(cands, 0 if not full else 100)
+        setattr(self, attr, new)
+        self._hotkeys = {**getattr(self, "_region_hotkeys", {}),
                          **getattr(self, "_full_hotkeys", {})}
         self._hotkey_ok = bool(self._hotkeys)
-        self.hotkey_text = next(iter(self._region_hotkeys.values()), "")
-        for hid in list(self._hotkey_actions):
-            if self._hotkey_actions[hid] == "region":
+        # 显示名取 values()（dict 的 key 是热键 id，别取成 id 了 —— 踩过）
+        self.hotkey_text = next(
+            iter((getattr(self, "_region_hotkeys", {}) or {}).values()), "")
+        self.full_hotkey_text = next(
+            iter((getattr(self, "_full_hotkeys", {}) or {}).values()), "")
+        # id → 动作 与原生事件过滤器都要重装
+        action = "fullscreen" if full else "region"
+        for hid in list(getattr(self, "_hotkey_actions", {})):
+            if self._hotkey_actions[hid] == action:
                 del self._hotkey_actions[hid]
-        for hid in self._region_hotkeys:
-            self._hotkey_actions[hid] = "region"
+        for hid in new:
+            self._hotkey_actions[hid] = action
         if self._filter is not None:
             try:
                 self.app.removeNativeEventFilter(self._filter)
@@ -452,19 +509,26 @@ class PyShotApp(QObject):
         if self._hotkey_ok:
             self._filter = HotkeyFilter(self._hotkeys.keys(), self._on_hotkey)
             self.app.installNativeEventFilter(self._filter)
-        self._cap_log("热键已更换", spec or "auto", "->", self.hotkey_text)
-        # 菜单勾选 + 编辑器里的提示同步
-        for spec_i, act in getattr(self, "_hotkey_actions_ui", []):
-            act.setChecked(spec_i == spec)
+        self._cap_log("热键已更换", action, spec or "auto", "->",
+                      self.full_hotkey_text if full else self.hotkey_text)
+        # 菜单勾选（两组各自的勾选项） + 编辑器里的提示同步
+        for which_i, spec_i, act in getattr(self, "_hotkey_actions_ui", []):
+            if which_i == which:
+                act.setChecked(spec_i == spec)
         for ed in getattr(self, "editors", []):
             try:
                 ed.set_hotkey_hint(self.hotkey_text, self.full_hotkey_text)
             except Exception:                      # noqa: BLE001
                 pass
         if not quiet:
-            tip = tr("截右键菜单请用不带 Alt 的键（Alt 会让菜单消失）")
+            now = self.full_hotkey_text if full else self.hotkey_text
+            tip = (tr("截右键菜单请用不带 Alt 的键（Alt 会让菜单消失）")
+                   if not full else
+                   tr("全屏截图热键同样可以用「自定义…」自己按一个"))
             self._notify(tr("截图热键"),
-                         tr("已改为 {}（立即生效）", self.hotkey_text) + "\n" + tip)
+                         tr("{} 已改为 {}（立即生效）",
+                            tr("全屏截图") if full else tr("区域截图"), now)
+                         + "\n" + tip)
         return bool(new)
 
     # ---------- 托盘 ----------
@@ -590,37 +654,57 @@ class PyShotApp(QObject):
         menu.addMenu(menu_delay)
 
         # 截图热键：**能换**很重要 —— 带 Alt 的组合会让 Windows 进入"菜单模式"，
-        # 右键菜单/下拉框在按下 Alt 的瞬间就消失，截菜单必须用不含 Alt 的键
+        # 右键菜单/下拉框在按下 Alt 的瞬间就消失，截菜单必须用不含 Alt 的键；
+        # 另外像 Ctrl+Shift+F 会抢走 Outlook 的快捷键。区域/全屏两组各自可改。
         menu_hot = menu.addMenu(make_menu_icon("camera"), tr("截图热键"))
         menu_hot.setToolTipsVisible(True)
         menu_hot.setToolTip(
             tr("截右键菜单请选不带 Alt 的键：Alt 会让菜单消失"))
         self._hotkey_actions_ui = []
-        cur = saved_hotkey()
-        for spec in HOTKEY_CHOICES:
-            nice = (parse_hotkey(spec) or (0, 0, spec))[2]
-            label = (tr("{}（截菜单友好）", nice) if "alt" not in spec
-                     else tr("{}（含 Alt，截菜单会失败）", nice))
-            act = QAction(label, menu_hot)
-            act.setCheckable(True)
-            act.setChecked(spec == cur)
-            act.triggered.connect(
-                lambda checked=False, s=spec: self.set_hotkey(s))
-            menu_hot.addAction(act)
-            self._hotkey_actions_ui.append((spec, act))
-        menu_hot.addSeparator()
-        act_custom = QAction(tr("自定义…"), menu_hot)
-        act_custom.setToolTip(
-            tr("自己按一个组合键，当场检测是否被占用 / 会不会抢别人的快捷键"))
-        act_custom.triggered.connect(self.custom_hotkey)
-        menu_hot.addAction(act_custom)
-        act_auto = QAction(tr("自动选择（推荐）"), menu_hot)
-        act_auto.setCheckable(True)
-        act_auto.setChecked(not cur)
-        act_auto.setToolTip(tr("让程序按候选表挑第一个没被占用的键（优先不含 Alt 的）"))
-        act_auto.triggered.connect(lambda: self.set_hotkey(""))
-        menu_hot.addAction(act_auto)
-        self._hotkey_actions_ui.append(("", act_auto))
+        for which, title, tip, choices in (
+                ("region", tr("区域截图（选区）"),
+                 tr("按这个键框选区域截图"),
+                 HOTKEY_CHOICES),
+                ("full", tr("全屏截图"),
+                 tr("按这个键截鼠标所在的那块显示器"),
+                 FULLSCREEN_CHOICES)):
+            cur = saved_hotkey(which)
+            cur_text = (self.full_hotkey_text if which == "full"
+                        else self.hotkey_text)
+            # 标题里带上"当前生效的键"，不用点进去猜
+            sub = menu_hot.addMenu(f"{title} — {cur_text}" if cur_text else title)
+            sub.setToolTipsVisible(True)
+            sub.setToolTip(tip)
+            for spec in choices:
+                nice = (parse_hotkey(spec) or (0, 0, spec))[2]
+                label = (tr("{}（截菜单友好）", nice) if "alt" not in spec
+                         else tr("{}（含 Alt，截菜单会失败）", nice))
+                act = QAction(label, sub)
+                act.setCheckable(True)
+                # 只勾"用户明确选过的那个"；没选过就只勾「自动选择」，
+                # 别让"预设"和"自动"同时打勾（会让人以为两个都生效）
+                act.setChecked(bool(cur) and spec == cur)
+                act.triggered.connect(
+                    lambda checked=False, s=spec, w=which:
+                    self.set_hotkey(s, w))
+                sub.addAction(act)
+                self._hotkey_actions_ui.append((which, spec, act))
+            sub.addSeparator()
+            act_custom = QAction(tr("自定义…"), sub)
+            act_custom.setToolTip(
+                tr("自己按一个组合键，当场检测是否被占用 / 会不会抢别人的快捷键"))
+            act_custom.triggered.connect(
+                lambda checked=False, w=which: self.custom_hotkey(w))
+            sub.addAction(act_custom)
+            act_auto = QAction(tr("自动选择（推荐）"), sub)
+            act_auto.setCheckable(True)
+            act_auto.setChecked(not cur)
+            act_auto.setToolTip(
+                tr("让程序按候选表挑第一个没被占用的键（优先不含 Alt 的）"))
+            act_auto.triggered.connect(
+                lambda checked=False, w=which: self.set_hotkey("", w))
+            sub.addAction(act_auto)
+            self._hotkey_actions_ui.append((which, "", act_auto))
         menu.addMenu(menu_hot)
 
         menu.addSeparator()
