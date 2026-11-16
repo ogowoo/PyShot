@@ -43,7 +43,7 @@ def check(name, cond, extra=""):
         failures.append(name)
 
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 # 1) 仅构造应用（等价于启动早段）不应发任何通知
 core = PyShotApp(app)

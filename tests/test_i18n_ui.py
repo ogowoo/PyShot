@@ -23,7 +23,7 @@ sys.path.insert(0, HERE)
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QApplication
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 import i18n
 from i18n import set_language, tr

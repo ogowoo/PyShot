@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QApplication, QWidget
 
 from snipper import SnipperOverlay, MAG_SIZE
 
-app = QApplication(sys.argv)
+app = QApplication.instance() or QApplication(sys.argv)
 
 # 棋盘格窗口：黑白 1px 交替太难渲染，用 4px 色块棋盘
 probe = QWidget()

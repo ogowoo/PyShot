@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QApplication
 
 from snipper import SnipperOverlay, grab_virtual_desktop
 
-app = QApplication(sys.argv)
+app = QApplication.instance() or QApplication(sys.argv)
 
 # 1) 先看桌面抓图是否正常
 bg, geo = grab_virtual_desktop()

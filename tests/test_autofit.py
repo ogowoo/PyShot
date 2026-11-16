@@ -11,6 +11,11 @@
 import os
 import sys
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(errors="backslashreplace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(errors="backslashreplace")
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("PYSHOT_LANG", "zh_CN")
 os.environ["PYSHOT_SKIP_DEPS"] = "1"
@@ -22,7 +27,7 @@ from PySide6.QtGui import QColor, QPixmap, QWheelEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 from editor import EditorWindow
 

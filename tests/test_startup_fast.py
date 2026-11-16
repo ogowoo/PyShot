@@ -42,7 +42,7 @@ from PySide6.QtGui import QColor, QPixmap, QFont
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 import main as m
 import style

@@ -16,7 +16,7 @@ sys.path.insert(0, HERE)
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QApplication, QMenu
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 import i18n
 from i18n import (AUTO, LANGUAGES, TABLE, language_from_locale, set_language,

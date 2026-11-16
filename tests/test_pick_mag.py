@@ -20,7 +20,7 @@ from PySide6.QtWidgets import QApplication
 from editor import EditorWindow
 from style import apply_theme
 
-app = QApplication(sys.argv)
+app = QApplication.instance() or QApplication(sys.argv)
 apply_theme(app)
 
 # 色块图：25px 一块，每块不同色相，块间 1px 白线

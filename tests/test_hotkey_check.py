@@ -32,7 +32,7 @@ i18n.reset_cache()
 from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import QApplication, QDialogButtonBox
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 import style
 

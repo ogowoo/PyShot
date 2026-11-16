@@ -25,7 +25,7 @@ sys.path.insert(0, HERE)
 
 from PySide6.QtWidgets import QApplication
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 import scroller
 from scroller import Frame, find_scroll

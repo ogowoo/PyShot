@@ -31,7 +31,7 @@ from watermark import (DEFAULT_SETTINGS, WatermarkDialog, describe,
                        draw_watermark, load_default, normalize, placements,
                        save_default, watermark_size)
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 failures = []
 
 

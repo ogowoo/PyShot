@@ -33,7 +33,7 @@ from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtWidgets import QApplication, QDialog
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 import style
 
@@ -47,7 +47,7 @@ failures = []
 
 
 def check(name, cond, extra=""):
-    print(("PASS" if cond else "FAIL"), name, extra)
+    print(("PASS" if cond else "FAIL"), name.encode("ascii", "backslashreplace").decode(), str(extra).encode("ascii", "backslashreplace").decode())
     if not cond:
         failures.append(name)
 
@@ -155,4 +155,4 @@ print()
 if failures:
     print("失败项:", failures)
     sys.exit(1)
-print("扩展画布边缘测试通过 ✔")
+print("canvas expand tests passed")

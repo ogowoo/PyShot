@@ -33,7 +33,7 @@ from PySide6.QtGui import QColor, QMouseEvent, QPixmap, QWheelEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 from editor import EditorWindow
 from shapes import RectShape

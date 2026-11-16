@@ -28,7 +28,7 @@ from PySide6.QtCore import QRectF
 from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtWidgets import QApplication
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 import session
 from shapes import RectShape
@@ -37,7 +37,7 @@ failures = []
 
 
 def check(name, cond, extra=""):
-    print(("PASS" if cond else "FAIL"), name, extra)
+    print(('PASS' if cond else 'FAIL'), ascii(name), ascii(extra))
     if not cond:
         failures.append(name)
 
@@ -133,4 +133,4 @@ print()
 if failures:
     print("失败项:", failures)
     sys.exit(1)
-print("历史标签保留测试通过 ✔")
+print('history keep test passed')

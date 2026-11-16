@@ -17,7 +17,7 @@ sys.path.insert(0, HERE)
 from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtWidgets import QApplication
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 from editor import PALETTE, EditorWindow
 
@@ -25,7 +25,7 @@ failures = []
 
 
 def check(name, cond, extra=""):
-    print(("PASS" if cond else "FAIL"), name, extra)
+    print(("PASS" if cond else "FAIL"), name.encode("ascii", "backslashreplace").decode(), str(extra).encode("ascii", "backslashreplace").decode())
     if not cond:
         failures.append(name)
 

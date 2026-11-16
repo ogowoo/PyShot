@@ -34,7 +34,7 @@ from scroller import ScrollCapture, ScrollDriver, array_to_pixmap, _UNIT_DEFAULT
 
 _set_setting(SCROLL_ENABLED_KEY, True)
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 failures = []
 
 

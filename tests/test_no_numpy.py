@@ -18,7 +18,8 @@ class _BlockNumpy:
         return None
 
 
-sys.meta_path.insert(0, _BlockNumpy())
+_numpy_blocker = _BlockNumpy()
+sys.meta_path.insert(0, _numpy_blocker)
 for mod in list(sys.modules):
     if mod == "numpy" or mod.startswith("numpy."):
         del sys.modules[mod]
@@ -42,7 +43,7 @@ from PySide6.QtCore import QRect, QTimer
 from PySide6.QtGui import QColor, QFont, QPainter, QPixmap
 from PySide6.QtWidgets import QApplication
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 # 这些模块都不能再去 import numpy
 import capture_utils
@@ -121,7 +122,10 @@ check("无 numpy 也能拼出长图",
       else str(out))
 
 print()
+if _numpy_blocker in sys.meta_path:
+    sys.meta_path.remove(_numpy_blocker)
+
 if failures:
     print("失败项:", failures)
     sys.exit(1)
-print("无 numpy 运行验证通过 ✔")
+print("no-numpy runtime test passed")

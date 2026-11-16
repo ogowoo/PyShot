@@ -27,7 +27,7 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QDialog, QDialogButtonBox
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 from border import BORDER_DEFAULTS, BorderDialog
 from editor import EditorWindow

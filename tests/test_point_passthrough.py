@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QApplication
 
 from snipper import SnipperOverlay
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 failures = []
 
 

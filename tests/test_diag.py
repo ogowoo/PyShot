@@ -43,7 +43,7 @@ import time
 
 from PySide6.QtWidgets import QApplication
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 diag.dump_env("单元测试")
 with diag.timed("示例阶段", "参数A"):

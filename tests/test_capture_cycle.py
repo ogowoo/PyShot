@@ -30,7 +30,7 @@ from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent, QPixmap
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 import main as m
 import snipper as snip
@@ -39,7 +39,7 @@ failures = []
 
 
 def check(name, cond, extra=""):
-    print(("PASS" if cond else "FAIL"), name, extra)
+    print(("PASS" if cond else "FAIL"), name.encode("ascii", "backslashreplace").decode(), str(extra).encode("ascii", "backslashreplace").decode())
     if not cond:
         failures.append(name)
 
@@ -181,6 +181,6 @@ invariants(core2, "取消后")
 
 print()
 if failures:
-    print("失败项:", failures)
+    print([ascii(x) for x in failures])
     sys.exit(1)
-print("截图循环不变量测试通过 ✔")
+print("capture cycle tests passed")

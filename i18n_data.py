@@ -197,7 +197,7 @@ TABLE = {
     "颜色": ("顏色", "Color"),
     "打开系统拾色器": ("開啟系統拾色器", "Open the system color picker"),
     "自定义颜色": ("自定義顏色", "Custom colors"),
-    "输入文字，Enter 确认 / Esc 取消": ("輸入文字，Enter 確認 / Esc 取消", "Type text, Enter to confirm / Esc to cancel"),
+    "输入文字，Ctrl+Enter 确认 / Esc 取消": ("輸入文字，Ctrl+Enter 確認 / Esc 取消", "Type text, Ctrl+Enter to confirm / Esc to cancel"),
     "扩展画布边缘": ("擴展畫布邊缘", "Expand Canvas Edges"),
     "填充色": ("填充色", "Fill color"),
     "PyShot 编辑器": ("PyShot 編輯器", "PyShot Editor"),

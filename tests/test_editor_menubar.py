@@ -26,7 +26,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtWidgets import QApplication, QDialog, QFileDialog
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 import main as m
 from editor import EditorWindow

@@ -23,7 +23,7 @@ from PySide6.QtCore import QPoint, QPointF, Qt
 from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent, QPixmap
 from PySide6.QtWidgets import QApplication
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 from editor import TOOLS, EditorWindow
 

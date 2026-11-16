@@ -28,7 +28,7 @@ i18n.reset_cache()
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QApplication
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 from version import APP_VERSION, AUTHOR, AUTHOR_EMAIL, VERSION_TITLE
 

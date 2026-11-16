@@ -36,3 +36,11 @@ _out.txt
 Thumbs.db
 desktop.ini
 _msg.txt
+
+# ---- 本地运行依赖与 Agent 临时文件 ----
+.spill/
+PySide6/
+bin/
+*.dist-info/
+shiboken6/
+tests_console/

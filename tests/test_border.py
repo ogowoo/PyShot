@@ -33,12 +33,12 @@ from editor import EditorWindow
 from scroller import pixmap_to_array
 from shapes import RectShape
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 failures = []
 
 
 def check(name, cond, extra=""):
-    print(("PASS" if cond else "FAIL"), name, extra)
+    print(("PASS" if cond else "FAIL"), name.encode("ascii", "backslashreplace").decode(), str(extra).encode("ascii", "backslashreplace").decode())
     if not cond:
         failures.append(name)
 
@@ -307,4 +307,4 @@ print()
 if failures:
     print("失败项:", failures)
     sys.exit(1)
-print("加边框测试通过 ✔")
+print("border tests passed")

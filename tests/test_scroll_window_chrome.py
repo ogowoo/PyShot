@@ -29,7 +29,7 @@ from pathlib import Path
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QApplication
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 from scroller import Frame, find_scroll, pixmap_to_frame
 

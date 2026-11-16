@@ -17,6 +17,7 @@ import os
 import shutil
 import sys
 import tempfile
+import unittest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("PYSHOT_LANG", "zh_CN")
@@ -30,7 +31,7 @@ from PySide6.QtCore import QPointF, QRectF
 from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtWidgets import QApplication
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 import session
 from editor import EditorWindow
@@ -39,9 +40,8 @@ from shapes import (ArrowShape, EllipseShape, LineShape, MosaicShape, PenShape,
 
 failures = []
 
-
 def check(name, cond, extra=""):
-    print(("PASS" if cond else "FAIL"), name, extra)
+    print(("PASS" if cond else "FAIL"), ascii(name), ascii(extra))
     if not cond:
         failures.append(name)
 
@@ -167,4 +167,9 @@ print()
 if failures:
     print("失败项:", failures)
     sys.exit(1)
-print("会话缓存测试通过 ✔")
+print("session tests passed")
+
+
+class TestSessionRegression(unittest.TestCase):
+    def test_checks_passed(self):
+        self.assertEqual(failures, [])

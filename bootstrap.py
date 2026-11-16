@@ -11,6 +11,7 @@
 - PYSHOT_PIP_MIRROR 可自定义镜像源
 """
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -193,6 +194,27 @@ def _get_console_api():
     """取 Windows 控制台相关的 API（单独抽出来便于测试打桩）。"""
     import ctypes
     return ctypes.windll.kernel32, ctypes.windll.user32
+
+
+def relaunch_with_pythonw() -> bool:
+    """Windows 下用 pythonw.exe 重启脚本。"""
+    if os.name != "nt" or os.environ.get("PYSHOT_CONSOLE") == "1":
+        return False
+    if getattr(sys, "frozen", False) or os.environ.get("PYSHOT_PYTHONW") == "1":
+        return False
+    executable = Path(sys.executable)
+    if executable.name.lower() == "pythonw.exe":
+        return False
+    pythonw = shutil.which("pythonw.exe")
+    if not pythonw:
+        return False
+    env = os.environ.copy()
+    env["PYSHOT_PYTHONW"] = "1"
+    try:
+        subprocess.Popen([str(pythonw), str(Path(sys.argv[0]).resolve()), *sys.argv[1:]], env=env, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        os._exit(0)
+    except OSError:
+        return False
 
 
 def hide_own_console() -> str:

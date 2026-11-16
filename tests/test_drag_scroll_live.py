@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QApplication, QLabel, QMainWindow, QScrollArea
 
 from scroller import ScrollCapture, ScrollDriver, make_default_grab, pixmap_to_array
 
-app = QApplication(sys.argv)
+app = QApplication.instance() or QApplication(sys.argv)
 failures = []
 
 

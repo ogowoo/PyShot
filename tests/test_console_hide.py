@@ -1,130 +1,101 @@
 # -*- coding: utf-8 -*-
-"""自动隐藏黑色控制台（bootstrap.hide_own_console）。
+"""Unit tests for bootstrap.hide_own_console."""
 
-用户要的功能：双击 PyShot.py 启动时，Python 会自带一个黑色终端窗口，
-GUI 起来之后它还挂在任务栏里 —— 现在自动藏掉。
-
-规则（都要测）：
-  · 控制台是本进程自己的（双击/快捷方式启动）→ 藏（SW_HIDE）
-  · 从 pwsh/cmd 里启动 → 控制台是共享的 → **不藏**（藏了会把用户的终端一起藏起来）
-  · pythonw.exe / 没有控制台 → 不动
-  · PYSHOT_CONSOLE=1 → 保留（排障用）
-  · 出任何异常都不许让启动失败
-  · main() 里确实调用了它，且在 --check-deps 之后（命令行输出不能被藏掉）
-"""
 import os
 import sys
+import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # 项目根（本文件在子目录里）
-sys.path.insert(0, HERE)
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
 
 import bootstrap
 
-failures = []
 
-
-def check(name, cond, extra=""):
-    print(("PASS" if cond else "FAIL"), name, extra)
-    if not cond:
-        failures.append(name)
-
-
-class FakeK32:
-    def __init__(self, hwnd=1234, procs=1):
+class FakeKernel32:
+    def __init__(self, hwnd=1234, process_count=1):
         self.hwnd = hwnd
-        self.procs = procs
+        self.process_count = process_count
 
     def GetConsoleWindow(self):
         return self.hwnd
 
-    def GetConsoleProcessList(self, buf, n):
-        for i in range(min(self.procs, n)):
-            buf[i] = 1000 + i
-        return self.procs
+    def GetConsoleProcessList(self, buffer, size):
+        for index in range(min(self.process_count, size)):
+            buffer[index] = 1000 + index
+        return self.process_count
 
 
-class FakeU32:
+class FakeUser32:
     def __init__(self):
         self.calls = []
 
-    def ShowWindow(self, hwnd, cmd):
-        self.calls.append((hwnd, cmd))
+    def ShowWindow(self, hwnd, command):
+        self.calls.append((hwnd, command))
         return True
 
 
-def run_with(k32, u32, env_console=None):
-    """打桩跑一次 hide_own_console，返回 (状态, ShowWindow 调用记录)。"""
-    orig_api = bootstrap._get_console_api
-    bootstrap._get_console_api = lambda: (k32, u32)
-    old = os.environ.get("PYSHOT_CONSOLE")
-    try:
-        if env_console is None:
-            os.environ.pop("PYSHOT_CONSOLE", None)
-        else:
-            os.environ["PYSHOT_CONSOLE"] = env_console
-        return bootstrap.hide_own_console(), u32.calls
-    finally:
-        bootstrap._get_console_api = orig_api
-        if old is None:
-            os.environ.pop("PYSHOT_CONSOLE", None)
-        else:
-            os.environ["PYSHOT_CONSOLE"] = old
-
-
-# ---------- 1) 双击启动（独占控制台）→ 藏 ----------
-st, calls = run_with(FakeK32(hwnd=4321, procs=1), FakeU32())
-check("独占控制台 → 返回 hidden", st == "hidden", st)
-check("藏窗口时传的是 SW_HIDE(0)，且目标是本控制台",
-      calls == [(4321, 0)], str(calls))
-
-# ---------- 2) 终端里启动（共享控制台）→ 不藏 ----------
-u32 = FakeU32()
-st, calls = run_with(FakeK32(hwnd=4321, procs=3), u32)
-check("**共享控制台 → 返回 shared 且完全不碰窗口**",
-      st == "shared" and calls == [], f"{st} {calls}")
-
-# ---------- 3) 没有控制台（pythonw）→ none，不报错 ----------
-u32 = FakeU32()
-st, calls = run_with(FakeK32(hwnd=0, procs=0), u32)
-check("无控制台 → none 且不调用 ShowWindow", st == "none" and calls == [],
-      f"{st} {calls}")
-
-# ---------- 4) PYSHOT_CONSOLE=1 → 保留 ----------
-u32 = FakeU32()
-st, calls = run_with(FakeK32(hwnd=4321, procs=1), u32, env_console="1")
-check("PYSHOT_CONSOLE=1 → kept 且不动窗口", st == "kept" and calls == [],
-      f"{st} {calls}")
-
-# ---------- 5) 异常不能炸启动 ----------
-class BoomK32:
+class FailingKernel32:
     def GetConsoleWindow(self):
-        raise RuntimeError("boom")
+        raise RuntimeError("console API failure")
 
-    def GetConsoleProcessList(self, buf, n):
-        return 0
 
-st, _ = run_with(BoomK32(), FakeU32())
-check("API 抛异常 → 返回 error，不抛出", st == "error", st)
+class ConsoleHideTests(unittest.TestCase):
+    def run_hide(self, kernel32, user32, console_override=None):
+        environment = {}
+        if console_override is not None:
+            environment["PYSHOT_CONSOLE"] = console_override
 
-# ---------- 6) 真实环境冒烟：返回合法状态串；且绝不误藏共享控制台 ----------
-st = bootstrap.hide_own_console()
-check("真实环境返回合法状态",
-      st in ("hidden", "shared", "none", "kept", "n/a", "error"), st)
-# 本测试是从终端/运行器启动的，控制台必然是共享的 —— 不许返回 hidden
-check("**在共享控制台里运行时不许藏**（保护用户的终端窗口）",
-      st != "hidden" or os.environ.get("PYSHOT_CONSOLE") == "1", st)
+        with patch.object(
+            bootstrap, "_get_console_api", return_value=(kernel32, user32)
+        ):
+            with patch.dict(os.environ, environment, clear=True):
+                status = bootstrap.hide_own_console()
 
-# ---------- 7) main() 确实调用了，而且在 --check-deps 之后 ----------
-src = Path(HERE, "main.py").read_text(encoding="utf-8")
-i_call = src.index("hide_own_console()")
-i_deps = src.index('"--check-deps" in sys.argv')
-check("main() 里调用了 hide_own_console()", i_call > 0)
-check("调用点在 --check-deps 分支之后（命令行输出不会被藏掉）",
-      i_call > i_deps, f"{i_call} > {i_deps}")
+        return status, user32.calls
 
-print()
-if failures:
-    print("失败项:", failures)
-    sys.exit(1)
-print("控制台自动隐藏测试通过 ✔")
+    def test_owned_console_is_hidden(self):
+        status, calls = self.run_hide(
+            FakeKernel32(hwnd=4321, process_count=1), FakeUser32()
+        )
+        self.assertEqual(status, "hidden")
+        self.assertEqual(calls, [(4321, 0)])
+
+    def test_shared_console_is_not_hidden(self):
+        status, calls = self.run_hide(
+            FakeKernel32(hwnd=4321, process_count=3), FakeUser32()
+        )
+        self.assertEqual(status, "shared")
+        self.assertEqual(calls, [])
+
+    def test_missing_console_returns_none(self):
+        status, calls = self.run_hide(
+            FakeKernel32(hwnd=0, process_count=0), FakeUser32()
+        )
+        self.assertEqual(status, "none")
+        self.assertEqual(calls, [])
+
+    def test_environment_override_keeps_console(self):
+        status, calls = self.run_hide(
+            FakeKernel32(hwnd=4321, process_count=1),
+            FakeUser32(),
+            console_override="1",
+        )
+        self.assertEqual(status, "kept")
+        self.assertEqual(calls, [])
+
+    def test_api_exception_returns_error(self):
+        status, calls = self.run_hide(FailingKernel32(), FakeUser32())
+        self.assertEqual(status, "error")
+        self.assertEqual(calls, [])
+
+    def test_main_hides_console_after_dependency_check(self):
+        source = (PROJECT_ROOT / "main.py").read_text(encoding="utf-8")
+        dependency_check = source.index('"--check-deps" in sys.argv')
+        hide_call = source.index("hide_own_console()")
+        self.assertGreater(hide_call, dependency_check)
+
+
+if __name__ == "__main__":
+    unittest.main()

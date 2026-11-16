@@ -23,7 +23,7 @@ from style import apply_theme
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # 项目根（本文件在子目录里）
 
-app = QApplication(sys.argv)
+app = QApplication.instance() or QApplication(sys.argv)
 apply_theme(app)
 core = PyShotApp(app)
 print("托盘可用:", core.tray_available)

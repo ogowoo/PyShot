@@ -221,7 +221,7 @@ TABLE = {
     "颜色": ("顏色", "Color"),
     "打开系统拾色器": ("開啟系統拾色器", "Open the system color picker"),
     "自定义颜色": ("自定義顏色", "Custom colors"),
-    "输入文字，Enter 确认 / Esc 取消": ("輸入文字，Enter 確認 / Esc 取消", "Type text, Enter to confirm / Esc to cancel"),
+    "输入文字，Ctrl+Enter 确认 / Esc 取消": ("輸入文字，Ctrl+Enter 確認 / Esc 取消", "Type text, Ctrl+Enter to confirm / Esc to cancel"),
     "扩展画布边缘": ("擴展畫布邊缘", "Expand Canvas Edges"),
     "填充色": ("填充色", "Fill color"),
     "PyShot 编辑器": ("PyShot 編輯器", "PyShot Editor"),
@@ -829,6 +829,7 @@ def set_setting(key: str, value) -> bool:
 - PYSHOT_PIP_MIRROR 可自定义镜像源
 """
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -943,6 +944,11 @@ def alert(title: str, message: str):
             pass
 
 
+def _startup_text(zh_cn: str, zh_tw: str, en: str) -> str:
+    """返回 Qt 初始化前使用的三语启动文案。"""
+    return {"zh_CN": zh_cn, "zh_TW": zh_tw, "en": en}.get(system_language(), en)
+
+
 def ensure_deps(requirements=None, runner=None, quiet: bool = False) -> bool:
     """确保依赖就绪：优先用内嵌依赖；缺什么装什么。返回是否可用。"""
     if os.environ.get("PYSHOT_SKIP_DEPS") == "1":
@@ -952,16 +958,27 @@ def ensure_deps(requirements=None, runner=None, quiet: bool = False) -> bool:
     if _use_bundled_libs():
         if not missing_packages(reqs):
             if not quiet:
-                print("[PyShot] 依赖检查：使用程序旁边的内嵌依赖目录，无需安装。")
+                print(_startup_text(
+                    "[PyShot] 依赖检查：使用程序旁边的内嵌依赖目录，无需安装。",
+                    "[PyShot] 依賴檢查：使用程式旁邊的內嵌依賴目錄，無需安裝。",
+                    "[PyShot] Dependency check: using bundled dependencies; no installation required."))
             return True
     missing = missing_packages(reqs)
     if not missing:
         # 一切正常时也报一句：以前这里完全静默，用户会以为"依赖检查没了"
         if not quiet:
-            print(f"[PyShot] 依赖检查：{', '.join(p for _, p in reqs)} 已就绪。")
+            packages = ", ".join(p for _, p in reqs)
+            print(_startup_text(
+                f"[PyShot] 依赖检查：{packages} 已就绪。",
+                f"[PyShot] 依賴檢查：{packages} 已就緒。",
+                f"[PyShot] Dependency check: {packages} is ready."))
         return True
     if not quiet:
-        print(f"[PyShot] 缺少依赖：{', '.join(missing)}，正在自动安装（首次约需 1-3 分钟）…")
+        packages = ", ".join(missing)
+        print(_startup_text(
+            f"[PyShot] 缺少依赖：{packages}，正在自动安装（首次约需 1-3 分钟）…",
+            f"[PyShot] 缺少依賴：{packages}，正在自動安裝（首次約需 1-3 分鐘）…",
+            f"[PyShot] Missing dependencies: {packages}. Installing automatically (first run may take 1-3 minutes)..."))
     if os.name == "nt":
         enable_windows_long_paths()
     if not pip_install(missing, runner=runner):
@@ -977,7 +994,10 @@ def ensure_deps(requirements=None, runner=None, quiet: bool = False) -> bool:
         alert("PyShot 依赖仍不可用", f"以下库导入失败：{', '.join(still)}")
         return False
     if not quiet:
-        print("[PyShot] 依赖安装完成。")
+        print(_startup_text(
+            "[PyShot] 依赖安装完成。",
+            "[PyShot] 依賴安裝完成。",
+            "[PyShot] Dependency installation completed."))
     return True
 
 
@@ -1011,6 +1031,27 @@ def _get_console_api():
     """取 Windows 控制台相关的 API（单独抽出来便于测试打桩）。"""
     import ctypes
     return ctypes.windll.kernel32, ctypes.windll.user32
+
+
+def relaunch_with_pythonw() -> bool:
+    """Windows 下用 pythonw.exe 重启脚本。"""
+    if os.name != "nt" or os.environ.get("PYSHOT_CONSOLE") == "1":
+        return False
+    if getattr(sys, "frozen", False) or os.environ.get("PYSHOT_PYTHONW") == "1":
+        return False
+    executable = Path(sys.executable)
+    if executable.name.lower() == "pythonw.exe":
+        return False
+    pythonw = shutil.which("pythonw.exe")
+    if not pythonw:
+        return False
+    env = os.environ.copy()
+    env["PYSHOT_PYTHONW"] = "1"
+    try:
+        subprocess.Popen([str(pythonw), str(Path(sys.argv[0]).resolve()), *sys.argv[1:]], env=env, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        os._exit(0)
+    except OSError:
+        return False
 
 
 def hide_own_console() -> str:
@@ -1107,13 +1148,13 @@ import shutil
 from pathlib import Path
 
 from PySide6.QtCore import QPointF, QRectF, QSize
-from PySide6.QtGui import QColor, QPixmap
+from PySide6.QtGui import QColor, QImage, QPixmap
 
 # 缓存目录；跑测试时用 PYSHOT_SESSION_DIR 指到临时目录，绝不碰用户真实数据
 SESSION_DIR = Path(os.environ.get("PYSHOT_SESSION_DIR") or
                    (Path.home() / ".pyshot" / "session"))
 SESSION_SETTINGS_PATH = Path.home() / ".pyshot" / "settings.json"
-MAX_TABS = 12                       # 最多恢复这么多标签
+MAX_TABS = None                     # 不限制标签数量；仍受 MAX_BYTES 限制
 MAX_BYTES = 120 * 1024 * 1024       # 底图总量上限（约 120MB）
 
 
@@ -1292,7 +1333,7 @@ def has_session() -> bool:
 
 def save_session(tabs: list) -> bool:
     """保存会话。tabs: [{title, zoom, pixmap, shapes:[Shape]}, ...]"""
-    tabs = [t for t in tabs if t.get("pixmap") is not None][:MAX_TABS]
+    tabs = [t for t in tabs if t.get("pixmap") is not None]
     if not tabs:
         clear_session()
         return True
@@ -1308,7 +1349,7 @@ def save_session(tabs: list) -> bool:
         tmp.mkdir(parents=True, exist_ok=True)
         total = 0
         items = []
-        for i, tab in enumerate(tabs):
+        for i, tab in reversed(list(enumerate(tabs))):
             pix = tab["pixmap"]
             name = f"tab{i}.png"
             path = tmp / name
@@ -1328,7 +1369,8 @@ def save_session(tabs: list) -> bool:
                           "dpr": float(pix.devicePixelRatio() or 1.0),
                           "file": name,
                           "shapes": shapes})
-        meta = {"version": 1, "tabs": items}
+        items.reverse()
+        meta = {'version': 1, 'tabs': items}
         with open(tmp / "session.json", "w", encoding="utf-8") as f:
             json.dump(meta, f, ensure_ascii=False)
         # 原子替换
@@ -1341,33 +1383,37 @@ def save_session(tabs: list) -> bool:
 
 
 def load_session() -> list:
-    """读回上次的会话；返回 [{title, zoom, pixmap, shapes}, ...]。"""
-    meta_path = SESSION_DIR / "session.json"
+    meta_path = SESSION_DIR / 'session.json'
     if not meta_path.exists():
         return []
     try:
-        with open(meta_path, encoding="utf-8") as f:
+        with open(meta_path, encoding='utf-8') as f:
             meta = json.load(f)
-    except Exception:                              # noqa: BLE001
+    except Exception:
         return []
+    items = list(meta.get('tabs', []))
+    def decode(item):
+        path = SESSION_DIR / str(item.get('file', ''))
+        image = QImage(str(path)) if path.exists() else QImage()
+        return None if image.isNull() else image
+    if len(items) > 1:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=min(4, len(items))) as pool:
+            images = list(pool.map(decode, items))
+    else:
+        images = [decode(item) for item in items]
     out = []
-    for item in meta.get("tabs", [])[:MAX_TABS]:
-        path = SESSION_DIR / str(item.get("file", ""))
-        if not path.exists():
+    for item, image in zip(items, images):
+        if image is None:
             continue
-        pix = QPixmap(str(path))
-        if pix.isNull():
-            continue
-        dpr = float(item.get("dpr") or 1.0)
-        pix.setDevicePixelRatio(dpr)
+        pix = QPixmap.fromImage(image)
+        pix.setDevicePixelRatio(float(item.get('dpr') or 1.0))
         shapes = []
-        for d in item.get("shapes", []):
-            sh = shape_from_dict(d)
-            if sh is not None:
-                shapes.append(sh)
-        out.append({"title": item.get("title") or "截图",
-                    "zoom": float(item.get("zoom", 1.0)),
-                    "pixmap": pix, "shapes": shapes})
+        for data in item.get('shapes', []):
+            shape = shape_from_dict(data)
+            if shape is not None:
+                shapes.append(shape)
+        out.append({'title': item.get('title') or '截图', 'zoom': float(item.get('zoom', 1.0)), 'pixmap': pix, 'shapes': shapes})
     return out
 
 
@@ -5134,11 +5180,11 @@ class SnipperOverlay(QWidget):
             return
         self._warmed = True
         self.setGeometry(self.screen.geometry())
+        # Windows DWM 可能在 opacity=0 生效前先合成黑色首帧。
+        # 这里只预创建窗口和图形资源，不再把全屏遮罩上屏。
         self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         self.setWindowOpacity(0.0)
-        self.show()
-        self.raise_()
-        QTimer.singleShot(hold_ms, self._end_warmup)
+        QTimer.singleShot(0, self.end_warmup)
 
     def _end_warmup(self):
         if self._active:          # 用户已经自己开始截图了，别去隐藏
@@ -6956,7 +7002,7 @@ from PySide6.QtGui import (QAction, QColor, QGuiApplication, QIcon, QKeySequence
                            QPainter, QPainterPath, QPen, QPixmap, QPolygonF,
                            QTransform)
 from PySide6.QtWidgets import (QDialogButtonBox, QFontDialog, QGridLayout, QMenu, QStackedWidget, QApplication, QColorDialog, QDialog, QFileDialog,
-                               QFrame, QHBoxLayout, QInputDialog, QLabel, QLayout, QLineEdit,
+                               QFrame, QHBoxLayout, QInputDialog, QLabel, QLayout, QLineEdit, QPlainTextEdit,
                                QMainWindow, QMessageBox, QPushButton,
                                QScrollArea, QSizePolicy, QSpinBox, QTabBar,
                                QTabWidget, QToolButton, QVBoxLayout, QWidget,
@@ -6965,6 +7011,22 @@ from PySide6.QtWidgets import (QDialogButtonBox, QFontDialog, QGridLayout, QMenu
 
 
 
+
+
+
+class _MultilineTextEdit(QPlainTextEdit):
+    commit_requested = Signal()
+    cancel_requested = Signal()
+
+    def keyPressEvent(self, event):
+        if (event.key() in (Qt.Key_Return, Qt.Key_Enter)
+                and event.modifiers() & Qt.ControlModifier):
+            self.commit_requested.emit()
+            return
+        if event.key() == Qt.Key_Escape:
+            self.cancel_requested.emit()
+            return
+        super().keyPressEvent(event)
 
 
 # 「截图时不最小化编辑器」的设置键（主程序截图时读同一个键）
@@ -7334,7 +7396,7 @@ class Canvas(QWidget):
         self.float_style = {"shadow": False, "stroke": False, "radius": 0,
                             "stroke_color": "#ffffff", "stroke_width": 3}
 
-        self._text_edit: QLineEdit | None = None
+        self._text_edit: QPlainTextEdit | None = None
         self._text_pos = QPointF()
         self._text_target = None      # 正在改的已有文字（None = 新建）
         self.font_family = ""         # 文字字体（空 = 默认微软雅黑）
@@ -7871,8 +7933,8 @@ class Canvas(QWidget):
         """打开行内文字输入。target 是已有的 TextShape 时表示**改文字**。"""
         self._text_pos = pos
         self._text_target = target
-        edit = QLineEdit(self)
-        edit.setPlaceholderText(tr("输入文字，Enter 确认 / Esc 取消"))
+        edit = _MultilineTextEdit(self)
+        edit.setPlaceholderText(tr("输入文字，Ctrl+Enter 确认 / Esc 取消"))
         font = edit.font()
         size = int(getattr(target, "font_size", self.font_size) or self.font_size)
         font.setPixelSize(max(12, int(size * self.zoom)))
@@ -7883,12 +7945,13 @@ class Canvas(QWidget):
         edit.setStyleSheet(f"color: {self.color.name()}; background: rgba(255,255,255,220);"
                            "border: 1px dashed #888;")
         edit.move(int(pos.x() * self.zoom), int(pos.y() * self.zoom))
-        edit.resize(max(240, int(size * self.zoom * 12)), edit.sizeHint().height() + 6)
+        edit.resize(max(240, int(size * self.zoom * 12)),
+                    max(80, edit.sizeHint().height() + 6))
         if target is not None:                 # 改已有的：填上原文并全选，直接就能改
-            edit.setText(str(target.text))
+            edit.setPlainText(str(target.text))
             edit.selectAll()
-        edit.returnPressed.connect(self._commit_text)
-        edit.editingFinished.connect(self._commit_text)
+        edit.commit_requested.connect(self._commit_text)
+        edit.cancel_requested.connect(self._cancel_text)
         edit.show()
         edit.setFocus()
         self._text_edit = edit
@@ -7909,7 +7972,7 @@ class Canvas(QWidget):
         target = getattr(self, "_text_target", None)
         self._text_edit = None
         self._text_target = None
-        text = edit.text().strip()
+        text = edit.toPlainText().strip()
         edit.deleteLater()
         if target is not None:                 # 改已有文字
             if not text:
@@ -10665,8 +10728,9 @@ class PyShotApp(QObject):
 
         self._init_hotkey()   # 先注册热键，托盘文案才知道该显示哪个按键
         self._init_tray()
-        # 启动后台预热（延迟一点，不影响启动速度）
-        QTimer.singleShot(150, self._warmup)
+        # 不在启动阶段主动预热：实测字体排版与隐藏编辑器会阻塞事件循环约 2.2 秒。
+        # 有会话时，稍后的 boot_restore 会自然完成首次界面初始化；无会话时则把
+        # 一次性开销延迟到用户首次截图，确保托盘与全局热键快速可用。
 
     # ---------- 全局热键 ----------
     def _init_hotkey(self):
@@ -11478,6 +11542,7 @@ class PyShotApp(QObject):
         delay_ms 排在预热（150ms）之后：让预热先把字体/编辑器那两笔一次性开销
         付掉，这里再建编辑器窗口就只要几十毫秒。
         """
+        QTimer.singleShot(0, self._warmup)
         QTimer.singleShot(delay_ms, self.boot_restore)
 
     def boot_restore(self):
@@ -11488,15 +11553,10 @@ class PyShotApp(QObject):
         卡住 —— 用户按热键完全没反应（实测启动后 21 秒空白）。
         现在托盘/热键先可用，这一步随后在事件循环里进行，日志能看到各段耗时。
         """
-        import time
-        t0 = time.perf_counter()
+        # 启动阶段不解码历史截图、不创建编辑器，避免主线程阻塞数秒。
+        # 历史会话会在首次打开编辑器时由 _restore_into() 惰性恢复。
         restored = 0
-        try:
-            restored = self.restore_session()
-        except Exception:                          # noqa: BLE001
-            restored = 0
-        self._cap_log("启动·恢复会话",
-                      f"{restored} 张，耗时 {(time.perf_counter()-t0)*1000:.0f} ms")
+        self._cap_log('启动·恢复会话', '已延迟到首次打开编辑器')
         try:
             self.notify_ready(restored)
         except Exception:                          # noqa: BLE001
@@ -12076,6 +12136,9 @@ def main():
     # --check-deps：只检查依赖，不开界面
     if "--check-deps" in sys.argv:
         print(deps_report())
+        return
+
+    if relaunch_with_pythonw():
         return
 
     # 双击启动时自带的黑色控制台：藏起来（终端里启动的不动；

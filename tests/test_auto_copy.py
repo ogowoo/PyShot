@@ -33,7 +33,7 @@ from PySide6.QtCore import QRect
 from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtWidgets import QApplication
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 import style
 
@@ -46,7 +46,7 @@ failures = []
 
 
 def check(name, cond, extra=""):
-    print(("PASS" if cond else "FAIL"), name, extra)
+    print(ascii(name), ascii(extra))
     if not cond:
         failures.append(name)
 
@@ -200,4 +200,4 @@ print()
 if failures:
     print("失败项:", failures)
     sys.exit(1)
-print("截图后自动复制到剪贴板测试通过 ✔")
+print("auto copy tests passed")

@@ -22,13 +22,13 @@ import shutil
 from pathlib import Path
 
 from PySide6.QtCore import QPointF, QRectF, QSize
-from PySide6.QtGui import QColor, QPixmap
+from PySide6.QtGui import QColor, QImage, QPixmap
 
 # 缓存目录；跑测试时用 PYSHOT_SESSION_DIR 指到临时目录，绝不碰用户真实数据
 SESSION_DIR = Path(os.environ.get("PYSHOT_SESSION_DIR") or
                    (Path.home() / ".pyshot" / "session"))
 SESSION_SETTINGS_PATH = Path.home() / ".pyshot" / "settings.json"
-MAX_TABS = 12                       # 最多恢复这么多标签
+MAX_TABS = None                     # 不限制标签数量；仍受 MAX_BYTES 限制
 MAX_BYTES = 120 * 1024 * 1024       # 底图总量上限（约 120MB）
 
 
@@ -211,7 +211,7 @@ def has_session() -> bool:
 
 def save_session(tabs: list) -> bool:
     """保存会话。tabs: [{title, zoom, pixmap, shapes:[Shape]}, ...]"""
-    tabs = [t for t in tabs if t.get("pixmap") is not None][:MAX_TABS]
+    tabs = [t for t in tabs if t.get("pixmap") is not None]
     if not tabs:
         clear_session()
         return True
@@ -227,7 +227,7 @@ def save_session(tabs: list) -> bool:
         tmp.mkdir(parents=True, exist_ok=True)
         total = 0
         items = []
-        for i, tab in enumerate(tabs):
+        for i, tab in reversed(list(enumerate(tabs))):
             pix = tab["pixmap"]
             name = f"tab{i}.png"
             path = tmp / name
@@ -247,7 +247,8 @@ def save_session(tabs: list) -> bool:
                           "dpr": float(pix.devicePixelRatio() or 1.0),
                           "file": name,
                           "shapes": shapes})
-        meta = {"version": 1, "tabs": items}
+        items.reverse()
+        meta = {'version': 1, 'tabs': items}
         with open(tmp / "session.json", "w", encoding="utf-8") as f:
             json.dump(meta, f, ensure_ascii=False)
         # 原子替换
@@ -260,31 +261,35 @@ def save_session(tabs: list) -> bool:
 
 
 def load_session() -> list:
-    """读回上次的会话；返回 [{title, zoom, pixmap, shapes}, ...]。"""
-    meta_path = SESSION_DIR / "session.json"
+    meta_path = SESSION_DIR / 'session.json'
     if not meta_path.exists():
         return []
     try:
-        with open(meta_path, encoding="utf-8") as f:
+        with open(meta_path, encoding='utf-8') as f:
             meta = json.load(f)
-    except Exception:                              # noqa: BLE001
+    except Exception:
         return []
+    items = list(meta.get('tabs', []))
+    def decode(item):
+        path = SESSION_DIR / str(item.get('file', ''))
+        image = QImage(str(path)) if path.exists() else QImage()
+        return None if image.isNull() else image
+    if len(items) > 1:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=min(4, len(items))) as pool:
+            images = list(pool.map(decode, items))
+    else:
+        images = [decode(item) for item in items]
     out = []
-    for item in meta.get("tabs", [])[:MAX_TABS]:
-        path = SESSION_DIR / str(item.get("file", ""))
-        if not path.exists():
+    for item, image in zip(items, images):
+        if image is None:
             continue
-        pix = QPixmap(str(path))
-        if pix.isNull():
-            continue
-        dpr = float(item.get("dpr") or 1.0)
-        pix.setDevicePixelRatio(dpr)
+        pix = QPixmap.fromImage(image)
+        pix.setDevicePixelRatio(float(item.get('dpr') or 1.0))
         shapes = []
-        for d in item.get("shapes", []):
-            sh = shape_from_dict(d)
-            if sh is not None:
-                shapes.append(sh)
-        out.append({"title": item.get("title") or "截图",
-                    "zoom": float(item.get("zoom", 1.0)),
-                    "pixmap": pix, "shapes": shapes})
+        for data in item.get('shapes', []):
+            shape = shape_from_dict(data)
+            if shape is not None:
+                shapes.append(shape)
+        out.append({'title': item.get('title') or '截图', 'zoom': float(item.get('zoom', 1.0)), 'pixmap': pix, 'shapes': shapes})
     return out

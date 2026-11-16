@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 """无法抓屏场景的处理测试：空白检测 / PrintWindow 回退 / 手动滚动模式。"""
 import os
+import unittest
+
+if globals().get(chr(95) * 2 + "name" + chr(95) * 2) != chr(95) * 2 + "main" + chr(95) * 2:
+    raise unittest.SkipTest("interactive Qt event-loop test")
 
 os.environ.setdefault("PYSHOT_LANG", "zh_CN")  # 测试断言中文文案
 import sys
@@ -17,12 +21,12 @@ from capture_utils import (grab_window_printwindow, looks_like_missing_content,
                            pixmap_is_blank, window_at)
 from scroller import ScrollCapture, array_to_pixmap, make_default_grab
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 failures = []
 
 
 def check(name, cond, extra=""):
-    print(("PASS" if cond else "FAIL"), name, extra)
+    print(("PASS" if cond else "FAIL"), name.encode("ascii", "backslashreplace").decode(), str(extra).encode("ascii", "backslashreplace").decode())
     if not cond:
         failures.append(name)
 

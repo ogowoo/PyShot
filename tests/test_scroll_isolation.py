@@ -55,7 +55,7 @@ def check(name, cond, extra=""):
         failures.append(name)
 
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 core = PyShotApp(app)
 
 # 准备一个已打开并最小化的编辑器（模拟"二次截图"场景）

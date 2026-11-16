@@ -15,7 +15,7 @@ from snipper import SnipperOverlay, grab_virtual_desktop
 from style import apply_theme
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # 项目根（本文件在子目录里）
-app = QApplication(sys.argv)
+app = QApplication.instance() or QApplication(sys.argv)
 apply_theme(app)
 
 def brightness(pix):

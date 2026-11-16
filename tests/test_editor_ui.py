@@ -19,7 +19,7 @@ from PySide6.QtWidgets import QApplication
 from editor import EditorWindow
 from style import apply_theme
 
-app = QApplication(sys.argv)
+app = QApplication.instance() or QApplication(sys.argv)
 apply_theme(app)
 
 pix = QPixmap(os.path.join(os.path.dirname(__file__), "demo.png"))

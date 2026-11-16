@@ -320,6 +320,7 @@ EN = {
     "裁剪": "Crop",
     "拖拽选择保留区域，Enter 应用": "Drag to select what to keep, Enter to apply",
     "输入文字，Enter 确认 / Esc 取消": "Type text, Enter to confirm / Esc to cancel",
+    "输入文字，Ctrl+Enter 确认 / Esc 取消": "Type text, Ctrl+Enter to confirm / Esc to cancel",
     "工具：": "Tool: ",
     "工具": "Tool",
     "已取色": "Picked",

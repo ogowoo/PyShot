@@ -23,7 +23,7 @@ from main import PyShotApp
 from snipper import grab_virtual_desktop
 from style import apply_theme
 
-app = QApplication(sys.argv)
+app = QApplication.instance() or QApplication(sys.argv)
 apply_theme(app)
 core = PyShotApp(app)
 

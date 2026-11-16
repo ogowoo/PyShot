@@ -202,9 +202,9 @@ class SnipperOverlay(QWidget):
         self.setGeometry(self.screen.geometry())
         self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         self.setWindowOpacity(0.0)
-        self.show()
-        self.raise_()
-        QTimer.singleShot(hold_ms, self._end_warmup)
+        # Windows DWM 可能在 opacity=0 生效前先合成黑色首帧。
+        # 预热阶段不上屏，避免启动时闪现全屏遮罩。
+        QTimer.singleShot(0, self._end_warmup)
 
     def _end_warmup(self):
         if self._active:          # 用户已经自己开始截图了，别去隐藏

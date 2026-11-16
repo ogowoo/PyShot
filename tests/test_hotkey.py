@@ -97,7 +97,7 @@ else:
     print(f"提示：Ctrl+Alt+X 已被其他程序占用（err={err}），程序会自动降级到下一个候选")
 
 # --- 编辑器按钮提示同步 ---
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 win = EditorWindow(QPixmap(200, 150))
 win.set_hotkey_hint("Ctrl+Alt+X")
 check("编辑器按钮提示含热键", "Ctrl+Alt+X" in win.btn_shot.toolTip())

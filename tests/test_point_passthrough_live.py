@@ -20,7 +20,7 @@ from snipper import SnipperOverlay
 user32 = ctypes.windll.user32
 MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP = 0x0002, 0x0004
 
-app = QApplication(sys.argv)
+app = QApplication.instance() or QApplication(sys.argv)
 failures = []
 
 

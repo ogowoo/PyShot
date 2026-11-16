@@ -97,7 +97,7 @@ check("只依赖 PySide6（numpy 已剥离）",
 check("跳过自举开关有效", mod.ensure_deps() is True)
 
 # --- 核心功能：画布 / 序号 / 撤销 ---
-app = mod.QApplication([])
+app = mod.QApplication.instance() or mod.QApplication([])
 
 # --- 全局字体（要在 QApplication 建好之后验）---
 # PYSHOT_LANG 优先级高于 set_language()，切语言前先摘掉它

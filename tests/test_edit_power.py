@@ -33,7 +33,7 @@ from PySide6.QtGui import QColor, QMouseEvent, QPixmap
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 
 from editor import EditorWindow
 from shapes import RectShape
@@ -154,11 +154,10 @@ from shapes import TextShape
 canvas.tool = "text"
 QTest.qWait(10)
 canvas._open_text_editor(QPointF(60, 60))
-canvas._text_edit.setText("第一版文字")
+canvas._text_edit.setPlainText(chr(10).join(('line1', 'line2')))
 canvas._commit_text()
 texts = [s for s in canvas.shapes if isinstance(s, TextShape)]
-check("**先写一段文字**", len(texts) == 1 and texts[0].text == "第一版文字",
-      str([s.text for s in texts]))
+check('multiline text', len(texts) == 1 and texts[0].text == chr(10).join(('line1', 'line2')), str([s.text for s in texts]))
 t1 = texts[0]
 
 # 双击文字 → 打开行内编辑，内容已填好
@@ -167,25 +166,22 @@ dbl = QMouseEvent(_Ev.MouseButtonDblClick, canvas.to_widget(t1.pos),
 canvas.tool = "select"
 canvas.mouseDoubleClickEvent(dbl)
 check("**双击文字会打开编辑框**", canvas._text_edit is not None)
-check("编辑框里带着原文", canvas._text_edit.text() == "第一版文字",
-      canvas._text_edit.text())
-canvas._text_edit.setText("改过的文字")
+check('editor preserves text', canvas._text_edit.toPlainText() == chr(10).join(('line1', 'line2')), canvas._text_edit.toPlainText())
+canvas._text_edit.setPlainText('updated text')
 canvas._commit_text()
-check("**改完内容真的变了**", t1.text == "改过的文字", t1.text)
-check("改文字不会多出一个新图形",
-      len([s for s in canvas.shapes if isinstance(s, TextShape)]) == 1)
+check('updated text saved', t1.text == 'updated text', t1.text)
+check('editing does not add shape', len([s for s in canvas.shapes if isinstance(s, TextShape)]) == 1)
 
-# 改成空 = 删掉这段文字
+# Empty text deletes the shape
 canvas._open_text_editor(t1.pos, target=t1)
-canvas._text_edit.setText("   ")
+canvas._text_edit.setPlainText('   ')
 canvas._commit_text()
-check("清空内容等于删掉这段文字",
-      not [s for s in canvas.shapes if isinstance(s, TextShape)])
+check('empty text deletes shape', not [s for s in canvas.shapes if isinstance(s, TextShape)])
 
-# 字体：设置后新文字用它，且能存进会话
+# Font settings persist
 canvas._open_text_editor(QPointF(80, 80))
-canvas._text_edit.setText("字体测试")
-canvas.font_family = "SimSun"
+canvas._text_edit.setPlainText('font test')
+canvas.font_family = 'SimSun'
 canvas._commit_text()
 t2 = [s for s in canvas.shapes if isinstance(s, TextShape)][-1]
 check("新文字带上了选定的字体", t2.family == "SimSun", t2.family)

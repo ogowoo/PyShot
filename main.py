@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 
 # 依赖自举：缺 PySide6 / numpy 时自动 pip 安装（必须在导入 PySide6 之前）
-from bootstrap import deps_report, ensure_deps, hide_own_console
+from bootstrap import deps_report, ensure_deps, hide_own_console, relaunch_with_pythonw
 
 if not ensure_deps():
     raise SystemExit(1)
@@ -341,8 +341,9 @@ class PyShotApp(QObject):
 
         self._init_hotkey()   # 先注册热键，托盘文案才知道该显示哪个按键
         self._init_tray()
-        # 启动后台预热（延迟一点，不影响启动速度）
-        QTimer.singleShot(150, self._warmup)
+        # 不在启动阶段主动预热：实测字体排版与隐藏编辑器会阻塞事件循环约 2.2 秒。
+        # 有会话时，稍后的 boot_restore 会自然完成首次界面初始化；无会话时则把
+        # 一次性开销延迟到用户首次截图，确保托盘与全局热键快速可用。
 
     # ---------- 全局热键 ----------
     def _init_hotkey(self):
@@ -1154,6 +1155,7 @@ class PyShotApp(QObject):
         delay_ms 排在预热（150ms）之后：让预热先把字体/编辑器那两笔一次性开销
         付掉，这里再建编辑器窗口就只要几十毫秒。
         """
+        QTimer.singleShot(0, self._warmup)
         QTimer.singleShot(delay_ms, self.boot_restore)
 
     def boot_restore(self):
@@ -1753,6 +1755,9 @@ def main():
     # --check-deps：只检查依赖，不开界面
     if "--check-deps" in sys.argv:
         print(deps_report())
+        return
+
+    if relaunch_with_pythonw():
         return
 
     # 双击启动时自带的黑色控制台：藏起来（终端里启动的不动；

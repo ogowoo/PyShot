@@ -9,7 +9,7 @@ from PySide6.QtGui import (QAction, QColor, QGuiApplication, QIcon, QKeySequence
                            QPainter, QPainterPath, QPen, QPixmap, QPolygonF,
                            QTransform)
 from PySide6.QtWidgets import (QDialogButtonBox, QFontDialog, QGridLayout, QMenu, QStackedWidget, QApplication, QColorDialog, QDialog, QFileDialog,
-                               QFrame, QHBoxLayout, QInputDialog, QLabel, QLayout, QLineEdit,
+                               QFrame, QHBoxLayout, QInputDialog, QLabel, QLayout, QLineEdit, QPlainTextEdit,
                                QMainWindow, QMessageBox, QPushButton,
                                QScrollArea, QSizePolicy, QSpinBox, QTabBar,
                                QTabWidget, QToolButton, QVBoxLayout, QWidget,
@@ -21,6 +21,22 @@ from shapes import (ArrowShape, EllipseShape, HighlightShape, LineShape,
 from style import ACCENT, SpinBox, make_icon, make_tool_icon
 from watermark import WatermarkDialog, load_default, save_default
 from i18n import tr
+
+
+class _MultilineTextEdit(QPlainTextEdit):
+    commit_requested = Signal()
+    cancel_requested = Signal()
+
+    def keyPressEvent(self, event):
+        if (event.key() in (Qt.Key_Return, Qt.Key_Enter)
+                and event.modifiers() & Qt.ControlModifier):
+            self.commit_requested.emit()
+            return
+        if event.key() == Qt.Key_Escape:
+            self.cancel_requested.emit()
+            return
+        super().keyPressEvent(event)
+
 
 # 「截图时不最小化编辑器」的设置键（主程序截图时读同一个键）
 KEEP_EDITOR_SETTING = "capture_keep_editor"
@@ -389,7 +405,7 @@ class Canvas(QWidget):
         self.float_style = {"shadow": False, "stroke": False, "radius": 0,
                             "stroke_color": "#ffffff", "stroke_width": 3}
 
-        self._text_edit: QLineEdit | None = None
+        self._text_edit: QPlainTextEdit | None = None
         self._text_pos = QPointF()
         self._text_target = None      # 正在改的已有文字（None = 新建）
         self.font_family = ""         # 文字字体（空 = 默认微软雅黑）
@@ -926,8 +942,8 @@ class Canvas(QWidget):
         """打开行内文字输入。target 是已有的 TextShape 时表示**改文字**。"""
         self._text_pos = pos
         self._text_target = target
-        edit = QLineEdit(self)
-        edit.setPlaceholderText(tr("输入文字，Enter 确认 / Esc 取消"))
+        edit = _MultilineTextEdit(self)
+        edit.setPlaceholderText(tr("输入文字，Ctrl+Enter 确认 / Esc 取消"))
         font = edit.font()
         size = int(getattr(target, "font_size", self.font_size) or self.font_size)
         font.setPixelSize(max(12, int(size * self.zoom)))
@@ -938,12 +954,13 @@ class Canvas(QWidget):
         edit.setStyleSheet(f"color: {self.color.name()}; background: rgba(255,255,255,220);"
                            "border: 1px dashed #888;")
         edit.move(int(pos.x() * self.zoom), int(pos.y() * self.zoom))
-        edit.resize(max(240, int(size * self.zoom * 12)), edit.sizeHint().height() + 6)
+        edit.resize(max(240, int(size * self.zoom * 12)),
+                    max(80, edit.sizeHint().height() + 6))
         if target is not None:                 # 改已有的：填上原文并全选，直接就能改
-            edit.setText(str(target.text))
+            edit.setPlainText(str(target.text))
             edit.selectAll()
-        edit.returnPressed.connect(self._commit_text)
-        edit.editingFinished.connect(self._commit_text)
+        edit.commit_requested.connect(self._commit_text)
+        edit.cancel_requested.connect(self._cancel_text)
         edit.show()
         edit.setFocus()
         self._text_edit = edit
@@ -964,7 +981,7 @@ class Canvas(QWidget):
         target = getattr(self, "_text_target", None)
         self._text_edit = None
         self._text_target = None
-        text = edit.text().strip()
+        text = edit.toPlainText().strip()
         edit.deleteLater()
         if target is not None:                 # 改已有文字
             if not text:

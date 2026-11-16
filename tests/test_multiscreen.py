@@ -23,7 +23,7 @@ import main as main_mod
 import snipper as snipper_mod
 from snipper import region_to_screen_pixels
 
-app = QApplication([])
+app = QApplication.instance() or QApplication([])
 failures = []
 
 
