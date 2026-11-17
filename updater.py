@@ -189,7 +189,13 @@ def git_pull(root=None, timeout: int = 120) -> tuple:
     return True, text
 
 
-if __name__ == "__main__":                         # 手工冒烟：python updater.py
+def smoke():
+    """手工冒烟：python -c "import updater; updater.smoke()"。
+
+    注意：**不能有** ``if __name__ == "__main__"`` 块 —— 单文件版 build_single
+    只剥 main.py 里 ``main()`` 那一个入口，updater 若留 __main__ 块会被合并
+    进 PyShot.py 并在**每次启动时真的跑一遍联网检查**。
+    """
     print(f"current : {APP_VERSION}")
     r = check_for_update()
     if r["error"]:

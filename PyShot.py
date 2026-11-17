@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""PyShot 2.26 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
+"""PyShot 2.26.1 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
 
-本版主题：托盘一键检查更新
+本版主题：英文系统控制台不再冒中文
 作者：Walt Liang <Wat.L@outlook.com>
 
 这是一个自动生成的单文件版本：把多文件源码合并在一起，并在启动时自动安装
@@ -123,8 +123,10 @@ TABLE = {
     "稍后重启": ("稍後重啟", "Restart Later"),
     "打开图片": ("開啟圖片", "Open Image"),
     "图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)": ("圖片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)", "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp)"),
-    "[PyShot] 全局热键已注册：": ("[PyShot] 全局快速鍵已註冊：", ""),
-    "[PyShot] 热键注册失败，已尝试：": ("[PyShot] 快速鍵註冊失敗，已嘗試：", ""),
+    "[PyShot] 收到 Ctrl+C，正在退出…": ("[PyShot] 收到 Ctrl+C，正在結束…", "Ctrl+C received, exiting…"),
+    "[PyShot] 所选热键注册失败（可能被占用），已改用 {}": ("[PyShot] 所選快速鍵註冊失敗（可能被佔用），已改用 {}", "Chosen hotkey could not be registered (maybe already in use); fell back to {}"),
+    "[PyShot] 全局热键已注册：{}": ("[PyShot] 全局快速鍵已註冊：{}", "Global hotkeys registered: {}"),
+    "[PyShot] 热键注册失败，已尝试：{}": ("[PyShot] 快速鍵註冊失敗，已嘗試：{}", "Hotkey registration failed; tried: {}"),
     "{} 已经是{}的热键了，换一个组合（一个键只能绑一个动作）": ("{} 已經是{}的快速鍵了，換一個組合（一個鍵只能绑一個動作）", "{} is already the {} hotkey — pick another combo (one key, one action)"),
     "截右键菜单请用不带 Alt 的键（Alt 会让菜单消失）": ("截右鍵菜單請用不帶 Alt 的鍵（Alt 會讓菜單消失）", "For context menus use a hotkey without Alt (Alt closes the menu)"),
     "全屏截图热键同样可以用「自定义…」自己按一个": ("全螢幕截圖快速鍵同樣可以用「自定義…」自己按一個", "The full-screen hotkey can also be set with Custom…"),
@@ -168,8 +170,8 @@ TABLE = {
     "启动·托盘就绪": ("啟動·托盤就绪", ""),
     "被其它程序全局占用了（注册失败），换一个组合": ("被其它程序全局佔用了（註冊失敗），換一個組合", "Already taken globally by another program (registration failed) — pick another combo"),
     "无法测试占用情况：{}": ("無法測試佔用情况：{}", "Could not test availability: {}"),
-    "区域 ": ("區域 ", ""),
-    "全屏 ": ("全螢幕 ", ""),
+    "区域 {}": ("區域 {}", "Region {}"),
+    "全屏 {}": ("全螢幕 {}", "Full screen {}"),
     "{} 已经是{}的热键了，一组动作只能用一个键": ("{} 已經是{}的快速鍵了，一組動作只能用一個鍵", "{} is already the {} hotkey — each action needs its own key"),
     "自定义全屏截图热键": ("自定義全螢幕截圖快速鍵", "Custom full-screen capture hotkey"),
     "自定义截图热键": ("自定義截圖快速鍵", "Custom capture hotkey"),
@@ -526,21 +528,21 @@ TABLE = {
     "复制图片": ("複製圖片", "Copy image"),
     "重置大小 / 透明度": ("重置大小 / 透明度", "Reset size / opacity"),
     "关闭 (Esc)": ("關閉 (Esc)", "Close (Esc)"),
+    "PyShot {} 依赖检查：": ("PyShot {} 依賴檢查：", "PyShot {} dependency check:"),
+    "  Python: {}  解释器: {}": ("  Python: {}  解釋器: {}", "  Python: {}  Interpreter: {}"),
+    "[PyShot] 缺少依赖：{}，正在自动安装（首次约需 1-3 分钟）…": ("[PyShot] 缺少依賴：{}，正在自動安裝（首次約需 1-3 分鐘）…", "Missing dependencies: {}. Installing automatically (may take 1-3 minutes on first run)…"),
     "PyShot 依赖安装失败": ("PyShot 依賴安裝失敗", "PyShot dependency installation failed"),
+    "请手动执行以下命令后重新运行：\n\n{}": ("請手動執行以下命令後重新運行：\n\n{}", "Please run the following command manually, then start PyShot again:\n\n{}"),
     "PyShot 依赖仍不可用": ("PyShot 依賴仍不可用", "PyShot dependencies are still unavailable"),
-    " 依赖检查：": (" 依賴檢查：", ""),
-    "  内嵌依赖目录: 无（将使用系统环境或自动安装）": ("  內嵌依賴目錄: 無（將使用系統環境或自動安裝）", ""),
-    "  解释器: ": ("  解釋器: ", ""),
-    "[PyShot] 缺少依赖：": ("[PyShot] 缺少依賴：", ""),
-    "，正在自动安装（首次约需 1-3 分钟）…": ("，正在自動安裝（首次約需 1-3 分鐘）…", ", installing automatically (1–3 minutes the first time)…"),
-    "请手动执行以下命令后重新运行：\n\n": ("請手動執行以下命令後重新運行：\n\n", ""),
-    "以下库导入失败：": ("以下庫導入失敗：", "These libraries failed to import:"),
-    "  内嵌依赖目录: ": ("  內嵌依賴目錄: ", ""),
-    "[PyShot] 依赖检查：": ("[PyShot] 依賴檢查：", ""),
-    " 已就绪。": (" 已就绪。", ""),
-    "[PyShot] pip 执行失败：": ("[PyShot] pip 執行失敗：", ""),
-    "  [缺失] ": ("  [缺失] ", ""),
-    "托盘一键检查更新": ("托盤一鍵檢查更新", "One-click update check from the tray"),
+    "以下库导入失败：{}": ("以下庫導入失敗：{}", "These libraries failed to import: {}"),
+    "[PyShot] 依赖安装完成。": ("[PyShot] 依賴安裝完成。", "Dependencies installed."),
+    "  内嵌依赖目录: {}": ("  內嵌依賴目錄: {}", "  Bundled libs: {}"),
+    "  内嵌依赖目录: 无（将使用系统环境或自动安装）": ("  內嵌依賴目錄: 無（將使用系統環境或自動安裝）", "  Bundled libs: none (will use the system environment or auto-install)"),
+    "[PyShot] 依赖检查：{} 已就绪。": ("[PyShot] 依賴檢查：{} 已就绪。", "Dependency check: {} is ready."),
+    "[PyShot] pip 执行失败：{}": ("[PyShot] pip 執行失敗：{}", "[PyShot] pip failed: {}"),
+    "[PyShot] 依赖检查：使用程序旁边的内嵌依赖目录，无需安装。": ("[PyShot] 依賴檢查：使用程序旁邊的內嵌依賴目錄，無需安裝。", "Dependency check: using the bundled libs folder next to the app; nothing to install."),
+    "  [缺失] {}（{}）": ("  [缺失] {}（{}）", "  [MISSING] {} ({})"),
+    "英文系统控制台不再冒中文": ("英文系統控製台不再冒中文", "No more Chinese in the console on English systems"),
     "PyShot 使用帮助": ("PyShot 使用幫助", "PyShot Help"),
     "截图 + 标注工具，专为做操作指引/步骤说明优化。": ("截圖 + 標注工具，專為做操作指引/步驟說明優化。", "Screenshot and annotation tool, built for step-by-step guides."),
     "快速开始": ("快速開始", "Quick Start"),
@@ -946,7 +948,7 @@ def pip_install(packages, mirror: str | None = None, runner=None,
             if run(cmd) == 0:
                 return True
         except Exception as ex:  # noqa: BLE001
-            print(f"[PyShot] pip 执行失败：{ex}")
+            print(tr("[PyShot] pip 执行失败：{}", ex))
     return False
 
 
@@ -956,7 +958,7 @@ def alert(title: str, message: str):
     自动化测试/无人值守场景设 PYSHOT_NO_ALERT=1 就只打印 —— 否则这个模态框
     会把测试挂在那里等人点确定。
     """
-    print(f"[PyShot] {title}：{message}")
+    print(tr("[PyShot] {}：{}", title, message))
     if os.name == "nt" and os.environ.get("PYSHOT_NO_ALERT") != "1":
         try:
             import ctypes
@@ -974,44 +976,47 @@ def ensure_deps(requirements=None, runner=None, quiet: bool = False) -> bool:
     if _use_bundled_libs():
         if not missing_packages(reqs):
             if not quiet:
-                print("[PyShot] 依赖检查：使用程序旁边的内嵌依赖目录，无需安装。")
+                print(tr("[PyShot] 依赖检查：使用程序旁边的内嵌依赖目录，无需安装。"))
             return True
     missing = missing_packages(reqs)
     if not missing:
         # 一切正常时也报一句：以前这里完全静默，用户会以为"依赖检查没了"
         if not quiet:
-            print(f"[PyShot] 依赖检查：{', '.join(p for _, p in reqs)} 已就绪。")
+            print(tr("[PyShot] 依赖检查：{} 已就绪。",
+                     ", ".join(p for _, p in reqs)))
         return True
     if not quiet:
-        print(f"[PyShot] 缺少依赖：{', '.join(missing)}，正在自动安装（首次约需 1-3 分钟）…")
+        print(tr("[PyShot] 缺少依赖：{}，正在自动安装（首次约需 1-3 分钟）…",
+                 ", ".join(missing)))
     if os.name == "nt":
         enable_windows_long_paths()
     if not pip_install(missing, runner=runner):
         manual = f"{sys.executable} -m pip install " + " ".join(missing)
-        alert("PyShot 依赖安装失败",
-              f"请手动执行以下命令后重新运行：\n\n{manual}")
+        alert(tr("PyShot 依赖安装失败"),
+              tr("请手动执行以下命令后重新运行：\n\n{}", manual))
         return False
     # 安装完再验证一次，确保真的能导入
     import importlib
     importlib.invalidate_caches()
     still = missing_packages(reqs)
     if still:
-        alert("PyShot 依赖仍不可用", f"以下库导入失败：{', '.join(still)}")
+        alert(tr("PyShot 依赖仍不可用"),
+              tr("以下库导入失败：{}", ", ".join(still)))
         return False
     if not quiet:
-        print("[PyShot] 依赖安装完成。")
+        print(tr("[PyShot] 依赖安装完成。"))
     return True
 
 
 def deps_report() -> str:
     """依赖状态文本，供 --check-deps 使用。"""
     import importlib
-    lines = [f"PyShot {APP_VERSION} 依赖检查："]
+    lines = [tr("PyShot {} 依赖检查：", APP_VERSION)]
     bundled = bundled_libs()
     if bundled is not None:
-        lines.append(f"  内嵌依赖目录: {bundled}")
+        lines.append(tr("  内嵌依赖目录: {}", bundled))
     else:
-        lines.append("  内嵌依赖目录: 无（将使用系统环境或自动安装）")
+        lines.append(tr("  内嵌依赖目录: 无（将使用系统环境或自动安装）"))
     for module_name, pip_name in REQUIRED_PACKAGES:
         try:
             mod = importlib.import_module(module_name)
@@ -1021,8 +1026,9 @@ def deps_report() -> str:
             where = getattr(mod, "__file__", "")
             lines.append(f"  [OK]   {pip_name} {version or ''}  ({where})".rstrip())
         except Exception as ex:  # noqa: BLE001
-            lines.append(f"  [缺失] {pip_name}（{type(ex).__name__}）")
-    lines.append(f"  Python: {sys.version.split()[0]}  解释器: {sys.executable}")
+            lines.append(tr("  [缺失] {}（{}）", pip_name, type(ex).__name__))
+    lines.append(tr("  Python: {}  解释器: {}", sys.version.split()[0],
+                    sys.executable))
     return "\n".join(lines)
 
 
@@ -1107,10 +1113,10 @@ if not ensure_deps():
 命名：`MAJOR.MINOR[.PATCH]`，git 标签为 `v<版本>-qt`（`-qt` 表示根目录这套
 PySide6 实现，`tk_version/` 是独立的 Tkinter 版）。
 """
-APP_VERSION = "2.26"
+APP_VERSION = "2.26.1"
 
 # 这版的一句话主题（写进单文件头与「关于」对话框，便于用户确认自己拿的是哪版）
-VERSION_TITLE = "托盘一键检查更新"
+VERSION_TITLE = "英文系统控制台不再冒中文"
 
 # 版本日期（本地日期，供日志/文档使用）
 VERSION_DATE = "2026-11-17"
@@ -10596,7 +10602,13 @@ def git_pull(root=None, timeout: int = 120) -> tuple:
     return True, text
 
 
-if __name__ == "__main__":                         # 手工冒烟：python updater.py
+def smoke():
+    """手工冒烟：python -c "import updater; updater.smoke()"。
+
+    注意：**不能有** ``if __name__ == "__main__"`` 块 —— 单文件版 build_single
+    只剥 main.py 里 ``main()`` 那一个入口，updater 若留 __main__ 块会被合并
+    进 PyShot.py 并在**每次启动时真的跑一遍联网检查**。
+    """
     print(f"current : {APP_VERSION}")
     r = check_for_update()
     if r["error"]:
@@ -11016,8 +11028,8 @@ class PyShotApp(QObject):
         # 用户选的组合注册失败（被占用）时要说一声，别默默换一个
         if chosen and chosen.replace(" ", "").lower() != \
                 (self.hotkey_text or "").replace(" ", "").lower():
-            print("[PyShot] 所选热键注册失败（可能被占用），已改用",
-                  self.hotkey_text)
+            print(tr("[PyShot] 所选热键注册失败（可能被占用），已改用 {}",
+                     self.hotkey_text))
         # id → 动作，供 nativeEventFilter 分发
         self._hotkey_actions = {}
         for hid in self._region_hotkeys:
@@ -11029,12 +11041,13 @@ class PyShotApp(QObject):
             self.app.installNativeEventFilter(self._filter)
             parts = []
             if self.hotkey_text:
-                parts.append(f"区域 {self.hotkey_text}")
+                parts.append(tr("区域 {}", self.hotkey_text))
             if self.full_hotkey_text:
-                parts.append(f"全屏 {self.full_hotkey_text}")
-            print("[PyShot] 全局热键已注册：" + "、".join(parts))
+                parts.append(tr("全屏 {}", self.full_hotkey_text))
+            print(tr("[PyShot] 全局热键已注册：{}", "、".join(parts)))
         else:
-            print("[PyShot] 热键注册失败，已尝试：" + "、".join(region_cands))
+            print(tr("[PyShot] 热键注册失败，已尝试：{}",
+                     "、".join(region_cands)))
 
     def custom_hotkey(self, which: str = "region"):
         """托盘「截图热键 → … → 自定义…」：自己按组合键，当场检测冲突。"""
@@ -12602,7 +12615,7 @@ def main():
     # 收到信号就正常 quit()（会走 shutdown，把托盘图标和热键都收干净）。
     def _on_sigint(signum, frame):
         print()  # 让 ^C 后面换行，提示更清楚
-        print("[PyShot] 收到 Ctrl+C，正在退出…")
+        print(tr("[PyShot] 收到 Ctrl+C，正在退出…"))
         app.quit()
 
     try:

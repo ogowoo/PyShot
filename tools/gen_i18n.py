@@ -185,8 +185,37 @@ def _diag_literal_ids(tree) -> set:
 
 
 EN = {
+    # ---- 启动 console 输出（跟界面语言走；英文系统下不该蹦中文）----
+    "[PyShot] pip 执行失败：{}": "[PyShot] pip failed: {}",
+    "[PyShot] {}：{}": "[PyShot] {}: {}",
+    "PyShot 依赖安装失败": "PyShot dependency installation failed",
+    "请手动执行以下命令后重新运行：\n\n{}":
+        "Please run the following command manually, then start PyShot again:\n\n{}",
+    "PyShot 依赖仍不可用": "PyShot dependencies still unavailable",
+    "以下库导入失败：{}": "These libraries failed to import: {}",
+    "[PyShot] 依赖检查：使用程序旁边的内嵌依赖目录，无需安装。":
+        "Dependency check: using the bundled libs folder next to the app; nothing to install.",
+    "[PyShot] 依赖检查：{} 已就绪。": "Dependency check: {} is ready.",
+    "[PyShot] 缺少依赖：{}，正在自动安装（首次约需 1-3 分钟）…":
+        "Missing dependencies: {}. Installing automatically (may take 1-3 minutes on first run)…",
+    "[PyShot] 依赖安装完成。": "Dependencies installed.",
+    "PyShot {} 依赖检查：": "PyShot {} dependency check:",
+    "  内嵌依赖目录: {}": "  Bundled libs: {}",
+    "  内嵌依赖目录: 无（将使用系统环境或自动安装）":
+        "  Bundled libs: none (will use the system environment or auto-install)",
+    "  [缺失] {}（{}）": "  [MISSING] {} ({})",
+    "  Python: {}  解释器: {}": "  Python: {}  Interpreter: {}",
+    "[PyShot] 所选热键注册失败（可能被占用），已改用 {}":
+        "Chosen hotkey could not be registered (maybe already in use); fell back to {}",
+    "区域 {}": "Region {}",
+    "全屏 {}": "Full screen {}",
+    "[PyShot] 全局热键已注册：{}": "Global hotkeys registered: {}",
+    "[PyShot] 热键注册失败，已尝试：{}":
+        "Hotkey registration failed; tried: {}",
+    "[PyShot] 收到 Ctrl+C，正在退出…": "Ctrl+C received, exiting…",
     # ---- 版本主题（version.py）----
-    "托盘一键检查更新": "One-click update check from the tray",
+    "英文系统控制台不再冒中文":
+        "No more Chinese in the console on English systems",
     # ---- 检查更新 ----
     "检查更新…": "Check for Updates…",
     "检查更新": "Check for Updates",

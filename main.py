@@ -410,8 +410,8 @@ class PyShotApp(QObject):
         # 用户选的组合注册失败（被占用）时要说一声，别默默换一个
         if chosen and chosen.replace(" ", "").lower() != \
                 (self.hotkey_text or "").replace(" ", "").lower():
-            print("[PyShot] 所选热键注册失败（可能被占用），已改用",
-                  self.hotkey_text)
+            print(tr("[PyShot] 所选热键注册失败（可能被占用），已改用 {}",
+                     self.hotkey_text))
         # id → 动作，供 nativeEventFilter 分发
         self._hotkey_actions = {}
         for hid in self._region_hotkeys:
@@ -423,12 +423,13 @@ class PyShotApp(QObject):
             self.app.installNativeEventFilter(self._filter)
             parts = []
             if self.hotkey_text:
-                parts.append(f"区域 {self.hotkey_text}")
+                parts.append(tr("区域 {}", self.hotkey_text))
             if self.full_hotkey_text:
-                parts.append(f"全屏 {self.full_hotkey_text}")
-            print("[PyShot] 全局热键已注册：" + "、".join(parts))
+                parts.append(tr("全屏 {}", self.full_hotkey_text))
+            print(tr("[PyShot] 全局热键已注册：{}", "、".join(parts)))
         else:
-            print("[PyShot] 热键注册失败，已尝试：" + "、".join(region_cands))
+            print(tr("[PyShot] 热键注册失败，已尝试：{}",
+                     "、".join(region_cands)))
 
     def custom_hotkey(self, which: str = "region"):
         """托盘「截图热键 → … → 自定义…」：自己按组合键，当场检测冲突。"""
@@ -1997,7 +1998,7 @@ def main():
     # 收到信号就正常 quit()（会走 shutdown，把托盘图标和热键都收干净）。
     def _on_sigint(signum, frame):
         print()  # 让 ^C 后面换行，提示更清楚
-        print("[PyShot] 收到 Ctrl+C，正在退出…")
+        print(tr("[PyShot] 收到 Ctrl+C，正在退出…"))
         app.quit()
 
     try:
