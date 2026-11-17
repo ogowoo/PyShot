@@ -29,8 +29,8 @@ if not ensure_deps():
     raise SystemExit(1)
 
 from PySide6.QtCore import (QAbstractNativeEventFilter, QObject, QPoint, QRect,
-                            Qt, QThread, QTimer, QUrl, Signal)
-from PySide6.QtGui import (QAction, QColor, QCursor, QDesktopServices, QFontMetrics,
+                            Qt, QThread, QTimer, Signal)
+from PySide6.QtGui import (QAction, QColor, QCursor, QFontMetrics,
                            QGuiApplication, QIcon, QPainter, QPixmap)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
                                QLabel, QMenu, QMessageBox, QSystemTrayIcon)
@@ -340,6 +340,38 @@ class GitPullThread(QThread):
             self.done.emit(ok, msg)
         except Exception as exc:                       # noqa: BLE001
             self.done.emit(False, repr(exc))
+
+
+class SelfUpdateThread(QThread):
+    """后台给非 git 检出（单文件版 / 源码树）下载新版，不冻界面。
+
+    mode="single"  → 下载后**替换正在运行的 PyShot.py**（单文件版自更新）
+    mode="sidecar" → 只把新版写到旁边（源码树不是 git 检出时，别动用户源码）
+    """
+
+    done = Signal(bool, str, str)      # ok, message, mode
+
+    def __init__(self, mode: str, expected_version: str, parent=None):
+        super().__init__(parent)
+        self._mode = mode
+        self._expected = expected_version
+
+    def run(self):
+        try:
+            from updater import (app_root, apply_single_file_update,
+                                 fetch_single_file, single_file_version,
+                                 write_sidecar)
+            if self._mode == "single":
+                ok, msg = apply_single_file_update(self._expected)
+            else:
+                data = fetch_single_file()
+                ver = single_file_version(data)
+                dest = write_sidecar(app_root() / "PyShot.py", data,
+                                     ".".join(map(str, ver)) if ver else "new")
+                ok, msg = True, str(dest)
+            self.done.emit(ok, msg, self._mode)
+        except Exception as exc:                       # noqa: BLE001
+            self.done.emit(False, repr(exc), self._mode)
 
 
 class PyShotApp(QObject):
@@ -775,7 +807,8 @@ class PyShotApp(QObject):
         # ---------- 更新 ----------
         act_update = QAction(make_menu_icon("refresh"), tr("检查更新…"), self.app)
         act_update.setToolTip(
-            tr("对比 GitHub 上的最新版本；是 git 检出的话可以直接拉取更新"))
+            tr("对比 GitHub 上的最新版本；git 检出直接拉取，"
+               "单文件版下载覆盖自身"))
         act_update.triggered.connect(
             lambda checked=False: self.check_updates(manual=True))
         menu.addAction(act_update)
@@ -1698,7 +1731,7 @@ class PyShotApp(QObject):
                          tr("v{} 可用（当前 v{}）。\n"
                             "右键托盘图标 → 检查更新… 即可升级。", latest, cur))
             return
-        from updater import is_git_checkout
+        from updater import is_git_checkout, is_single_file
         box = QMessageBox(QMessageBox.Information, tr("发现新版本"),
                           tr("发现新版本 v{}（当前 v{}）。\n\n要现在更新吗？",
                              latest, cur),
@@ -1711,23 +1744,43 @@ class PyShotApp(QObject):
             QApplication.setOverrideCursor(Qt.WaitCursor)
             self._pull_thread = GitPullThread(self)
             self._pull_thread.done.connect(
-                lambda ok, msg: self._on_update_pulled(ok, msg, latest))
+                lambda ok, msg: self._on_update_applied(
+                    ok, msg, latest, tr("git pull")))
             self._pull_thread.start()
+        elif is_single_file():
+            # 单文件版自更新：下载仓库里的 PyShot.py 覆盖自己，校验版本后替换
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            self._apply_thread = SelfUpdateThread("single", latest, self)
+            self._apply_thread.done.connect(
+                lambda ok, msg, mode: self._on_update_applied(
+                    ok, msg, latest, tr("下载新版本")))
+            self._apply_thread.start()
         else:
-            # 单文件版/手动拷的源码：没有 .git，没法 git pull，
-            # 打开仓库页面让用户自己下载覆盖。
-            QDesktopServices.openUrl(QUrl(res.get("url", "")))
-            self._msg_box("info", tr("检查更新"),
-                          tr("当前安装不是 git 检出，无法自动更新。\n"
-                             "已打开项目页面，请下载最新版后覆盖。"))
+            # 源码树、但不是 git 检出：别动用户的源码，把新版单文件下到旁边
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            self._apply_thread = SelfUpdateThread("sidecar", latest, self)
+            self._apply_thread.done.connect(
+                lambda ok, msg, mode: self._on_sidecar_done(ok, msg))
+            self._apply_thread.start()
 
-    def _on_update_pulled(self, ok: bool, msg: str, latest: str):
+    def _on_sidecar_done(self, ok: bool, msg: str):
         QApplication.restoreOverrideCursor()
         if not ok:
             self._msg_box("warning", tr("更新失败"),
-                          tr("git pull 失败：\n{}\n\n"
-                             "本地若有改动或历史分叉，请先处理后再试。",
-                             msg))
+                          tr("下载失败：\n{}\n\n"
+                             "请检查网络或写权限，或手动到项目页面下载。", msg))
+            return
+        self._msg_box("info", tr("更新完成"),
+                      tr("已把新版单文件下载到：\n{}\n"
+                         "双击运行它即可（现有源码没动）。", msg))
+
+    def _on_update_applied(self, ok: bool, msg: str, latest: str, how: str):
+        QApplication.restoreOverrideCursor()
+        if not ok:
+            self._msg_box("warning", tr("更新失败"),
+                          tr("{} 失败：\n{}\n\n"
+                             "本地若有改动或历史分叉，请先处理后再试；"
+                             "也可以手动到项目页面下载。", how, msg))
             return
         box = QMessageBox(QMessageBox.Information, tr("更新完成"),
                           tr("已更新到 v{}。\n重启 PyShot 后生效。", latest)

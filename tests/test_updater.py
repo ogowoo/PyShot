@@ -106,6 +106,84 @@ check("有 .git 才算 git 检出", is_git_checkout(tmp))
 ok, msg = updater.git_pull(tmp, timeout=30)
 check("非仓库目录 git pull 失败且带原因", not ok and bool(msg), msg[:60])
 
+# ---------- 6) 单文件版自更新：下载 → 校验 → 原子替换 ----------
+# 真单文件 ~580KB，这里造 >100KB 的合法内容（编译要通过）
+_PAD = "# padding\n" * 12000                     # ~108KB
+
+
+def make_single(version: str) -> bytes:
+    return (f'# -*- coding: utf-8 -*-\n'
+            f'"""PyShot {version} 单文件版"""\n'
+            f'APP_VERSION = "{version}"\n{_PAD}').encode("utf-8")
+
+
+# 文档字符串里引了历史写法 APP_VERSION = "2.6"，行首锚定不能取错
+mixed = ('"""以前写死 `APP_VERSION = "2.6"`"""\n'
+         'APP_VERSION = "2.27"\n').encode("utf-8")
+check("版本解析跳过文档字符串里的旧写法",
+      updater.single_file_version(mixed) == (2, 27),
+      str(updater.single_file_version(mixed)))
+
+work = Path(tempfile.mkdtemp(prefix="pyshot_selfupd_"))
+target = work / "PyShot.py"
+target.write_text('APP_VERSION = "2.26.1"\nprint("old")\n', encoding="utf-8")
+
+real_fetch = updater.fetch_single_file
+
+
+def _fetch_ok(timeout=120):
+    return make_single("2.27")
+
+
+updater.fetch_single_file = _fetch_ok
+ok, msg = updater.apply_single_file_update("2.27", target=target)
+check("自更新成功并替换目标文件", ok and Path(msg) == target.resolve(), str(msg))
+check("替换后的文件是新版内容",
+      'APP_VERSION = "2.27"' in target.read_text(encoding="utf-8"))
+check("临时文件已清理（没有 .new 残留）", not (work / "PyShot.py.new").exists())
+
+# 下载比预期旧 → 拒绝（防止"下到旧版把新版盖了"）
+ok, msg = updater.apply_single_file_update("2.28", target=target)
+check("下载版本低于预期 → 拒绝替换", not ok and "旧版" in msg, msg[:50])
+check("拒绝时原文件没被动过",
+      'APP_VERSION = "2.27"' in target.read_text(encoding="utf-8"))
+
+# 太小（错误页）
+updater.fetch_single_file = lambda timeout=120: b"404 not found"
+ok, msg = updater.apply_single_file_update("2.27", target=target)
+check("内容太小 → 拒绝", not ok and "太小" in msg, msg[:50])
+
+# 没有 APP_VERSION
+updater.fetch_single_file = lambda timeout=120: b"# nothing\n" + b"#" * 200000
+ok, msg = updater.apply_single_file_update("2.27", target=target)
+check("缺 APP_VERSION → 拒绝", not ok and "APP_VERSION" in msg, msg[:50])
+
+# 截断（编译不过）
+updater.fetch_single_file = lambda timeout=120: (
+    b'APP_VERSION = "2.27"\ndef broken(:\n' + b"#" * 200000)
+ok, msg = updater.apply_single_file_update("2.27", target=target)
+check("编译不过（截断）→ 拒绝", not ok, msg[:50])
+
+# 网络失败
+def _boom_fetch(timeout=120):
+    raise UpdaterError("下载单文件失败: no network")
+updater.fetch_single_file = _boom_fetch
+ok, msg = updater.apply_single_file_update("2.27", target=target)
+check("下载失败 → 返回失败原因", not ok and "no network" in msg, msg[:50])
+
+# 没写权限（指向不存在目录）→ 明确报错而不是抛到界面
+updater.fetch_single_file = _fetch_ok
+ok, msg = updater.apply_single_file_update(
+    "2.27", target=work / "no_such_dir" / "PyShot.py")
+check("目标不可写 → 返回失败原因", not ok and bool(msg), msg[:70])
+
+updater.fetch_single_file = real_fetch
+
+# 源码树（非 git）旁置下载：写 PyShot-<版本>.py，不动原文件
+side = updater.write_sidecar(work / "PyShot.py", make_single("2.27"), "2.27")
+check("旁置文件命名为 PyShot-<版本>.py", side.name == "PyShot-2.27.py", side.name)
+check("旁置文件内容正确", 'APP_VERSION = "2.27"' in side.read_text(encoding="utf-8"))
+
 print()
 if failures:
     print("失败项:", failures)

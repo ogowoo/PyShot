@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""PyShot 2.26.1 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
+"""PyShot 2.27 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
 
-本版主题：英文系统控制台不再冒中文
+本版主题：单文件版也能自己升级
 作者：Walt Liang <Wat.L@outlook.com>
 
 这是一个自动生成的单文件版本：把多文件源码合并在一起，并在启动时自动安装
@@ -83,7 +83,7 @@ TABLE = {
     "使用帮助": ("使用幫助", "Help"),
     "打开帮助窗口（F1；三语，可按关键字搜索）": ("開啟幫助窗口（F1；三語，可按關鍵字搜索）", "Open the help window (F1; 3 languages, searchable)"),
     "检查更新…": ("檢查更新…", "Check for Updates…"),
-    "对比 GitHub 上的最新版本；是 git 检出的话可以直接拉取更新": ("對比 GitHub 上的最新版本；是 git 檢出的话可以直接拉取更新", "Compare with the latest release on GitHub; a git checkout can pull directly"),
+    "对比 GitHub 上的最新版本；git 检出直接拉取，单文件版下载覆盖自身": ("對比 GitHub 上的最新版本；git 檢出直接拉取，單檔案版下载覆蓋自身", "Compare with the latest release on GitHub; a git checkout pulls directly, the single-file build replaces itself"),
     "启动时自动检查更新": ("啟動時自動檢查更新", "Check for updates on startup"),
     "每天最多检查一次；有新版会在托盘气泡里提示": ("每天最多檢查一次；有新版會在托盤氣泡裡提示", "At most once a day; a tray bubble appears when a new version exists"),
     "语言": ("語言", "Language"),
@@ -119,6 +119,7 @@ TABLE = {
     "发现新版本": ("发現新版本", "New Version Available"),
     "发现新版本 v{}（当前 v{}）。\n\n要现在更新吗？": ("发現新版本 v{}（當前 v{}）。\n\n要現在更新吗？", "New version v{} found (currently v{}).\n\nUpdate now?"),
     "更新完成": ("更新完成", "Update Complete"),
+    "已把新版单文件下载到：\n{}\n双击运行它即可（现有源码没动）。": ("已把新版單檔案下载到：\n{}\n雙擊運行它即可（現有源碼沒動）。", "New single-file build downloaded to:\n{}\nDouble-click it to run (your existing source is untouched)."),
     "立即重启": ("立即重啟", "Restart Now"),
     "稍后重启": ("稍後重啟", "Restart Later"),
     "打开图片": ("開啟圖片", "Open Image"),
@@ -160,10 +161,9 @@ TABLE = {
     "右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n找不到图标时点任务栏右侧的 ∧ 展开。": ("右鍵托盤圖示：捲動長截圖 / 螢幕取色 / 釘圖 / 結束。\n找不到圖示時點任務欄右側的 ∧ 展開。", "Right-click the tray icon: scrolling capture / color picker / pin / exit.\nIf the icon is hidden, click the ∧ arrow near the clock."),
     "PyShot 有新版本": ("PyShot 有新版本", "New PyShot version available"),
     "v{} 可用（当前 v{}）。\n右键托盘图标 → 检查更新… 即可升级。": ("v{} 可用（當前 v{}）。\n右鍵托盤圖示 → 檢查更新… 即可升级。", "v{} is available (currently v{}).\nRight-click the tray icon → Check for Updates… to upgrade."),
-    "检查更新": ("檢查更新", "Check for Updates"),
-    "当前安装不是 git 检出，无法自动更新。\n已打开项目页面，请下载最新版后覆盖。": ("當前安裝不是 git 檢出，無法自動更新。\n已開啟項目頁面，請下载最新版後覆蓋。", "This installation is not a git checkout and cannot self-update.\nThe project page has been opened — download the latest version to overwrite it."),
     "更新失败": ("更新失敗", "Update Failed"),
-    "git pull 失败：\n{}\n\n本地若有改动或历史分叉，请先处理后再试。": ("git pull 失敗：\n{}\n\n本地若有改動或歷史分叉，請先處理後再試。", "git pull failed:\n{}\n\nIf you have local changes or a diverged history, resolve them and try again."),
+    "下载失败：\n{}\n\n请检查网络或写权限，或手动到项目页面下载。": ("下载失敗：\n{}\n\n請檢查網路或寫权限，或手動到項目頁面下载。", "Download failed:\n{}\n\nCheck your network connection and write permissions, or download manually from the project page."),
+    "{} 失败：\n{}\n\n本地若有改动或历史分叉，请先处理后再试；也可以手动到项目页面下载。": ("{} 失敗：\n{}\n\n本地若有改動或歷史分叉，請先處理後再試；也可以手動到項目頁面下载。", "{} failed:\n{}\n\nIf you have local changes or a diverged history, resolve them and try again; you can also download manually from the project page."),
     "已更新到 v{}。\n重启 PyShot 后生效。": ("已更新到 v{}。\n重啟 PyShot 後生效。", "Updated to v{}.\nRestart PyShot for it to take effect."),
     "跳过保存：当前 ": ("跳過儲存：當前 ", ""),
     " 个标签少于缓存的 ": (" 個標籤少於緩存的 ", ""),
@@ -187,6 +187,7 @@ TABLE = {
     "热键（{}）都被占用，请双击托盘图标截图。\n": ("快速鍵（{}）都被佔用，請雙擊托盤圖示截圖。\n", "Hotkeys ({}) are all taken — double-click the tray icon to capture.\n"),
     "可用环境变量 PYSHOT_HOTKEY 指定其他组合，例如 PYSHOT_HOTKEY=ctrl+alt+j": ("可用環境變數 PYSHOT_HOTKEY 指定其他組合，例如 PYSHOT_HOTKEY=ctrl+alt+j", "Set PYSHOT_HOTKEY to pick another combination, e.g. PYSHOT_HOTKEY=ctrl+alt+j"),
     "PyShot 已启动（恢复了 {} 张上次的截图）": ("PyShot 已啟動（恢複了 {} 張上次的截圖）", "PyShot started (restored {} capture(s))"),
+    "检查更新": ("檢查更新", "Check for Updates"),
     "已是最新版本（v{}）。": ("已是最新版本（v{}）。", "You are up to date (v{})."),
     "重启失败": ("重啟失敗", "Restart Failed"),
     "无法自动重启：{}\n请手动重新启动 PyShot。": ("無法自動重啟：{}\n請手動重新啟動 PyShot。", "Could not restart automatically: {}\nPlease start PyShot manually."),
@@ -202,6 +203,7 @@ TABLE = {
     "全屏截图失败": ("全螢幕截圖失敗", "Full-screen capture failed"),
     "请检查网络，或稍后再试。": ("請檢查網路，或稍後再試。", "Please check your network connection, or try again later."),
     "检查更新失败：\n{}": ("檢查更新失敗：\n{}", "Update check failed:\n{}"),
+    "下载新版本": ("下载新版本", "Downloading the new version"),
     "兜底：确保覆盖层真的铺满并且是画出来的。\n\n        注意：**不能**因为 _bg 还没抓回来就跳过 —— 抓屏是延后做的（先显示遮罩、\n        后抓底图），这里要是等 _bg，头几帧的兜底就全空转了，多屏/缩放下遮罩\n        可能压根没铺好（曾因此表现成\"遮罩卡住不动\"）。\n        ": ("兜底：確保覆蓋層真的鋪滿并且是畫出來的。\n\n        注意：**不能**因為 _bg 還沒抓回來就跳過 —— 抓屏是延後做的（先顯示遮罩、\n        後抓底圖），這裡要是等 _bg，頭几幀的兜底就全空轉了，多屏/縮放下遮罩\n        可能壓根沒鋪好（曾因此表現成\"遮罩卡住不動\"）。\n        ", ""),
     "底图=空": ("底圖=空", ""),
     "底图=自检失败": ("底圖=自檢失敗", ""),
@@ -542,7 +544,7 @@ TABLE = {
     "[PyShot] pip 执行失败：{}": ("[PyShot] pip 執行失敗：{}", "[PyShot] pip failed: {}"),
     "[PyShot] 依赖检查：使用程序旁边的内嵌依赖目录，无需安装。": ("[PyShot] 依賴檢查：使用程序旁邊的內嵌依賴目錄，無需安裝。", "Dependency check: using the bundled libs folder next to the app; nothing to install."),
     "  [缺失] {}（{}）": ("  [缺失] {}（{}）", "  [MISSING] {} ({})"),
-    "英文系统控制台不再冒中文": ("英文系統控製台不再冒中文", "No more Chinese in the console on English systems"),
+    "单文件版也能自己升级": ("單檔案版也能自己升级", "The single-file build can upgrade itself"),
     "PyShot 使用帮助": ("PyShot 使用幫助", "PyShot Help"),
     "截图 + 标注工具，专为做操作指引/步骤说明优化。": ("截圖 + 標注工具，專為做操作指引/步驟說明優化。", "Screenshot and annotation tool, built for step-by-step guides."),
     "快速开始": ("快速開始", "Quick Start"),
@@ -1113,10 +1115,10 @@ if not ensure_deps():
 命名：`MAJOR.MINOR[.PATCH]`，git 标签为 `v<版本>-qt`（`-qt` 表示根目录这套
 PySide6 实现，`tk_version/` 是独立的 Tkinter 版）。
 """
-APP_VERSION = "2.26.1"
+APP_VERSION = "2.27"
 
 # 这版的一句话主题（写进单文件头与「关于」对话框，便于用户确认自己拿的是哪版）
-VERSION_TITLE = "英文系统控制台不再冒中文"
+VERSION_TITLE = "单文件版也能自己升级"
 
 # 版本日期（本地日期，供日志/文档使用）
 VERSION_DATE = "2026-11-17"
@@ -10433,6 +10435,7 @@ class EditorWindow(QMainWindow):
 main.py 里用 tr() 写，这里只返回结构化结果。
 """
 import json
+import os
 import re
 import subprocess
 import urllib.error
@@ -10582,6 +10585,95 @@ def is_git_checkout(root=None) -> bool:
     return (root / ".git").exists()
 
 
+SINGLE_FILE_NAME = "PyShot.py"
+# 单文件版的自更新：直接下载仓库 main 分支里生成好的那份（它就在版本库根目录，
+# 每次发布都会重新生成提交）。注意仓库已从 ogowoo/pyshot 改名为 ogowoo/PyShot，
+# raw 域名对大小写敏感，用改名后的写法。
+RAW_SINGLE_URL = (f"https://raw.githubusercontent.com/{REPO}/main/"
+                   f"{SINGLE_FILE_NAME}")
+MIN_SINGLE_BYTES = 100 * 1024       # 真单文件 ~580KB；太小肯定是错误页/截断
+# 只认行首的赋值：version.py 的文档字符串里还引了历史写法 `APP_VERSION = "2.6"`
+_VERSION_ASSIGN_RE = re.compile(r'^APP_VERSION = "([^"]+)"', re.MULTILINE)
+
+
+def is_single_file() -> bool:
+    """正在跑的是单文件版吗（__file__ 自己就是 PyShot.py，且旁边没有 .git）。"""
+    return Path(__file__).resolve().name == SINGLE_FILE_NAME \
+        and not is_git_checkout()
+
+
+def fetch_single_file(timeout: int = HTTP_TIMEOUT) -> bytes:
+    """从仓库 raw 地址下载最新单文件（失败抛 UpdaterError）。"""
+    req = urllib.request.Request(
+        RAW_SINGLE_URL, headers={"User-Agent": "pyshot-updater"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.read()
+    except urllib.error.URLError as exc:
+        raise UpdaterError(f"下载单文件失败: {exc}") from exc
+
+
+def single_file_version(data) -> tuple:
+    """从单文件内容里取出真正的 APP_VERSION（行首赋值；文档字符串里的旧写法不算）。"""
+    if isinstance(data, bytes):
+        data = data.decode("utf-8", "replace")
+    m = _VERSION_ASSIGN_RE.search(data or "")
+    return parse_version(m.group(1)) if m else None
+
+
+def write_sidecar(target: Path, data: bytes, version=None) -> Path:
+    """把下载到的新版写到 target 旁边，不动现有文件（源码树/无写权限时用）。"""
+    dest = target.parent / f"{target.stem}-{version or 'new'}{target.suffix}"
+    dest.write_bytes(data)
+    return dest
+
+
+def apply_single_file_update(expected_version: str = "", timeout: int = 120,
+                             target=None) -> tuple:
+    """单文件版自更新：下载 → 校验 → 原子替换自己。
+
+    返回 (ok, message)：
+      ok=True  message 是替换后的文件路径（调用方提示"重启生效"）
+      ok=False message 是失败原因
+
+    target 缺省 = 正在运行的 PyShot.py。测试里传临时文件，别碰真身。
+    校验三道：长度（防错误页）、能编译（防截断）、APP_VERSION 符合预期
+    （防"下到旧版把新版盖了"）。替换用 os.replace：同目录原子操作。
+    """
+    dest = Path(target).resolve() if target else Path(__file__).resolve()
+    try:
+        data = fetch_single_file(timeout)
+    except UpdaterError as exc:
+        return False, str(exc)
+    if len(data) < MIN_SINGLE_BYTES:
+        return False, f"下载内容太小（{len(data)} 字节），不像单文件版"
+    ver = single_file_version(data)
+    if ver is None:
+        return False, "下载到的文件里找不到 APP_VERSION，拒绝替换"
+    if expected_version:
+        try:
+            if compare_versions(ver, expected_version) < 0:
+                return False, (f"下载到的是旧版 {'.'.join(map(str, ver))} "
+                               f"（低于线上 {expected_version}），拒绝替换")
+        except UpdaterError:
+            return False, f"版本号无法比较: {ver!r} vs {expected_version!r}"
+    try:
+        compile(data.decode("utf-8", "replace"), str(dest), "exec")
+    except SyntaxError as exc:
+        return False, f"下载的文件编译不过（多半是下载被截断）：{exc}"
+    tmp = dest.with_name(dest.name + ".new")
+    try:
+        tmp.write_bytes(data)
+        os.replace(tmp, dest)
+    except OSError as exc:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+        return False, f"无法写入 {dest}（没有写权限？）：{exc}"
+    return True, str(dest)
+
+
 def git_pull(root=None, timeout: int = 120) -> tuple:
     """在 root 里 ``git pull --ff-only``。
 
@@ -10650,8 +10742,8 @@ from pathlib import Path
 
 
 from PySide6.QtCore import (QAbstractNativeEventFilter, QObject, QPoint, QRect,
-                            Qt, QThread, QTimer, QUrl, Signal)
-from PySide6.QtGui import (QAction, QColor, QCursor, QDesktopServices, QFontMetrics,
+                            Qt, QThread, QTimer, Signal)
+from PySide6.QtGui import (QAction, QColor, QCursor, QFontMetrics,
                            QGuiApplication, QIcon, QPainter, QPixmap)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
                                QLabel, QMenu, QMessageBox, QSystemTrayIcon)
@@ -10958,6 +11050,36 @@ class GitPullThread(QThread):
             self.done.emit(ok, msg)
         except Exception as exc:                       # noqa: BLE001
             self.done.emit(False, repr(exc))
+
+
+class SelfUpdateThread(QThread):
+    """后台给非 git 检出（单文件版 / 源码树）下载新版，不冻界面。
+
+    mode="single"  → 下载后**替换正在运行的 PyShot.py**（单文件版自更新）
+    mode="sidecar" → 只把新版写到旁边（源码树不是 git 检出时，别动用户源码）
+    """
+
+    done = Signal(bool, str, str)      # ok, message, mode
+
+    def __init__(self, mode: str, expected_version: str, parent=None):
+        super().__init__(parent)
+        self._mode = mode
+        self._expected = expected_version
+
+    def run(self):
+        try:
+
+            if self._mode == "single":
+                ok, msg = apply_single_file_update(self._expected)
+            else:
+                data = fetch_single_file()
+                ver = single_file_version(data)
+                dest = write_sidecar(app_root() / "PyShot.py", data,
+                                     ".".join(map(str, ver)) if ver else "new")
+                ok, msg = True, str(dest)
+            self.done.emit(ok, msg, self._mode)
+        except Exception as exc:                       # noqa: BLE001
+            self.done.emit(False, repr(exc), self._mode)
 
 
 class PyShotApp(QObject):
@@ -11393,7 +11515,8 @@ class PyShotApp(QObject):
         # ---------- 更新 ----------
         act_update = QAction(make_menu_icon("refresh"), tr("检查更新…"), self.app)
         act_update.setToolTip(
-            tr("对比 GitHub 上的最新版本；是 git 检出的话可以直接拉取更新"))
+            tr("对比 GitHub 上的最新版本；git 检出直接拉取，"
+               "单文件版下载覆盖自身"))
         act_update.triggered.connect(
             lambda checked=False: self.check_updates(manual=True))
         menu.addAction(act_update)
@@ -12329,23 +12452,43 @@ class PyShotApp(QObject):
             QApplication.setOverrideCursor(Qt.WaitCursor)
             self._pull_thread = GitPullThread(self)
             self._pull_thread.done.connect(
-                lambda ok, msg: self._on_update_pulled(ok, msg, latest))
+                lambda ok, msg: self._on_update_applied(
+                    ok, msg, latest, tr("git pull")))
             self._pull_thread.start()
+        elif is_single_file():
+            # 单文件版自更新：下载仓库里的 PyShot.py 覆盖自己，校验版本后替换
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            self._apply_thread = SelfUpdateThread("single", latest, self)
+            self._apply_thread.done.connect(
+                lambda ok, msg, mode: self._on_update_applied(
+                    ok, msg, latest, tr("下载新版本")))
+            self._apply_thread.start()
         else:
-            # 单文件版/手动拷的源码：没有 .git，没法 git pull，
-            # 打开仓库页面让用户自己下载覆盖。
-            QDesktopServices.openUrl(QUrl(res.get("url", "")))
-            self._msg_box("info", tr("检查更新"),
-                          tr("当前安装不是 git 检出，无法自动更新。\n"
-                             "已打开项目页面，请下载最新版后覆盖。"))
+            # 源码树、但不是 git 检出：别动用户的源码，把新版单文件下到旁边
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            self._apply_thread = SelfUpdateThread("sidecar", latest, self)
+            self._apply_thread.done.connect(
+                lambda ok, msg, mode: self._on_sidecar_done(ok, msg))
+            self._apply_thread.start()
 
-    def _on_update_pulled(self, ok: bool, msg: str, latest: str):
+    def _on_sidecar_done(self, ok: bool, msg: str):
         QApplication.restoreOverrideCursor()
         if not ok:
             self._msg_box("warning", tr("更新失败"),
-                          tr("git pull 失败：\n{}\n\n"
-                             "本地若有改动或历史分叉，请先处理后再试。",
-                             msg))
+                          tr("下载失败：\n{}\n\n"
+                             "请检查网络或写权限，或手动到项目页面下载。", msg))
+            return
+        self._msg_box("info", tr("更新完成"),
+                      tr("已把新版单文件下载到：\n{}\n"
+                         "双击运行它即可（现有源码没动）。", msg))
+
+    def _on_update_applied(self, ok: bool, msg: str, latest: str, how: str):
+        QApplication.restoreOverrideCursor()
+        if not ok:
+            self._msg_box("warning", tr("更新失败"),
+                          tr("{} 失败：\n{}\n\n"
+                             "本地若有改动或历史分叉，请先处理后再试；"
+                             "也可以手动到项目页面下载。", how, msg))
             return
         box = QMessageBox(QMessageBox.Information, tr("更新完成"),
                           tr("已更新到 v{}。\n重启 PyShot 后生效。", latest)

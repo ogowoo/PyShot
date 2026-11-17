@@ -214,13 +214,13 @@ EN = {
         "Hotkey registration failed; tried: {}",
     "[PyShot] 收到 Ctrl+C，正在退出…": "Ctrl+C received, exiting…",
     # ---- 版本主题（version.py）----
-    "英文系统控制台不再冒中文":
-        "No more Chinese in the console on English systems",
+    "单文件版也能自己升级":
+        "The single-file build can upgrade itself",
     # ---- 检查更新 ----
     "检查更新…": "Check for Updates…",
     "检查更新": "Check for Updates",
-    "对比 GitHub 上的最新版本；是 git 检出的话可以直接拉取更新":
-        "Compare with the latest release on GitHub; a git checkout can pull directly",
+    "对比 GitHub 上的最新版本；git 检出直接拉取，单文件版下载覆盖自身":
+        "Compare with the latest release on GitHub; a git checkout pulls directly, the single-file build replaces itself",
     "启动时自动检查更新": "Check for updates on startup",
     "每天最多检查一次；有新版会在托盘气泡里提示":
         "At most once a day; a tray bubble appears when a new version exists",
@@ -233,10 +233,13 @@ EN = {
     "PyShot 有新版本": "New PyShot version available",
     "v{} 可用（当前 v{}）。\n右键托盘图标 → 检查更新… 即可升级。":
         "v{} is available (currently v{}).\nRight-click the tray icon → Check for Updates… to upgrade.",
-    "当前安装不是 git 检出，无法自动更新。\n已打开项目页面，请下载最新版后覆盖。":
-        "This installation is not a git checkout and cannot self-update.\nThe project page has been opened — download the latest version to overwrite it.",
-    "git pull 失败：\n{}\n\n本地若有改动或历史分叉，请先处理后再试。":
-        "git pull failed:\n{}\n\nIf you have local changes or a diverged history, resolve them and try again.",
+    "下载新版本": "Downloading the new version",
+    "{} 失败：\n{}\n\n本地若有改动或历史分叉，请先处理后再试；也可以手动到项目页面下载。":
+        "{} failed:\n{}\n\nIf you have local changes or a diverged history, resolve them and try again; you can also download manually from the project page.",
+    "下载失败：\n{}\n\n请检查网络或写权限，或手动到项目页面下载。":
+        "Download failed:\n{}\n\nCheck your network connection and write permissions, or download manually from the project page.",
+    "已把新版单文件下载到：\n{}\n双击运行它即可（现有源码没动）。":
+        "New single-file build downloaded to:\n{}\nDouble-click it to run (your existing source is untouched).",
     "更新失败": "Update Failed",
     "更新完成": "Update Complete",
     "已更新到 v{}。\n重启 PyShot 后生效。":
