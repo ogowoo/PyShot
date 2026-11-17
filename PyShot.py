@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""PyShot 2.25.1 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
+"""PyShot 2.26 单文件版 —— 仿 FSCapture 的截图 + 标注编辑工具（自动安装依赖）
 
-本版主题：热键文案跟着换
+本版主题：托盘一键检查更新
 作者：Walt Liang <Wat.L@outlook.com>
 
 这是一个自动生成的单文件版本：把多文件源码合并在一起，并在启动时自动安装
@@ -82,6 +82,10 @@ TABLE = {
     "直接打开编辑器窗口（空白也能用，从它的「文件」菜单打开图片）": ("直接開啟編輯器窗口（空白也能用，从它的「檔案」菜單開啟圖片）", "Open the editor window directly (works even when empty; use its File menu to open an image)"),
     "使用帮助": ("使用幫助", "Help"),
     "打开帮助窗口（F1；三语，可按关键字搜索）": ("開啟幫助窗口（F1；三語，可按關鍵字搜索）", "Open the help window (F1; 3 languages, searchable)"),
+    "检查更新…": ("檢查更新…", "Check for Updates…"),
+    "对比 GitHub 上的最新版本；是 git 检出的话可以直接拉取更新": ("對比 GitHub 上的最新版本；是 git 檢出的话可以直接拉取更新", "Compare with the latest release on GitHub; a git checkout can pull directly"),
+    "启动时自动检查更新": ("啟動時自動檢查更新", "Check for updates on startup"),
+    "每天最多检查一次；有新版会在托盘气泡里提示": ("每天最多檢查一次；有新版會在托盤氣泡裡提示", "At most once a day; a tray bubble appears when a new version exists"),
     "语言": ("語言", "Language"),
     "取消截图": ("取消截圖", "Cancel Capture"),
     "收起正在显示的截图遮罩（Esc / 再按一次热键也可以）": ("收起正在顯示的截圖遮罩（Esc / 再按一次快速鍵也可以）", "Dismiss the capture overlay (Esc or pressing the hotkey again also works)"),
@@ -112,6 +116,11 @@ TABLE = {
     " px 长图": (" px 長圖", " px"),
     "滚动截图失败": ("捲動截圖失敗", "Scrolling capture failed"),
     "PyShot 已启动": ("PyShot 已啟動", "PyShot started"),
+    "发现新版本": ("发現新版本", "New Version Available"),
+    "发现新版本 v{}（当前 v{}）。\n\n要现在更新吗？": ("发現新版本 v{}（當前 v{}）。\n\n要現在更新吗？", "New version v{} found (currently v{}).\n\nUpdate now?"),
+    "更新完成": ("更新完成", "Update Complete"),
+    "立即重启": ("立即重啟", "Restart Now"),
+    "稍后重启": ("稍後重啟", "Restart Later"),
     "打开图片": ("開啟圖片", "Open Image"),
     "图片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)": ("圖片 (*.png *.jpg *.jpeg *.bmp *.gif *.webp)", "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp)"),
     "[PyShot] 全局热键已注册：": ("[PyShot] 全局快速鍵已註冊：", ""),
@@ -147,6 +156,13 @@ TABLE = {
     "PyShot 热键不可用": ("PyShot 快速鍵不可用", "PyShot hotkeys unavailable"),
     "按 {} 框选截图，或双击托盘图标。\n": ("按 {} 框選截圖，或雙擊托盤圖示。\n", "Press {} to capture a region, or double-click the tray icon.\n"),
     "右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n找不到图标时点任务栏右侧的 ∧ 展开。": ("右鍵托盤圖示：捲動長截圖 / 螢幕取色 / 釘圖 / 結束。\n找不到圖示時點任務欄右側的 ∧ 展開。", "Right-click the tray icon: scrolling capture / color picker / pin / exit.\nIf the icon is hidden, click the ∧ arrow near the clock."),
+    "PyShot 有新版本": ("PyShot 有新版本", "New PyShot version available"),
+    "v{} 可用（当前 v{}）。\n右键托盘图标 → 检查更新… 即可升级。": ("v{} 可用（當前 v{}）。\n右鍵托盤圖示 → 檢查更新… 即可升级。", "v{} is available (currently v{}).\nRight-click the tray icon → Check for Updates… to upgrade."),
+    "检查更新": ("檢查更新", "Check for Updates"),
+    "当前安装不是 git 检出，无法自动更新。\n已打开项目页面，请下载最新版后覆盖。": ("當前安裝不是 git 檢出，無法自動更新。\n已開啟項目頁面，請下载最新版後覆蓋。", "This installation is not a git checkout and cannot self-update.\nThe project page has been opened — download the latest version to overwrite it."),
+    "更新失败": ("更新失敗", "Update Failed"),
+    "git pull 失败：\n{}\n\n本地若有改动或历史分叉，请先处理后再试。": ("git pull 失敗：\n{}\n\n本地若有改動或歷史分叉，請先處理後再試。", "git pull failed:\n{}\n\nIf you have local changes or a diverged history, resolve them and try again."),
+    "已更新到 v{}。\n重启 PyShot 后生效。": ("已更新到 v{}。\n重啟 PyShot 後生效。", "Updated to v{}.\nRestart PyShot for it to take effect."),
     "跳过保存：当前 ": ("跳過儲存：當前 ", ""),
     " 个标签少于缓存的 ": (" 個標籤少於緩存的 ", ""),
     "启动·托盘就绪": ("啟動·托盤就绪", ""),
@@ -169,6 +185,9 @@ TABLE = {
     "热键（{}）都被占用，请双击托盘图标截图。\n": ("快速鍵（{}）都被佔用，請雙擊托盤圖示截圖。\n", "Hotkeys ({}) are all taken — double-click the tray icon to capture.\n"),
     "可用环境变量 PYSHOT_HOTKEY 指定其他组合，例如 PYSHOT_HOTKEY=ctrl+alt+j": ("可用環境變數 PYSHOT_HOTKEY 指定其他組合，例如 PYSHOT_HOTKEY=ctrl+alt+j", "Set PYSHOT_HOTKEY to pick another combination, e.g. PYSHOT_HOTKEY=ctrl+alt+j"),
     "PyShot 已启动（恢复了 {} 张上次的截图）": ("PyShot 已啟動（恢複了 {} 張上次的截圖）", "PyShot started (restored {} capture(s))"),
+    "已是最新版本（v{}）。": ("已是最新版本（v{}）。", "You are up to date (v{})."),
+    "重启失败": ("重啟失敗", "Restart Failed"),
+    "无法自动重启：{}\n请手动重新启动 PyShot。": ("無法自動重啟：{}\n請手動重新啟動 PyShot。", "Could not restart automatically: {}\nPlease start PyShot manually."),
     " · 从进程开始 ": (" · 从進程開始 ", ""),
     " ms（热键=": (" ms（快速鍵=", ""),
     "{} 已改为 {}（立即生效）": ("{} 已改為 {}（立即生效）", "{} is now {} (takes effect immediately)"),
@@ -179,6 +198,8 @@ TABLE = {
     "显示器 {}": ("顯示器 {}", "Monitor {}"),
     "打开编辑器失败": ("開啟編輯器失敗", "Could not open the editor"),
     "全屏截图失败": ("全螢幕截圖失敗", "Full-screen capture failed"),
+    "请检查网络，或稍后再试。": ("請檢查網路，或稍後再試。", "Please check your network connection, or try again later."),
+    "检查更新失败：\n{}": ("檢查更新失敗：\n{}", "Update check failed:\n{}"),
     "兜底：确保覆盖层真的铺满并且是画出来的。\n\n        注意：**不能**因为 _bg 还没抓回来就跳过 —— 抓屏是延后做的（先显示遮罩、\n        后抓底图），这里要是等 _bg，头几帧的兜底就全空转了，多屏/缩放下遮罩\n        可能压根没铺好（曾因此表现成\"遮罩卡住不动\"）。\n        ": ("兜底：確保覆蓋層真的鋪滿并且是畫出來的。\n\n        注意：**不能**因為 _bg 還沒抓回來就跳過 —— 抓屏是延後做的（先顯示遮罩、\n        後抓底圖），這裡要是等 _bg，頭几幀的兜底就全空轉了，多屏/縮放下遮罩\n        可能壓根沒鋪好（曾因此表現成\"遮罩卡住不動\"）。\n        ", ""),
     "底图=空": ("底圖=空", ""),
     "底图=自检失败": ("底圖=自檢失敗", ""),
@@ -519,7 +540,7 @@ TABLE = {
     " 已就绪。": (" 已就绪。", ""),
     "[PyShot] pip 执行失败：": ("[PyShot] pip 執行失敗：", ""),
     "  [缺失] ": ("  [缺失] ", ""),
-    "热键文案跟着换": ("快速鍵文案跟着換", "hotkey labels follow your change"),
+    "托盘一键检查更新": ("托盤一鍵檢查更新", "One-click update check from the tray"),
     "PyShot 使用帮助": ("PyShot 使用幫助", "PyShot Help"),
     "截图 + 标注工具，专为做操作指引/步骤说明优化。": ("截圖 + 標注工具，專為做操作指引/步驟說明優化。", "Screenshot and annotation tool, built for step-by-step guides."),
     "快速开始": ("快速開始", "Quick Start"),
@@ -944,11 +965,6 @@ def alert(title: str, message: str):
             pass
 
 
-def _startup_text(zh_cn: str, zh_tw: str, en: str) -> str:
-    """返回 Qt 初始化前使用的三语启动文案。"""
-    return {"zh_CN": zh_cn, "zh_TW": zh_tw, "en": en}.get(system_language(), en)
-
-
 def ensure_deps(requirements=None, runner=None, quiet: bool = False) -> bool:
     """确保依赖就绪：优先用内嵌依赖；缺什么装什么。返回是否可用。"""
     if os.environ.get("PYSHOT_SKIP_DEPS") == "1":
@@ -958,27 +974,16 @@ def ensure_deps(requirements=None, runner=None, quiet: bool = False) -> bool:
     if _use_bundled_libs():
         if not missing_packages(reqs):
             if not quiet:
-                print(_startup_text(
-                    "[PyShot] 依赖检查：使用程序旁边的内嵌依赖目录，无需安装。",
-                    "[PyShot] 依賴檢查：使用程式旁邊的內嵌依賴目錄，無需安裝。",
-                    "[PyShot] Dependency check: using bundled dependencies; no installation required."))
+                print("[PyShot] 依赖检查：使用程序旁边的内嵌依赖目录，无需安装。")
             return True
     missing = missing_packages(reqs)
     if not missing:
         # 一切正常时也报一句：以前这里完全静默，用户会以为"依赖检查没了"
         if not quiet:
-            packages = ", ".join(p for _, p in reqs)
-            print(_startup_text(
-                f"[PyShot] 依赖检查：{packages} 已就绪。",
-                f"[PyShot] 依賴檢查：{packages} 已就緒。",
-                f"[PyShot] Dependency check: {packages} is ready."))
+            print(f"[PyShot] 依赖检查：{', '.join(p for _, p in reqs)} 已就绪。")
         return True
     if not quiet:
-        packages = ", ".join(missing)
-        print(_startup_text(
-            f"[PyShot] 缺少依赖：{packages}，正在自动安装（首次约需 1-3 分钟）…",
-            f"[PyShot] 缺少依賴：{packages}，正在自動安裝（首次約需 1-3 分鐘）…",
-            f"[PyShot] Missing dependencies: {packages}. Installing automatically (first run may take 1-3 minutes)..."))
+        print(f"[PyShot] 缺少依赖：{', '.join(missing)}，正在自动安装（首次约需 1-3 分钟）…")
     if os.name == "nt":
         enable_windows_long_paths()
     if not pip_install(missing, runner=runner):
@@ -994,10 +999,7 @@ def ensure_deps(requirements=None, runner=None, quiet: bool = False) -> bool:
         alert("PyShot 依赖仍不可用", f"以下库导入失败：{', '.join(still)}")
         return False
     if not quiet:
-        print(_startup_text(
-            "[PyShot] 依赖安装完成。",
-            "[PyShot] 依賴安裝完成。",
-            "[PyShot] Dependency installation completed."))
+        print("[PyShot] 依赖安装完成。")
     return True
 
 
@@ -1105,13 +1107,13 @@ if not ensure_deps():
 命名：`MAJOR.MINOR[.PATCH]`，git 标签为 `v<版本>-qt`（`-qt` 表示根目录这套
 PySide6 实现，`tk_version/` 是独立的 Tkinter 版）。
 """
-APP_VERSION = "2.25.1"
+APP_VERSION = "2.26"
 
 # 这版的一句话主题（写进单文件头与「关于」对话框，便于用户确认自己拿的是哪版）
-VERSION_TITLE = "热键文案跟着换"
+VERSION_TITLE = "托盘一键检查更新"
 
 # 版本日期（本地日期，供日志/文档使用）
-VERSION_DATE = "2026-09-24"
+VERSION_DATE = "2026-11-17"
 
 # 作者（唯一来源：关于对话框、README、单文件头、帮助里都从这里取，
 # 别再各处各写一份邮箱 —— 改一次就全对上）
@@ -4497,6 +4499,19 @@ def _draw_clock(p, c):
     p.drawLine(QPointF(12, 12), QPointF(16.2, 14.2))    # 分针
 
 
+def _draw_refresh(p, c):
+    """更新：环形箭头（托盘「检查更新」菜单用）。"""
+    pen = p.pen()
+    pen.setWidthF(2.2)
+    p.setPen(pen)
+    p.drawArc(QRectF(5, 5, 14, 14), 60 * 16, 300 * 16)   # 缺口留在右上
+    p.setBrush(c)
+    p.setPen(Qt.NoPen)
+    # 箭头三角：贴在弧的终点（约 60° 处），朝切线方向（左上）
+    p.drawPolygon([QPointF(14.8, 4.2), QPointF(17.9, 6.3),
+                   QPointF(15.3, 8.5)])
+
+
 _ICON_DRAWERS = {
     "select": _draw_select, "rect": _draw_rect, "ellipse": _draw_ellipse,
     "line": _draw_line, "arrow": _draw_arrow, "pen": _draw_pen,
@@ -4506,7 +4521,7 @@ _ICON_DRAWERS = {
     "monitor": _draw_monitor, "scroll": _draw_scroll, "image": _draw_image,
     "window": _draw_window, "pin": _draw_pin, "exit": _draw_exit,
     "globe": _draw_globe, "hand": _draw_hand, "pan": _draw_hand, "cancel": _draw_cancel,
-    "help": _draw_help, "clock": _draw_clock,
+    "help": _draw_help, "clock": _draw_clock, "refresh": _draw_refresh,
 }
 
 
@@ -5180,11 +5195,11 @@ class SnipperOverlay(QWidget):
             return
         self._warmed = True
         self.setGeometry(self.screen.geometry())
-        # Windows DWM 可能在 opacity=0 生效前先合成黑色首帧。
-        # 这里只预创建窗口和图形资源，不再把全屏遮罩上屏。
         self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         self.setWindowOpacity(0.0)
-        QTimer.singleShot(0, self.end_warmup)
+        # Windows DWM 可能在 opacity=0 生效前先合成黑色首帧。
+        # 预热阶段不上屏，避免启动时闪现全屏遮罩。
+        QTimer.singleShot(0, self._end_warmup)
 
     def _end_warmup(self):
         if self._active:          # 用户已经自己开始截图了，别去隐藏
@@ -10388,6 +10403,210 @@ class EditorWindow(QMainWindow):
 
 
 # ========================================================================
+# 来自 updater.py
+# ========================================================================
+# -*- coding: utf-8 -*-
+"""updater.py —— 检查更新 / 应用更新（纯标准库，Qt 无关，便于单独测试）。
+
+机制
+====
+- 远程版本 = GitHub 仓库（见 ``REPO``）的最新 tag，形如 ``v2.25.1-qt``。
+  优先走 GitHub REST API（用户机器**不需要装 git**）；API 不可达时
+  回落到 ``git ls-remote --tags``。
+- 本机版本 = version.py 里的 APP_VERSION（全项目唯一定义处，别另写一份）。
+- 版本比较：把 "2.9.2" / "2.25.1" 拆成数字元组逐段比。
+  **不能按字符串比** —— "2.9.2" > "2.25.1"（按字符串）会把旧版当成新版。
+- 应用更新：
+  - 本目录是 git 检出（旁边有 .git）→ ``git pull --ff-only``；
+    ``--ff-only`` 保证只在能干净快进时动手，本地有改动/分叉就拒绝，
+    绝不会把用户的改动搅乱。
+  - 不是 git 检出（单文件版 / 手动解压的源码）→ 返回 False，
+    由调用方打开仓库页面让用户自己下载覆盖。
+
+本模块刻意**不 import Qt、不出现用户可见文案**：所有界面措辞都在
+main.py 里用 tr() 写，这里只返回结构化结果。
+"""
+import json
+import re
+import subprocess
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+
+
+REPO = "ogowoo/pyshot"
+REPO_WEB_URL = f"https://github.com/{REPO}"
+TAGS_API = f"https://api.github.com/repos/{REPO}/tags?per_page=100"
+HTTP_TIMEOUT = 8            # 秒；检查更新不该让用户等太久
+
+# 版本号出处：version.py 注释里说 git 标签为 v<版本>-qt / -tk
+_TAG_RE = re.compile(r"^v?(\d+(?:\.\d+){0,2})(?:[-_].*)?$", re.IGNORECASE)
+
+
+class UpdaterError(Exception):
+    """检查/应用更新时的可预期失败（网络不通、解析不出版本等）。"""
+
+
+def parse_version(text: str):
+    """从 "v2.25.1-qt" / "2.9" / "v3.0-tk" 这类串里拆出版本元组。
+
+    合法返回 tuple[int, ...]（如 (2, 25, 1)）；解析不出来返回 None。
+    前导的 v、后面 -qt/-tk 之类的后缀都剥掉，只留数字段。
+    """
+    m = _TAG_RE.match((text or "").strip())
+    if not m:
+        return None
+    try:
+        return tuple(int(p) for p in m.group(1).split("."))
+    except ValueError:                             # 理论到不了这（正则拦过）
+        return None
+
+
+def compare_versions(a, b) -> int:
+    """比较两个版本元组/可解析串：a<b → -1，相等 → 0，a>b → +1。
+
+    段数不同按右侧补 0 比（(2, 25) == (2, 25, 0) < (2, 25, 1)）。
+    """
+    ta = a if isinstance(a, tuple) else parse_version(str(a))
+    tb = b if isinstance(b, tuple) else parse_version(str(b))
+    if ta is None or tb is None:
+        raise UpdaterError(f"无法解析的版本号: {a!r} / {b!r}")
+    n = max(len(ta), len(tb))
+    ta += (0,) * (n - len(ta))
+    tb += (0,) * (n - len(tb))
+    return (ta > tb) - (ta < tb)
+
+
+# ---------------------------------------------------------------- 远程版本查询
+
+def _fetch_tags_via_api(timeout: int = HTTP_TIMEOUT) -> list:
+    """GitHub REST API 拿 tag 列表（按字母序返回，不保证版本序，后面自己比）。"""
+    req = urllib.request.Request(
+        TAGS_API, headers={"User-Agent": "pyshot-updater", "Accept": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8", "replace"))
+    except urllib.error.URLError as exc:
+        raise UpdaterError(f"GitHub API 不可达: {exc}") from exc
+    if not isinstance(data, list):
+        raise UpdaterError("GitHub API 返回异常（不是列表）")
+    return [item.get("name", "") for item in data if isinstance(item, dict)]
+
+
+def _fetch_tags_via_git(timeout: int = HTTP_TIMEOUT) -> list:
+    """git ls-remote 兜底（机器上装了 git 才走得到）。"""
+    try:
+        out = subprocess.run(
+            ["git", "ls-remote", "--tags", REPO_WEB_URL],
+            capture_output=True, text=True, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise UpdaterError(f"git 也不可用: {exc}") from exc
+    if out.returncode != 0:
+        raise UpdaterError(f"git ls-remote 失败: {out.stderr.strip()[:200]}")
+    tags = []
+    for line in out.stdout.splitlines():
+        # 形如 "<sha>\trefs/tags/v2.25.1-qt^{}"（^{} 是解引用行，跳过）
+        ref = line.rsplit("refs/tags/", 1)[-1] if "refs/tags/" in line else ""
+        if ref and not ref.endswith("^{}"):
+            tags.append(ref)
+    return tags
+
+
+def latest_remote(timeout: int = HTTP_TIMEOUT) -> dict:
+    """查线上的最新版本。
+
+    返回 {"version": (2, 25, 1), "tag": "v2.25.1-qt"}。
+    一个 tag 都解析不出（比如仓库还没打标签）抛 UpdaterError。
+    """
+    try:
+        tags = _fetch_tags_via_api(timeout)
+    except UpdaterError:
+        tags = _fetch_tags_via_git(timeout)
+    best_tag, best_ver = None, None
+    for tag in tags:
+        ver = parse_version(tag)
+        if ver is None:
+            continue                              # 非版本号标签（rc/beta 等）跳过
+        if best_ver is None or compare_versions(ver, best_ver) > 0:
+            best_tag, best_ver = tag, ver
+    if best_ver is None:
+        raise UpdaterError("线上没有任何可识别的版本标签")
+    return {"version": best_ver, "tag": best_tag}
+
+
+def check_for_update(timeout: int = HTTP_TIMEOUT) -> dict:
+    """一次完整的"要不要更新"判定（后台线程里调）。
+
+    返回 dict（调用方按 error/available 分支做界面）：
+      current    本机版本字符串（APP_VERSION）
+      latest     线上最新版本字符串（"2.25.1"）
+      tag        线上最新 tag（"v2.25.1-qt"）
+      url        仓库页面地址
+      available  True = 线上比本机新
+      error      非空 = 检查失败原因（网络/解析），其余字段无意义
+    """
+    result = {"current": APP_VERSION, "latest": "", "tag": "", "url": REPO_WEB_URL,
+              "available": False, "error": ""}
+    try:
+        info = latest_remote(timeout)
+    except UpdaterError as exc:
+        result["error"] = str(exc)
+        return result
+    result["latest"] = ".".join(str(p) for p in info["version"])
+    result["tag"] = info["tag"]
+    cur = parse_version(APP_VERSION)
+    if cur is None:
+        result["error"] = f"本机版本号无法解析: {APP_VERSION}"
+        return result
+    result["available"] = compare_versions(info["version"], cur) > 0
+    return result
+
+
+# ---------------------------------------------------------------- 应用更新
+
+def app_root() -> Path:
+    """程序所在目录（updater.py 在根目录里，取它的父目录）。"""
+    return Path(__file__).resolve().parent
+
+
+def is_git_checkout(root=None) -> bool:
+    """本目录是不是 git 检出（能不能直接 git pull）。"""
+    root = Path(root) if root else app_root()
+    return (root / ".git").exists()
+
+
+def git_pull(root=None, timeout: int = 120) -> tuple:
+    """在 root 里 ``git pull --ff-only``。
+
+    返回 (ok, message)：ok=False 时 message 是失败原因（已含 stderr）。
+    --ff-only 是本功能的护栏：本地有未提交改动或历史分叉时它**拒绝**
+    合并，而不是硬来把用户的改动搅乱。
+    """
+    root = Path(root) if root else app_root()
+    try:
+        out = subprocess.run(
+            ["git", "pull", "--ff-only"], cwd=str(root),
+            capture_output=True, text=True, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return False, f"git 执行失败: {exc}"
+    text = (out.stdout + ("\n" + out.stderr if out.stderr else "")).strip()
+    if out.returncode != 0:
+        return False, text or f"git pull 退出码 {out.returncode}"
+    return True, text
+
+
+if __name__ == "__main__":                         # 手工冒烟：python updater.py
+    print(f"current : {APP_VERSION}")
+    r = check_for_update()
+    if r["error"]:
+        print(f"error   : {r['error']}")
+    else:
+        print(f"latest  : {r['latest']} ({r['tag']})")
+        print(f"update? : {r['available']}")
+
+
+# ========================================================================
 # 来自 main.py
 # ========================================================================
 # -*- coding: utf-8 -*-
@@ -10419,8 +10638,8 @@ from pathlib import Path
 
 
 from PySide6.QtCore import (QAbstractNativeEventFilter, QObject, QPoint, QRect,
-                            Qt, QTimer)
-from PySide6.QtGui import (QAction, QColor, QCursor, QFontMetrics,
+                            Qt, QThread, QTimer, QUrl, Signal)
+from PySide6.QtGui import (QAction, QColor, QCursor, QDesktopServices, QFontMetrics,
                            QGuiApplication, QIcon, QPainter, QPixmap)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
                                QLabel, QMenu, QMessageBox, QSystemTrayIcon)
@@ -10443,6 +10662,11 @@ HOTKEY_ID_BASE = 0x5053          # "PS"
 # 启用前会先弹一段说明讲清"不稳定"。
 SCROLL_ENABLED_KEY = "scroll_capture_enabled"
 SCROLL_NOTICE_KEY = "scroll_capture_notice_off"
+# 「检查更新」的设置键：是否启动时自动检查（默认开）+ 上次检查时间戳（
+# 自动检查每天最多一次，别每次启动都去敲 GitHub）。
+UPDATE_AUTO_KEY = "update_auto_check"
+UPDATE_LAST_CHECK_KEY = "update_last_check"
+UPDATE_CHECK_INTERVAL = 24 * 3600          # 自动检查的最小间隔（秒）
 # 「截图时不最小化编辑器」的设置键在 editor.py（KEEP_EDITOR_SETTING），
 # 主程序与编辑器菜单共用同一个键，避免两处各写一份字符串而对不上。
 
@@ -10690,6 +10914,38 @@ class HotkeyFilter(QAbstractNativeEventFilter):
             if msg.message == WM_HOTKEY and msg.wParam in self.ids:
                 self.callback(msg.wParam)
         return False, 0
+
+
+class UpdateCheckThread(QThread):
+    """后台查一次更新，结果通过 done 信号带回 GUI 线程。
+
+    网络请求在子线程里跑：GitHub API 超时 8 秒，放主线程会冻住界面
+    （托盘菜单点完"检查更新"白屏几秒很难看）。线程随结果发完自行结束。
+    """
+
+    done = Signal(dict)          # updater.check_for_update() 的返回 dict
+
+    def run(self):
+        try:
+
+            self.done.emit(check_for_update())
+        except Exception as exc:                       # noqa: BLE001
+            self.done.emit({"current": "", "latest": "", "tag": "", "url": "",
+                            "available": False, "error": repr(exc)})
+
+
+class GitPullThread(QThread):
+    """后台 git pull（用户点了"现在更新"之后）。拉取可能要好几秒。"""
+
+    done = Signal(bool, str)     # ok, message
+
+    def run(self):
+        try:
+
+            ok, msg = git_pull()
+            self.done.emit(ok, msg)
+        except Exception as exc:                       # noqa: BLE001
+            self.done.emit(False, repr(exc))
 
 
 class PyShotApp(QObject):
@@ -11118,6 +11374,26 @@ class PyShotApp(QObject):
         act_help.setToolTip(tr("打开帮助窗口（F1；三语，可按关键字搜索）"))
         act_help.triggered.connect(self.show_help)
         menu.addAction(act_help)
+
+        menu.addSeparator()
+
+        # ---------- 更新 ----------
+        act_update = QAction(make_menu_icon("refresh"), tr("检查更新…"), self.app)
+        act_update.setToolTip(
+            tr("对比 GitHub 上的最新版本；是 git 检出的话可以直接拉取更新"))
+        act_update.triggered.connect(
+            lambda checked=False: self.check_updates(manual=True))
+        menu.addAction(act_update)
+        self.act_update = act_update
+
+        act_update_auto = QAction(make_menu_icon("refresh"),
+                                  tr("启动时自动检查更新"), menu)
+        act_update_auto.setCheckable(True)
+        act_update_auto.setChecked(self._update_auto_enabled())
+        act_update_auto.setToolTip(
+            tr("每天最多检查一次；有新版会在托盘气泡里提示"))
+        act_update_auto.toggled.connect(self._set_update_auto)
+        menu.addAction(act_update_auto)
 
         menu.addSeparator()
 
@@ -11553,16 +11829,26 @@ class PyShotApp(QObject):
         卡住 —— 用户按热键完全没反应（实测启动后 21 秒空白）。
         现在托盘/热键先可用，这一步随后在事件循环里进行，日志能看到各段耗时。
         """
-        # 启动阶段不解码历史截图、不创建编辑器，避免主线程阻塞数秒。
-        # 历史会话会在首次打开编辑器时由 _restore_into() 惰性恢复。
+        import time
+        t0 = time.perf_counter()
         restored = 0
-        self._cap_log('启动·恢复会话', '已延迟到首次打开编辑器')
+        try:
+            restored = self.restore_session()
+        except Exception:                          # noqa: BLE001
+            restored = 0
+        self._cap_log("启动·恢复会话",
+                      f"{restored} 张，耗时 {(time.perf_counter()-t0)*1000:.0f} ms")
         try:
             self.notify_ready(restored)
         except Exception:                          # noqa: BLE001
             pass
         self._cap_log("启动·就绪",
                       f"从进程开始到就绪 {(time.perf_counter()-_PROC_T0)*1000:.0f} ms")
+        # 静默检查更新（开关开着且距上次超过 24 小时才真的查）
+        try:
+            self.maybe_auto_check_updates()
+        except Exception:                          # noqa: BLE001
+            pass
 
     def _on_region_selected(self, region):
         self._cap_log("滚动·选区确定", f"region={region.x()},{region.y()} "
@@ -11962,6 +12248,137 @@ class PyShotApp(QObject):
             tr("按 {} 框选截图，或双击托盘图标。\n", self.hotkey_text) +
             tr("右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n"
                "找不到图标时点任务栏右侧的 ∧ 展开。"))
+
+    # ---------- 更新 ----------
+    def _update_auto_enabled(self) -> bool:
+        """启动时自动检查更新（默认开；设置存 ~/.pyshot/settings.json）。"""
+        try:
+
+            return bool(get_setting(UPDATE_AUTO_KEY, True))
+        except Exception:                              # noqa: BLE001
+            return True
+
+    def _set_update_auto(self, enabled: bool):
+
+        set_setting(UPDATE_AUTO_KEY, bool(enabled))
+
+    def check_updates(self, manual: bool = True):
+        """查一次更新：后台线程跑，结果回来再弹界面。
+
+        manual=True 来自托盘菜单：转等待光标，失败/无新版都明确说一声。
+        manual=False 是启动后的静默检查：只在"有新版"时托盘气泡提示，
+        网络不通/已最新都**不打扰**（启动时弹一堆失败气泡很烦）。
+        """
+        if getattr(self, "_update_thread", None) is not None \
+                and self._update_thread.isRunning():
+            return                              # 上一次还没查完，别叠查询
+        if manual:
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+        self._update_thread = UpdateCheckThread(self)
+        self._update_thread.done.connect(
+            lambda res: self._on_update_checked(res, manual))
+        self._update_thread.start()
+
+    def _on_update_checked(self, res: dict, manual: bool):
+        if manual:
+            QApplication.restoreOverrideCursor()
+        err = res.get("error") or ""
+        if err:
+            if manual:
+                self._msg_box("warning", tr("检查更新"),
+                              tr("检查更新失败：\n{}", err) + "\n\n"
+                              + tr("请检查网络，或稍后再试。"))
+            return
+        if not res.get("available"):
+            if manual:
+                self._msg_box(
+                    "info", tr("检查更新"),
+                    tr("已是最新版本（v{}）。", res.get("current", "")))
+            return
+        # 有新版
+        cur, latest = res.get("current", ""), res.get("latest", "")
+        if not manual:
+            # 静默检查：托盘气泡提一句即可，弹对话框会把用户正干的事打断
+            self._notify(tr("PyShot 有新版本"),
+                         tr("v{} 可用（当前 v{}）。\n"
+                            "右键托盘图标 → 检查更新… 即可升级。", latest, cur))
+            return
+
+        box = QMessageBox(QMessageBox.Information, tr("发现新版本"),
+                          tr("发现新版本 v{}（当前 v{}）。\n\n要现在更新吗？",
+                             latest, cur),
+                          QMessageBox.Yes | QMessageBox.No,
+                          self.editors[-1] if self.editors else None)
+        box.setDefaultButton(QMessageBox.Yes)
+        if box.exec() != QMessageBox.Yes:
+            return
+        if is_git_checkout():
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            self._pull_thread = GitPullThread(self)
+            self._pull_thread.done.connect(
+                lambda ok, msg: self._on_update_pulled(ok, msg, latest))
+            self._pull_thread.start()
+        else:
+            # 单文件版/手动拷的源码：没有 .git，没法 git pull，
+            # 打开仓库页面让用户自己下载覆盖。
+            QDesktopServices.openUrl(QUrl(res.get("url", "")))
+            self._msg_box("info", tr("检查更新"),
+                          tr("当前安装不是 git 检出，无法自动更新。\n"
+                             "已打开项目页面，请下载最新版后覆盖。"))
+
+    def _on_update_pulled(self, ok: bool, msg: str, latest: str):
+        QApplication.restoreOverrideCursor()
+        if not ok:
+            self._msg_box("warning", tr("更新失败"),
+                          tr("git pull 失败：\n{}\n\n"
+                             "本地若有改动或历史分叉，请先处理后再试。",
+                             msg))
+            return
+        box = QMessageBox(QMessageBox.Information, tr("更新完成"),
+                          tr("已更新到 v{}。\n重启 PyShot 后生效。", latest)
+                          + ("\n\n" + msg if msg else ""),
+                          QMessageBox.Yes | QMessageBox.No,
+                          self.editors[-1] if self.editors else None)
+        box.button(QMessageBox.Yes).setText(tr("立即重启"))
+        box.button(QMessageBox.No).setText(tr("稍后重启"))
+        box.setDefaultButton(QMessageBox.Yes)
+        if box.exec() == QMessageBox.Yes:
+            self._restart_now()
+
+    def _restart_now(self):
+        """拉起一个新进程后退出自己（更新后的代码要重启才生效）。"""
+        try:
+            import subprocess
+            subprocess.Popen([sys.executable] + sys.argv,
+                             cwd=os.getcwd())
+        except Exception as exc:                       # noqa: BLE001
+            self._msg_box("warning", tr("重启失败"),
+                          tr("无法自动重启：{}\n请手动重新启动 PyShot。", exc))
+            return
+        self.app.quit()
+
+    def _msg_box(self, kind: str, title: str, text: str):
+        """统一弹 QMessageBox（kind = info / warning）。"""
+        icon = {"info": QMessageBox.Information,
+                "warning": QMessageBox.Warning}.get(kind, QMessageBox.Information)
+        parent = self.editors[-1] if self.editors else None
+        QMessageBox(icon, title, text, QMessageBox.Ok, parent).exec()
+
+    def maybe_auto_check_updates(self):
+        """启动后的静默检查：开关开着 + 距上次超过 24 小时才查。"""
+        if not self._update_auto_enabled():
+            return
+        try:
+
+            last = float(get_setting(UPDATE_LAST_CHECK_KEY, 0) or 0)
+            if time.time() - last < UPDATE_CHECK_INTERVAL:
+                return
+            # 先记时间戳：就算这次网络失败，也别每次启动都重试
+            set_setting(UPDATE_LAST_CHECK_KEY, time.time())
+        except Exception:                              # noqa: BLE001
+            return
+        # 延迟 5 秒：别和启动恢复/就绪提示抢资源
+        QTimer.singleShot(5000, lambda: self.check_updates(manual=False))
 
     def open_image(self):
         path, _ = QFileDialog.getOpenFileName(

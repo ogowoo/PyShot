@@ -61,6 +61,7 @@ _env = dict(os.environ)
 _env["PYTHONPATH"] = _fake
 _env.pop("PYSHOT_SKIP_DEPS", None)
 _env["PYSHOT_NO_ALERT"] = "1"          # 别弹模态框把测试挂住
+_env["PYSHOT_LANG"] = "zh_CN"          # 断言的是中文文案；别随系统区域设置漂
 _env["PYTHONIOENCODING"] = "utf-8"
 _proc = subprocess.run([sys.executable, TARGET], cwd=HERE, env=_env,
                        capture_output=True, text=True, encoding="utf-8",

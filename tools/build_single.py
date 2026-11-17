@@ -42,6 +42,7 @@ MODULES = [
     "snipper.py",
     "scroller.py",
     "editor.py",
+    "updater.py",
     "main.py",
 ]
 
@@ -53,7 +54,7 @@ MODULES = [
 PRELUDE = ["i18n_data.py", "i18n.py", "bootstrap.py"]
 
 LOCAL_MODULES = ("i18n_data", "i18n", "version", "session", "diag", "bootstrap", "help_text", "helpwin", "hotkeyui", "watermark", "border", "shapes", "style", "capture_utils",
-                 "pinboard", "snipper", "scroller", "editor", "main")
+                 "pinboard", "snipper", "scroller", "editor", "updater", "main")
 
 _LOCAL_ALT = "|".join(LOCAL_MODULES)
 

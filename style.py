@@ -531,6 +531,19 @@ def _draw_clock(p, c):
     p.drawLine(QPointF(12, 12), QPointF(16.2, 14.2))    # 分针
 
 
+def _draw_refresh(p, c):
+    """更新：环形箭头（托盘「检查更新」菜单用）。"""
+    pen = p.pen()
+    pen.setWidthF(2.2)
+    p.setPen(pen)
+    p.drawArc(QRectF(5, 5, 14, 14), 60 * 16, 300 * 16)   # 缺口留在右上
+    p.setBrush(c)
+    p.setPen(Qt.NoPen)
+    # 箭头三角：贴在弧的终点（约 60° 处），朝切线方向（左上）
+    p.drawPolygon([QPointF(14.8, 4.2), QPointF(17.9, 6.3),
+                   QPointF(15.3, 8.5)])
+
+
 _ICON_DRAWERS = {
     "select": _draw_select, "rect": _draw_rect, "ellipse": _draw_ellipse,
     "line": _draw_line, "arrow": _draw_arrow, "pen": _draw_pen,
@@ -540,7 +553,7 @@ _ICON_DRAWERS = {
     "monitor": _draw_monitor, "scroll": _draw_scroll, "image": _draw_image,
     "window": _draw_window, "pin": _draw_pin, "exit": _draw_exit,
     "globe": _draw_globe, "hand": _draw_hand, "pan": _draw_hand, "cancel": _draw_cancel,
-    "help": _draw_help, "clock": _draw_clock,
+    "help": _draw_help, "clock": _draw_clock, "refresh": _draw_refresh,
 }
 
 

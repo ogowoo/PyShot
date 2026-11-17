@@ -134,11 +134,15 @@ check("工具项成组（取色/贴图相邻）",
       names.index("屏幕取色") + 1 == names.index("贴出剪贴板图片"), str(names))
 check("窗口项成组（打开图片/打开编辑器相邻）",
       names.index("打开图片编辑…") + 1 == names.index("显示编辑器"))
+check("更新项成组（检查更新/自动检查相邻）",
+      names.index("检查更新…") + 1 == names.index("启动时自动检查更新"),
+      str(names))
 check("退出在最后", names[-1] == "退出 PyShot", str(names[-1]))
 
-# 分组分隔线：6 条（截图|滚动、滚动|工具、工具|语言、语言|取消、取消|退出）
+# 分组分隔线：7 条（截图|滚动、滚动|工具、工具|窗口、窗口|更新、
+# 更新|语言、语言|取消、取消|退出）
 sep_count = sum(1 for t in top if t[2])
-check("分隔线数量合理（6 条）", sep_count == 6, f"{sep_count} 条")
+check("分隔线数量合理（7 条）", sep_count == 7, f"{sep_count} 条")
 check("有语言子菜单", "语言" in names, str(names))
 
 # ---------- 图标与快捷键显示 ----------

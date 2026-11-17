@@ -29,8 +29,8 @@ if not ensure_deps():
     raise SystemExit(1)
 
 from PySide6.QtCore import (QAbstractNativeEventFilter, QObject, QPoint, QRect,
-                            Qt, QTimer)
-from PySide6.QtGui import (QAction, QColor, QCursor, QFontMetrics,
+                            Qt, QThread, QTimer, QUrl, Signal)
+from PySide6.QtGui import (QAction, QColor, QCursor, QDesktopServices, QFontMetrics,
                            QGuiApplication, QIcon, QPainter, QPixmap)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
                                QLabel, QMenu, QMessageBox, QSystemTrayIcon)
@@ -56,6 +56,11 @@ HOTKEY_ID_BASE = 0x5053          # "PS"
 # 启用前会先弹一段说明讲清"不稳定"。
 SCROLL_ENABLED_KEY = "scroll_capture_enabled"
 SCROLL_NOTICE_KEY = "scroll_capture_notice_off"
+# 「检查更新」的设置键：是否启动时自动检查（默认开）+ 上次检查时间戳（
+# 自动检查每天最多一次，别每次启动都去敲 GitHub）。
+UPDATE_AUTO_KEY = "update_auto_check"
+UPDATE_LAST_CHECK_KEY = "update_last_check"
+UPDATE_CHECK_INTERVAL = 24 * 3600          # 自动检查的最小间隔（秒）
 # 「截图时不最小化编辑器」的设置键在 editor.py（KEEP_EDITOR_SETTING），
 # 主程序与编辑器菜单共用同一个键，避免两处各写一份字符串而对不上。
 
@@ -303,6 +308,38 @@ class HotkeyFilter(QAbstractNativeEventFilter):
             if msg.message == WM_HOTKEY and msg.wParam in self.ids:
                 self.callback(msg.wParam)
         return False, 0
+
+
+class UpdateCheckThread(QThread):
+    """后台查一次更新，结果通过 done 信号带回 GUI 线程。
+
+    网络请求在子线程里跑：GitHub API 超时 8 秒，放主线程会冻住界面
+    （托盘菜单点完"检查更新"白屏几秒很难看）。线程随结果发完自行结束。
+    """
+
+    done = Signal(dict)          # updater.check_for_update() 的返回 dict
+
+    def run(self):
+        try:
+            from updater import check_for_update
+            self.done.emit(check_for_update())
+        except Exception as exc:                       # noqa: BLE001
+            self.done.emit({"current": "", "latest": "", "tag": "", "url": "",
+                            "available": False, "error": repr(exc)})
+
+
+class GitPullThread(QThread):
+    """后台 git pull（用户点了"现在更新"之后）。拉取可能要好几秒。"""
+
+    done = Signal(bool, str)     # ok, message
+
+    def run(self):
+        try:
+            from updater import git_pull
+            ok, msg = git_pull()
+            self.done.emit(ok, msg)
+        except Exception as exc:                       # noqa: BLE001
+            self.done.emit(False, repr(exc))
 
 
 class PyShotApp(QObject):
@@ -731,6 +768,26 @@ class PyShotApp(QObject):
         act_help.setToolTip(tr("打开帮助窗口（F1；三语，可按关键字搜索）"))
         act_help.triggered.connect(self.show_help)
         menu.addAction(act_help)
+
+        menu.addSeparator()
+
+        # ---------- 更新 ----------
+        act_update = QAction(make_menu_icon("refresh"), tr("检查更新…"), self.app)
+        act_update.setToolTip(
+            tr("对比 GitHub 上的最新版本；是 git 检出的话可以直接拉取更新"))
+        act_update.triggered.connect(
+            lambda checked=False: self.check_updates(manual=True))
+        menu.addAction(act_update)
+        self.act_update = act_update
+
+        act_update_auto = QAction(make_menu_icon("refresh"),
+                                  tr("启动时自动检查更新"), menu)
+        act_update_auto.setCheckable(True)
+        act_update_auto.setChecked(self._update_auto_enabled())
+        act_update_auto.setToolTip(
+            tr("每天最多检查一次；有新版会在托盘气泡里提示"))
+        act_update_auto.toggled.connect(self._set_update_auto)
+        menu.addAction(act_update_auto)
 
         menu.addSeparator()
 
@@ -1181,6 +1238,11 @@ class PyShotApp(QObject):
             pass
         self._cap_log("启动·就绪",
                       f"从进程开始到就绪 {(time.perf_counter()-_PROC_T0)*1000:.0f} ms")
+        # 静默检查更新（开关开着且距上次超过 24 小时才真的查）
+        try:
+            self.maybe_auto_check_updates()
+        except Exception:                          # noqa: BLE001
+            pass
 
     def _on_region_selected(self, region):
         self._cap_log("滚动·选区确定", f"region={region.x()},{region.y()} "
@@ -1580,6 +1642,137 @@ class PyShotApp(QObject):
             tr("按 {} 框选截图，或双击托盘图标。\n", self.hotkey_text) +
             tr("右键托盘图标：滚动长截图 / 屏幕取色 / 贴图 / 退出。\n"
                "找不到图标时点任务栏右侧的 ∧ 展开。"))
+
+    # ---------- 更新 ----------
+    def _update_auto_enabled(self) -> bool:
+        """启动时自动检查更新（默认开；设置存 ~/.pyshot/settings.json）。"""
+        try:
+            from i18n import get_setting
+            return bool(get_setting(UPDATE_AUTO_KEY, True))
+        except Exception:                              # noqa: BLE001
+            return True
+
+    def _set_update_auto(self, enabled: bool):
+        from i18n import set_setting
+        set_setting(UPDATE_AUTO_KEY, bool(enabled))
+
+    def check_updates(self, manual: bool = True):
+        """查一次更新：后台线程跑，结果回来再弹界面。
+
+        manual=True 来自托盘菜单：转等待光标，失败/无新版都明确说一声。
+        manual=False 是启动后的静默检查：只在"有新版"时托盘气泡提示，
+        网络不通/已最新都**不打扰**（启动时弹一堆失败气泡很烦）。
+        """
+        if getattr(self, "_update_thread", None) is not None \
+                and self._update_thread.isRunning():
+            return                              # 上一次还没查完，别叠查询
+        if manual:
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+        self._update_thread = UpdateCheckThread(self)
+        self._update_thread.done.connect(
+            lambda res: self._on_update_checked(res, manual))
+        self._update_thread.start()
+
+    def _on_update_checked(self, res: dict, manual: bool):
+        if manual:
+            QApplication.restoreOverrideCursor()
+        err = res.get("error") or ""
+        if err:
+            if manual:
+                self._msg_box("warning", tr("检查更新"),
+                              tr("检查更新失败：\n{}", err) + "\n\n"
+                              + tr("请检查网络，或稍后再试。"))
+            return
+        if not res.get("available"):
+            if manual:
+                self._msg_box(
+                    "info", tr("检查更新"),
+                    tr("已是最新版本（v{}）。", res.get("current", "")))
+            return
+        # 有新版
+        cur, latest = res.get("current", ""), res.get("latest", "")
+        if not manual:
+            # 静默检查：托盘气泡提一句即可，弹对话框会把用户正干的事打断
+            self._notify(tr("PyShot 有新版本"),
+                         tr("v{} 可用（当前 v{}）。\n"
+                            "右键托盘图标 → 检查更新… 即可升级。", latest, cur))
+            return
+        from updater import is_git_checkout
+        box = QMessageBox(QMessageBox.Information, tr("发现新版本"),
+                          tr("发现新版本 v{}（当前 v{}）。\n\n要现在更新吗？",
+                             latest, cur),
+                          QMessageBox.Yes | QMessageBox.No,
+                          self.editors[-1] if self.editors else None)
+        box.setDefaultButton(QMessageBox.Yes)
+        if box.exec() != QMessageBox.Yes:
+            return
+        if is_git_checkout():
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            self._pull_thread = GitPullThread(self)
+            self._pull_thread.done.connect(
+                lambda ok, msg: self._on_update_pulled(ok, msg, latest))
+            self._pull_thread.start()
+        else:
+            # 单文件版/手动拷的源码：没有 .git，没法 git pull，
+            # 打开仓库页面让用户自己下载覆盖。
+            QDesktopServices.openUrl(QUrl(res.get("url", "")))
+            self._msg_box("info", tr("检查更新"),
+                          tr("当前安装不是 git 检出，无法自动更新。\n"
+                             "已打开项目页面，请下载最新版后覆盖。"))
+
+    def _on_update_pulled(self, ok: bool, msg: str, latest: str):
+        QApplication.restoreOverrideCursor()
+        if not ok:
+            self._msg_box("warning", tr("更新失败"),
+                          tr("git pull 失败：\n{}\n\n"
+                             "本地若有改动或历史分叉，请先处理后再试。",
+                             msg))
+            return
+        box = QMessageBox(QMessageBox.Information, tr("更新完成"),
+                          tr("已更新到 v{}。\n重启 PyShot 后生效。", latest)
+                          + ("\n\n" + msg if msg else ""),
+                          QMessageBox.Yes | QMessageBox.No,
+                          self.editors[-1] if self.editors else None)
+        box.button(QMessageBox.Yes).setText(tr("立即重启"))
+        box.button(QMessageBox.No).setText(tr("稍后重启"))
+        box.setDefaultButton(QMessageBox.Yes)
+        if box.exec() == QMessageBox.Yes:
+            self._restart_now()
+
+    def _restart_now(self):
+        """拉起一个新进程后退出自己（更新后的代码要重启才生效）。"""
+        try:
+            import subprocess
+            subprocess.Popen([sys.executable] + sys.argv,
+                             cwd=os.getcwd())
+        except Exception as exc:                       # noqa: BLE001
+            self._msg_box("warning", tr("重启失败"),
+                          tr("无法自动重启：{}\n请手动重新启动 PyShot。", exc))
+            return
+        self.app.quit()
+
+    def _msg_box(self, kind: str, title: str, text: str):
+        """统一弹 QMessageBox（kind = info / warning）。"""
+        icon = {"info": QMessageBox.Information,
+                "warning": QMessageBox.Warning}.get(kind, QMessageBox.Information)
+        parent = self.editors[-1] if self.editors else None
+        QMessageBox(icon, title, text, QMessageBox.Ok, parent).exec()
+
+    def maybe_auto_check_updates(self):
+        """启动后的静默检查：开关开着 + 距上次超过 24 小时才查。"""
+        if not self._update_auto_enabled():
+            return
+        try:
+            from i18n import get_setting, set_setting
+            last = float(get_setting(UPDATE_LAST_CHECK_KEY, 0) or 0)
+            if time.time() - last < UPDATE_CHECK_INTERVAL:
+                return
+            # 先记时间戳：就算这次网络失败，也别每次启动都重试
+            set_setting(UPDATE_LAST_CHECK_KEY, time.time())
+        except Exception:                              # noqa: BLE001
+            return
+        # 延迟 5 秒：别和启动恢复/就绪提示抢资源
+        QTimer.singleShot(5000, lambda: self.check_updates(manual=False))
 
     def open_image(self):
         path, _ = QFileDialog.getOpenFileName(

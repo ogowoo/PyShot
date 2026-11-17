@@ -185,6 +185,38 @@ def _diag_literal_ids(tree) -> set:
 
 
 EN = {
+    # ---- 版本主题（version.py）----
+    "托盘一键检查更新": "One-click update check from the tray",
+    # ---- 检查更新 ----
+    "检查更新…": "Check for Updates…",
+    "检查更新": "Check for Updates",
+    "对比 GitHub 上的最新版本；是 git 检出的话可以直接拉取更新":
+        "Compare with the latest release on GitHub; a git checkout can pull directly",
+    "启动时自动检查更新": "Check for updates on startup",
+    "每天最多检查一次；有新版会在托盘气泡里提示":
+        "At most once a day; a tray bubble appears when a new version exists",
+    "检查更新失败：\n{}": "Update check failed:\n{}",
+    "请检查网络，或稍后再试。": "Please check your network connection, or try again later.",
+    "已是最新版本（v{}）。": "You are up to date (v{}).",
+    "发现新版本": "New Version Available",
+    "发现新版本 v{}（当前 v{}）。\n\n要现在更新吗？":
+        "New version v{} found (currently v{}).\n\nUpdate now?",
+    "PyShot 有新版本": "New PyShot version available",
+    "v{} 可用（当前 v{}）。\n右键托盘图标 → 检查更新… 即可升级。":
+        "v{} is available (currently v{}).\nRight-click the tray icon → Check for Updates… to upgrade.",
+    "当前安装不是 git 检出，无法自动更新。\n已打开项目页面，请下载最新版后覆盖。":
+        "This installation is not a git checkout and cannot self-update.\nThe project page has been opened — download the latest version to overwrite it.",
+    "git pull 失败：\n{}\n\n本地若有改动或历史分叉，请先处理后再试。":
+        "git pull failed:\n{}\n\nIf you have local changes or a diverged history, resolve them and try again.",
+    "更新失败": "Update Failed",
+    "更新完成": "Update Complete",
+    "已更新到 v{}。\n重启 PyShot 后生效。":
+        "Updated to v{}.\nRestart PyShot for it to take effect.",
+    "立即重启": "Restart Now",
+    "稍后重启": "Restart Later",
+    "无法自动重启：{}\n请手动重新启动 PyShot。":
+        "Could not restart automatically: {}\nPlease start PyShot manually.",
+    "重启失败": "Restart Failed",
     # ---- 托盘菜单 ----
     "区域截图": "Capture Region",
     "框选一块区域截图": "Drag to capture a region",
